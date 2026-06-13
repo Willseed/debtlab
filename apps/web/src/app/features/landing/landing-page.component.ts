@@ -29,11 +29,20 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
           <button
             class="button button--secondary"
             type="button"
+            disabled
+            aria-describedby="apple-login-disabled-hint"
             i18n="Apple login@@landingAppleLogin"
           >
             使用 Apple 繼續
           </button>
         </div>
+        <p
+          id="apple-login-disabled-hint"
+          class="hero-band__login-note"
+          i18n="Apple login disabled note@@landingAppleLoginDisabledNote"
+        >
+          Apple 登入審核中，暫不開放。
+        </p>
       </div>
     </section>
   `,

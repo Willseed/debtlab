@@ -42,3 +42,5 @@ pnpm lhci
 Copy `.env.example` for local development only. Do not commit `.env`, `.env.local`, `.dev.vars`, private keys, credential JSON files, or production tokens.
 
 Production secrets must be stored in GitHub Secrets.
+
+Sign in with Apple is currently visible in the login screen but disabled while Apple review is pending. Apple secrets are optional until that feature is enabled.

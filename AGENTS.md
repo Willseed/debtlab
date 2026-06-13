@@ -246,6 +246,8 @@ CLOUDFLARE_D1_DATABASE_ID
 LHCI_GITHUB_APP_TOKEN
 ```
 
+`APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` are required only when Sign in with Apple is enabled. While Apple review is pending, the Apple login UI must remain visible but disabled and CI must not require those Apple secrets.
+
 Production value:
 
 ```txt
@@ -259,7 +261,9 @@ APP_BASE_URL=https://lab.buy2330.cc
 Authentication must support:
 
 1. Google OAuth.
-2. Sign in with Apple.
+2. Sign in with Apple once Apple review is approved.
+
+While Apple review is pending, the Sign in with Apple screen element must remain visible but disabled. The backend Apple auth endpoint must not attempt token verification and must return a disabled error response.
 
 Never trust frontend OAuth claims directly.
 

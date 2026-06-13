@@ -16,6 +16,7 @@
       <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>登入提供者</target></trans-unit>
       <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>使用 Google 繼續</target></trans-unit>
       <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>使用 Apple 繼續</target></trans-unit>
+      <trans-unit id="landingAppleLoginDisabledNote" datatype="html"><source>Apple 登入審核中，暫不開放。</source><target>Apple 登入審核中，暫不開放。</target></trans-unit>
       <trans-unit id="dashboardTitle" datatype="html"><source>儀表板</source><target>儀表板</target></trans-unit>
       <trans-unit id="dashboardMetrics" datatype="html"><source>儀表板指標</source><target>儀表板指標</target></trans-unit>
       <trans-unit id="dashboardThisMonth" datatype="html"><source>本月支出</source><target>本月支出</target></trans-unit>

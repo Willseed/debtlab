@@ -46,6 +46,20 @@ The Worker must verify the token with Google before creating a local session.
 
 ### POST `/api/auth/apple`
 
+Temporarily disabled while Apple review is pending. The login screen still displays the Apple control, but it is disabled. API calls to this route return:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Sign in with Apple is temporarily disabled.",
+    "details": {}
+  }
+}
+```
+
+The request shape below applies after Sign in with Apple is enabled.
+
 Request:
 
 ```json
@@ -62,7 +76,7 @@ Request:
 }
 ```
 
-The Worker must verify the Apple identity token and must key identity by provider subject, not email.
+When enabled, the Worker must verify the Apple identity token and must key identity by provider subject, not email.
 
 ### GET `/api/auth/me`
 

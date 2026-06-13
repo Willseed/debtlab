@@ -5,7 +5,7 @@ import { errorResponse, notImplemented } from '../http/error-response';
 import { requireAuth } from '../middleware/require-auth';
 import { SESSION_COOKIE_NAME } from '../services/auth.service';
 import { AppBindings } from '../types';
-import { appleAuthSchema, googleAuthSchema } from '../validation/schemas';
+import { googleAuthSchema } from '../validation/schemas';
 
 export const authRoutes = new Hono<AppBindings>();
 
@@ -26,21 +26,8 @@ authRoutes.post('/google', async (c) => {
   return notImplemented(c, 'Google OAuth verification is not implemented yet.');
 });
 
-authRoutes.post('/apple', async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const parsed = appleAuthSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return errorResponse(
-      c,
-      422,
-      'VALIDATION_ERROR',
-      'Apple credential is invalid.',
-      parsed.error.flatten(),
-    );
-  }
-
-  return notImplemented(c, 'Apple identity token verification is not implemented yet.');
+authRoutes.post('/apple', (c) => {
+  return errorResponse(c, 403, 'FORBIDDEN', 'Sign in with Apple is temporarily disabled.');
 });
 
 authRoutes.get('/me', requireAuth, (c) => {

@@ -2,57 +2,422 @@
 <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
   <file source-language="zh-TW" datatype="plaintext" original="ng2.template">
     <body>
-      <trans-unit id="appSkipLink" datatype="html"><source>跳到主要內容</source></trans-unit>
-      <trans-unit id="appBrand" datatype="html"><source>LabSplit Black Gold</source></trans-unit>
-      <trans-unit id="appNavLabel" datatype="html"><source>主要導覽</source></trans-unit>
-      <trans-unit id="appNavHome" datatype="html"><source>首頁</source></trans-unit>
-      <trans-unit id="appNavDashboard" datatype="html"><source>儀表板</source></trans-unit>
-      <trans-unit id="appNavExpenses" datatype="html"><source>支出</source></trans-unit>
-      <trans-unit id="appNavSettlements" datatype="html"><source>結算</source></trans-unit>
-      <trans-unit id="appNavAdmin" datatype="html"><source>管理</source></trans-unit>
-      <trans-unit id="appNavGarage" datatype="html"><source>車庫</source></trans-unit>
-      <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source></trans-unit>
-      <trans-unit id="landingHeroSubtitle" datatype="html"><source>給實驗室共同支出使用的私有拆帳儀表板。</source></trans-unit>
-      <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source></trans-unit>
-      <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source></trans-unit>
-      <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source></trans-unit>
-      <trans-unit id="dashboardTitle" datatype="html"><source>儀表板</source></trans-unit>
-      <trans-unit id="dashboardMetrics" datatype="html"><source>儀表板指標</source></trans-unit>
-      <trans-unit id="dashboardThisMonth" datatype="html"><source>本月支出</source></trans-unit>
-      <trans-unit id="dashboardYourBalance" datatype="html"><source>你的餘額</source></trans-unit>
-      <trans-unit id="dashboardActionRequired" datatype="html"><source>待處理</source></trans-unit>
-      <trans-unit id="dashboardRecentActivity" datatype="html"><source>最近活動</source></trans-unit>
-      <trans-unit id="dashboardSettlementSuggestions" datatype="html"><source>結算建議</source></trans-unit>
-      <trans-unit id="dashboardNoRecentActivity" datatype="html"><source>目前沒有需要結算的支出。</source></trans-unit>
-      <trans-unit id="expensesTitle" datatype="html"><source>支出</source></trans-unit>
-      <trans-unit id="expensesAdd" datatype="html"><source>新增支出</source></trans-unit>
-      <trans-unit id="expensesSearchLabel" datatype="html"><source>搜尋標題</source></trans-unit>
-      <trans-unit id="expensesDate" datatype="html"><source>日期</source></trans-unit>
-      <trans-unit id="expensesTitleColumn" datatype="html"><source>標題</source></trans-unit>
-      <trans-unit id="expensesCategory" datatype="html"><source>分類</source></trans-unit>
-      <trans-unit id="expensesPaidBy" datatype="html"><source>付款人</source></trans-unit>
-      <trans-unit id="expensesAmount" datatype="html"><source>金額</source></trans-unit>
-      <trans-unit id="expensesParticipants" datatype="html"><source>參與者</source></trans-unit>
-      <trans-unit id="expensesActions" datatype="html"><source>操作</source></trans-unit>
-      <trans-unit id="expensesEmpty" datatype="html"><source>目前沒有支出。</source></trans-unit>
-      <trans-unit id="settlementsTitle" datatype="html"><source>結算</source></trans-unit>
-      <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source></trans-unit>
-      <trans-unit id="settlementSuggestedTransfers" datatype="html"><source>建議轉帳</source></trans-unit>
-      <trans-unit id="settlementRecordPayment" datatype="html"><source>記錄付款</source></trans-unit>
-      <trans-unit id="settlementConfirmPayment" datatype="html"><source>確認付款</source></trans-unit>
-      <trans-unit id="settlementEmpty" datatype="html"><source>目前沒有待確認付款。</source></trans-unit>
-      <trans-unit id="adminTitle" datatype="html"><source>管理</source></trans-unit>
-      <trans-unit id="adminUserManagement" datatype="html"><source>使用者管理</source></trans-unit>
-      <trans-unit id="adminSystemStats" datatype="html"><source>系統統計</source></trans-unit>
-      <trans-unit id="adminAuditLogs" datatype="html"><source>稽核紀錄</source></trans-unit>
-      <trans-unit id="adminEasterEggSettings" datatype="html"><source>彩蛋設定</source></trans-unit>
-      <trans-unit id="adminCsvExport" datatype="html"><source>匯出 CSV</source></trans-unit>
-      <trans-unit id="garageTitle" datatype="html"><source>隱藏車庫</source></trans-unit>
-      <trans-unit id="garageLeaderboard" datatype="html"><source>實驗室花費排行榜</source></trans-unit>
-      <trans-unit id="garageCoffeeCounter" datatype="html"><source>咖啡支出計數</source></trans-unit>
-      <trans-unit id="garageBalancedMember" datatype="html"><source>最平衡成員</source></trans-unit>
-      <trans-unit id="garageWeirdestAmount" datatype="html"><source>最奇怪金額</source></trans-unit>
-      <trans-unit id="garageBadges" datatype="html"><source>彩蛋徽章</source></trans-unit>
+      <trans-unit id="appSkipLink" datatype="html">
+        <source>跳到主要內容</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">10,14</context>
+        </context-group>
+        <note priority="1" from="description">Skip link</note>
+      </trans-unit>
+      <trans-unit id="appBrand" datatype="html">
+        <source> LabSplit Black Gold </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">15,18</context>
+        </context-group>
+        <note priority="1" from="description">App brand</note>
+      </trans-unit>
+      <trans-unit id="appNavLabel" datatype="html">
+        <source>主要導覽</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">18,21</context>
+        </context-group>
+        <note priority="1" from="description">Nav label</note>
+      </trans-unit>
+      <trans-unit id="appNavHome" datatype="html">
+        <source> 首頁 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">25,29</context>
+        </context-group>
+        <note priority="1" from="description">Home nav</note>
+      </trans-unit>
+      <trans-unit id="appNavDashboard" datatype="html">
+        <source> 儀表板 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">32,36</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard nav</note>
+      </trans-unit>
+      <trans-unit id="appNavExpenses" datatype="html">
+        <source> 支出 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">39,43</context>
+        </context-group>
+        <note priority="1" from="description">Expenses nav</note>
+      </trans-unit>
+      <trans-unit id="appNavSettlements" datatype="html">
+        <source> 結算 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">46,48</context>
+        </context-group>
+        <note priority="1" from="description">Settlements nav</note>
+      </trans-unit>
+      <trans-unit id="appNavAdmin" datatype="html">
+        <source> 管理 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">49,51</context>
+        </context-group>
+        <note priority="1" from="description">Admin nav</note>
+      </trans-unit>
+      <trans-unit id="appNavGarage" datatype="html">
+        <source> 車庫 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">52,58</context>
+        </context-group>
+        <note priority="1" from="description">Garage nav</note>
+      </trans-unit>
+      <trans-unit id="adminTitle" datatype="html">
+        <source>管理</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-page.component.ts</context>
+          <context context-type="linenumber">12,13</context>
+        </context-group>
+        <note priority="1" from="description">Admin title</note>
+      </trans-unit>
+      <trans-unit id="adminUserManagement" datatype="html">
+        <source>使用者管理</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-page.component.ts</context>
+          <context context-type="linenumber">14,17</context>
+        </context-group>
+        <note priority="1" from="description">Admin user management</note>
+      </trans-unit>
+      <trans-unit id="adminSystemStats" datatype="html">
+        <source>系統統計</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-page.component.ts</context>
+          <context context-type="linenumber">17,20</context>
+        </context-group>
+        <note priority="1" from="description">Admin system stats</note>
+      </trans-unit>
+      <trans-unit id="adminAuditLogs" datatype="html">
+        <source>稽核紀錄</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-page.component.ts</context>
+          <context context-type="linenumber">20,23</context>
+        </context-group>
+        <note priority="1" from="description">Admin audit logs</note>
+      </trans-unit>
+      <trans-unit id="adminEasterEggSettings" datatype="html">
+        <source> 彩蛋設定 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-page.component.ts</context>
+          <context context-type="linenumber">24,30</context>
+        </context-group>
+        <note priority="1" from="description">Admin Easter egg settings</note>
+      </trans-unit>
+      <trans-unit id="adminCsvExport" datatype="html">
+        <source> 匯出 CSV </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/admin/admin-page.component.ts</context>
+          <context context-type="linenumber">34,41</context>
+        </context-group>
+        <note priority="1" from="description">Admin CSV export</note>
+      </trans-unit>
+      <trans-unit id="dashboardTitle" datatype="html">
+        <source> 儀表板 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">11,17</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard title</note>
+      </trans-unit>
+      <trans-unit id="dashboardMetrics" datatype="html">
+        <source>儀表板指標</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">17,19</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard metrics group</note>
+      </trans-unit>
+      <trans-unit id="dashboardThisMonth" datatype="html">
+        <source>本月支出</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">21,23</context>
+        </context-group>
+        <note priority="1" from="description">This month card</note>
+      </trans-unit>
+      <trans-unit id="dashboardYourBalance" datatype="html">
+        <source>你的餘額</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">25,27</context>
+        </context-group>
+        <note priority="1" from="description">Balance card</note>
+      </trans-unit>
+      <trans-unit id="dashboardActionRequired" datatype="html">
+        <source>待處理</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">29,31</context>
+        </context-group>
+        <note priority="1" from="description">Action card</note>
+      </trans-unit>
+      <trans-unit id="dashboardRecentActivity" datatype="html">
+        <source>最近活動</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">33,37</context>
+        </context-group>
+        <note priority="1" from="description">Activity card</note>
+      </trans-unit>
+      <trans-unit id="dashboardSettlementSuggestions" datatype="html">
+        <source> 結算建議 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">42,46</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard settlement suggestions</note>
+      </trans-unit>
+      <trans-unit id="dashboardNoRecentActivity" datatype="html">
+        <source> 目前沒有需要結算的支出。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">45,53</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard empty state</note>
+      </trans-unit>
+      <trans-unit id="expensesTitle" datatype="html">
+        <source> 支出 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">14,16</context>
+        </context-group>
+        <note priority="1" from="description">Expenses title</note>
+      </trans-unit>
+      <trans-unit id="expensesAdd" datatype="html">
+        <source> 新增支出 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">17,22</context>
+        </context-group>
+        <note priority="1" from="description">Add expense</note>
+      </trans-unit>
+      <trans-unit id="expensesSearchLabel" datatype="html">
+        <source>搜尋標題</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">22,27</context>
+        </context-group>
+        <note priority="1" from="description">Expense search label</note>
+      </trans-unit>
+      <trans-unit id="expensesDate" datatype="html">
+        <source>日期</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">31,32</context>
+        </context-group>
+        <note priority="1" from="description">Expense date column</note>
+      </trans-unit>
+      <trans-unit id="expensesTitleColumn" datatype="html">
+        <source>標題</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">32,33</context>
+        </context-group>
+        <note priority="1" from="description">Expense title column</note>
+      </trans-unit>
+      <trans-unit id="expensesCategory" datatype="html">
+        <source>分類</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">33,34</context>
+        </context-group>
+        <note priority="1" from="description">Expense category column</note>
+      </trans-unit>
+      <trans-unit id="expensesPaidBy" datatype="html">
+        <source>付款人</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">34,35</context>
+        </context-group>
+        <note priority="1" from="description">Expense payer column</note>
+      </trans-unit>
+      <trans-unit id="expensesAmount" datatype="html">
+        <source>金額</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">35,36</context>
+        </context-group>
+        <note priority="1" from="description">Expense amount column</note>
+      </trans-unit>
+      <trans-unit id="expensesParticipants" datatype="html">
+        <source>參與者</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">36,38</context>
+        </context-group>
+        <note priority="1" from="description">Expense participants column</note>
+      </trans-unit>
+      <trans-unit id="expensesActions" datatype="html">
+        <source>操作</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">37,41</context>
+        </context-group>
+        <note priority="1" from="description">Expense actions column</note>
+      </trans-unit>
+      <trans-unit id="expensesEmpty" datatype="html">
+        <source>目前沒有支出。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">41,48</context>
+        </context-group>
+        <note priority="1" from="description">Expenses empty state</note>
+      </trans-unit>
+      <trans-unit id="garageTitle" datatype="html">
+        <source>隱藏車庫</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">10,14</context>
+        </context-group>
+        <note priority="1" from="description">Garage title</note>
+      </trans-unit>
+      <trans-unit id="garageLeaderboard" datatype="html">
+        <source> 實驗室花費排行榜 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">15,19</context>
+        </context-group>
+        <note priority="1" from="description">Garage leaderboard</note>
+      </trans-unit>
+      <trans-unit id="garageCoffeeCounter" datatype="html">
+        <source> 咖啡支出計數 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">21,25</context>
+        </context-group>
+        <note priority="1" from="description">Garage coffee counter</note>
+      </trans-unit>
+      <trans-unit id="garageBalancedMember" datatype="html">
+        <source> 最平衡成員 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">27,31</context>
+        </context-group>
+        <note priority="1" from="description">Garage balanced member</note>
+      </trans-unit>
+      <trans-unit id="garageWeirdestAmount" datatype="html">
+        <source> 最奇怪金額 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">33,37</context>
+        </context-group>
+        <note priority="1" from="description">Garage weirdest amount</note>
+      </trans-unit>
+      <trans-unit id="garageBadges" datatype="html">
+        <source>彩蛋徽章</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">40,47</context>
+        </context-group>
+        <note priority="1" from="description">Garage badges</note>
+      </trans-unit>
+      <trans-unit id="landingHeroTitle" datatype="html">
+        <source> 實驗室花費，精準拆帳 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
+          <context context-type="linenumber">12,14</context>
+        </context-group>
+        <note priority="1" from="description">Landing hero title</note>
+      </trans-unit>
+      <trans-unit id="landingHeroSubtitle" datatype="html">
+        <source> 給實驗室共同支出使用的私有拆帳儀表板。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
+          <context context-type="linenumber">15,20</context>
+        </context-group>
+        <note priority="1" from="description">Landing hero subtitle</note>
+      </trans-unit>
+      <trans-unit id="landingOAuthProviders" datatype="html">
+        <source>登入提供者</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
+          <context context-type="linenumber">20,23</context>
+        </context-group>
+        <note priority="1" from="description">OAuth provider group</note>
+      </trans-unit>
+      <trans-unit id="landingGoogleLogin" datatype="html">
+        <source> 使用 Google 繼續 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
+          <context context-type="linenumber">27,31</context>
+        </context-group>
+        <note priority="1" from="description">Google login</note>
+      </trans-unit>
+      <trans-unit id="landingAppleLogin" datatype="html">
+        <source> 使用 Apple 繼續 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
+          <context context-type="linenumber">36,41</context>
+        </context-group>
+        <note priority="1" from="description">Apple login</note>
+      </trans-unit>
+      <trans-unit id="landingAppleLoginDisabledNote" datatype="html">
+        <source> Apple 登入審核中，暫不開放。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
+          <context context-type="linenumber">44,51</context>
+        </context-group>
+        <note priority="1" from="description">Apple login disabled note</note>
+      </trans-unit>
+      <trans-unit id="settlementsTitle" datatype="html">
+        <source> 結算 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">15,20</context>
+        </context-group>
+        <note priority="1" from="description">Settlements title</note>
+      </trans-unit>
+      <trans-unit id="settlementBalanceSummary" datatype="html">
+        <source> 餘額總覽 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">21,25</context>
+        </context-group>
+        <note priority="1" from="description">Balance summary</note>
+      </trans-unit>
+      <trans-unit id="settlementSuggestedTransfers" datatype="html">
+        <source> 建議轉帳 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">27,33</context>
+        </context-group>
+        <note priority="1" from="description">Suggested transfers</note>
+      </trans-unit>
+      <trans-unit id="settlementRecordPayment" datatype="html">
+        <source> 記錄付款 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">39,43</context>
+        </context-group>
+        <note priority="1" from="description">Record payment</note>
+      </trans-unit>
+      <trans-unit id="settlementConfirmPayment" datatype="html">
+        <source> 確認付款 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">46,50</context>
+        </context-group>
+        <note priority="1" from="description">Confirm payment</note>
+      </trans-unit>
+      <trans-unit id="settlementEmpty" datatype="html">
+        <source>目前沒有待確認付款。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">50,56</context>
+        </context-group>
+        <note priority="1" from="description">Settlement empty state</note>
+      </trans-unit>
     </body>
   </file>
 </xliff>

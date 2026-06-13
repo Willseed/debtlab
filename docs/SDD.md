@@ -49,7 +49,7 @@ This SDD defines product and system design.
 
 LabSplit Black Gold is a private expense-splitting web application for a laboratory. It allows lab members to record shared expenses, split costs among participants, calculate balances, suggest optimized settlements, and track payments. The application will be deployed on Cloudflare infrastructure and will use Cloudflare Workers for backend APIs, Cloudflare D1 for persistent relational storage, and Angular 22 for the frontend.
 
-The product must support Google OAuth and Sign in with Apple. Authentication must be verified on the backend, and local application authorization must be managed independently through local users, roles, and group membership records.
+The product must support Google OAuth and Sign in with Apple. Authentication must be verified on the backend, and local application authorization must be managed independently through local users, roles, and group membership records. While Apple review is pending, the Sign in with Apple UI remains visible but disabled and the backend Apple auth endpoint returns a disabled response without requiring Apple credentials.
 
 The visual style should be inspired by a luxury black-and-gold supercar dashboard aesthetic, referencing the provided Lamborghini-style design inspiration only as a mood reference. The application must not use Lamborghini logos, trademarks, copyrighted visual assets, or any copied brand identity.
 
@@ -70,7 +70,7 @@ This SDD is intended to be directly usable by Codex or another AI coding agent a
 5. Suggest simplified settlement transfers.
 6. Allow payment records and confirmations.
 7. Provide admin-level member and audit management.
-8. Support Google OAuth and Sign in with Apple.
+8. Support Google OAuth and keep Sign in with Apple ready for enablement after Apple review.
 9. Provide a premium black-and-gold user interface.
 10. Include safe and optional Easter eggs.
 11. Support Traditional Chinese Taiwan as the default locale.
@@ -921,7 +921,14 @@ Do not manually format date, number, or currency strings unless the custom forma
 The system must support:
 
 1. Google OAuth.
-2. Sign in with Apple.
+2. Sign in with Apple once Apple review is approved.
+
+Temporary Apple status:
+
+1. The landing page must still display the Apple login control.
+2. The Apple login control must be disabled while Apple review is pending.
+3. `POST /api/auth/apple` must return `FORBIDDEN` while disabled and must not attempt Apple token verification.
+4. Apple OAuth secrets are optional while the feature is disabled.
 
 ## 12.2 Identity Model
 
@@ -952,6 +959,8 @@ apple + Apple sub claim
 8. Frontend receives current user profile.
 
 ## 12.4 Apple Login Flow
+
+This flow is temporarily disabled while Apple review is pending. The intended flow below applies once Apple credentials are available and the feature is enabled.
 
 1. User clicks "Continue with Apple".
 2. Frontend obtains identity token and optional authorization code.
@@ -1068,6 +1077,22 @@ Response:
 ```
 
 ## POST /api/auth/apple
+
+Temporary status:
+
+While Apple review is pending, this endpoint returns:
+
+```json
+{
+  "error": {
+    "code": "FORBIDDEN",
+    "message": "Sign in with Apple is temporarily disabled.",
+    "details": {}
+  }
+}
+```
+
+The request and success response below apply after Sign in with Apple is enabled.
 
 Request:
 
@@ -2047,6 +2072,8 @@ APPLE_KEY_ID
 APPLE_PRIVATE_KEY
 APP_BASE_URL
 ```
+
+Apple secrets are required only when Sign in with Apple is enabled. While Apple review is pending and the Apple login control is disabled, the Apple secret values are optional.
 
 Production value:
 
