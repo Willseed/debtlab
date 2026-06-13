@@ -12,6 +12,7 @@ Private lab expense splitter for `https://lab.buy2330.cc`.
 - Lighthouse CI quality gate.
 
 Production `/api/*` requests are served by the Cloudflare Worker route `lab.buy2330.cc/api/*`.
+Run the `Deploy Cloudflare Worker` workflow manually after `CLOUDFLARE_API_TOKEN` has Workers, D1, and route-management permissions.
 
 ## Local Setup
 

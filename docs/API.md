@@ -33,6 +33,7 @@ NOT_IMPLEMENTED
 ## Auth
 
 Production `/api/*` traffic is served by the Cloudflare Worker route `lab.buy2330.cc/api/*`.
+Run the `Deploy Cloudflare Worker` workflow manually after `CLOUDFLARE_API_TOKEN` has Workers, D1, and route-management permissions.
 
 ### GET `/api/auth/google/start`
 
