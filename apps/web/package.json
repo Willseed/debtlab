@@ -1,0 +1,49 @@
+{
+  "name": "web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "ng serve",
+    "start:test": "ng serve --configuration test --port 4200",
+    "build": "ng build --configuration production",
+    "test": "ng test --watch=false",
+    "test:coverage": "ng test --watch=false --code-coverage",
+    "lint": "ng lint",
+    "extract-i18n": "ng extract-i18n --output-path src/locale",
+    "typecheck": "ng build --configuration development --no-progress"
+  },
+  "dependencies": {
+    "@angular/animations": "^22.0.0",
+    "@angular/common": "^22.0.0",
+    "@angular/compiler": "^22.0.0",
+    "@angular/core": "^22.0.0",
+    "@angular/forms": "^22.0.0",
+    "@angular/platform-browser": "^22.0.0",
+    "@angular/platform-browser-dynamic": "^22.0.1",
+    "@angular/router": "^22.0.0",
+    "rxjs": "^7.8.2",
+    "tslib": "^2.8.1",
+    "zone.js": "~0.16.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^22.0.0",
+    "@angular-eslint/builder": "^22.0.0",
+    "@angular-eslint/eslint-plugin": "^22.0.0",
+    "@angular-eslint/eslint-plugin-template": "^22.0.0",
+    "@angular-eslint/template-parser": "^22.0.0",
+    "@angular/cli": "^22.0.0",
+    "@angular/compiler-cli": "^22.0.0",
+    "@angular/localize": "^22.0.0",
+    "@types/jasmine": "^5.1.8",
+    "angular-eslint": "^22.0.0",
+    "eslint": "^9.29.0",
+    "jasmine-core": "^5.7.1",
+    "karma": "^6.4.4",
+    "karma-chrome-launcher": "^3.2.0",
+    "karma-coverage": "^2.2.1",
+    "karma-jasmine": "^5.1.0",
+    "karma-jasmine-html-reporter": "^2.1.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.34.1"
+  }
+}

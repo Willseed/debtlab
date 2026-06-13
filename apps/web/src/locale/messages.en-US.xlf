@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
+  <file source-language="zh-TW" target-language="en-US" datatype="plaintext" original="ng2.template">
+    <body>
+      <trans-unit id="appSkipLink" datatype="html"><source>跳到主要內容</source><target>Skip to main content</target></trans-unit>
+      <trans-unit id="appBrand" datatype="html"><source>LabSplit Black Gold</source><target>LabSplit Black Gold</target></trans-unit>
+      <trans-unit id="appNavLabel" datatype="html"><source>主要導覽</source><target>Main navigation</target></trans-unit>
+      <trans-unit id="appNavHome" datatype="html"><source>首頁</source><target>Home</target></trans-unit>
+      <trans-unit id="appNavDashboard" datatype="html"><source>儀表板</source><target>Dashboard</target></trans-unit>
+      <trans-unit id="appNavExpenses" datatype="html"><source>支出</source><target>Expenses</target></trans-unit>
+      <trans-unit id="appNavSettlements" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
+      <trans-unit id="appNavAdmin" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
+      <trans-unit id="appNavGarage" datatype="html"><source>車庫</source><target>Garage</target></trans-unit>
+      <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>Lab Expenses. Split With Precision.</target></trans-unit>
+      <trans-unit id="landingHeroSubtitle" datatype="html"><source>給實驗室共同支出使用的私有拆帳儀表板。</source><target>A private expense cockpit for shared lab spending.</target></trans-unit>
+      <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
+      <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>Continue with Google</target></trans-unit>
+      <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>Continue with Apple</target></trans-unit>
+      <trans-unit id="dashboardTitle" datatype="html"><source>儀表板</source><target>Dashboard</target></trans-unit>
+      <trans-unit id="dashboardMetrics" datatype="html"><source>儀表板指標</source><target>Dashboard metrics</target></trans-unit>
+      <trans-unit id="dashboardThisMonth" datatype="html"><source>本月支出</source><target>This Month</target></trans-unit>
+      <trans-unit id="dashboardYourBalance" datatype="html"><source>你的餘額</source><target>Your Balance</target></trans-unit>
+      <trans-unit id="dashboardActionRequired" datatype="html"><source>待處理</source><target>Action Required</target></trans-unit>
+      <trans-unit id="dashboardRecentActivity" datatype="html"><source>最近活動</source><target>Recent Activity</target></trans-unit>
+      <trans-unit id="dashboardSettlementSuggestions" datatype="html"><source>結算建議</source><target>Settlement Suggestions</target></trans-unit>
+      <trans-unit id="dashboardNoRecentActivity" datatype="html"><source>目前沒有需要結算的支出。</source><target>There are no expenses to settle.</target></trans-unit>
+      <trans-unit id="expensesTitle" datatype="html"><source>支出</source><target>Expenses</target></trans-unit>
+      <trans-unit id="expensesAdd" datatype="html"><source>新增支出</source><target>Add Expense</target></trans-unit>
+      <trans-unit id="expensesSearchLabel" datatype="html"><source>搜尋標題</source><target>Search title</target></trans-unit>
+      <trans-unit id="expensesDate" datatype="html"><source>日期</source><target>Date</target></trans-unit>
+      <trans-unit id="expensesTitleColumn" datatype="html"><source>標題</source><target>Title</target></trans-unit>
+      <trans-unit id="expensesCategory" datatype="html"><source>分類</source><target>Category</target></trans-unit>
+      <trans-unit id="expensesPaidBy" datatype="html"><source>付款人</source><target>Paid By</target></trans-unit>
+      <trans-unit id="expensesAmount" datatype="html"><source>金額</source><target>Amount</target></trans-unit>
+      <trans-unit id="expensesParticipants" datatype="html"><source>參與者</source><target>Participants</target></trans-unit>
+      <trans-unit id="expensesActions" datatype="html"><source>操作</source><target>Actions</target></trans-unit>
+      <trans-unit id="expensesEmpty" datatype="html"><source>目前沒有支出。</source><target>There are no expenses yet.</target></trans-unit>
+      <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
+      <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>Balance Summary</target></trans-unit>
+      <trans-unit id="settlementSuggestedTransfers" datatype="html"><source>建議轉帳</source><target>Suggested Transfers</target></trans-unit>
+      <trans-unit id="settlementRecordPayment" datatype="html"><source>記錄付款</source><target>Record Payment</target></trans-unit>
+      <trans-unit id="settlementConfirmPayment" datatype="html"><source>確認付款</source><target>Confirm Payment</target></trans-unit>
+      <trans-unit id="settlementEmpty" datatype="html"><source>目前沒有待確認付款。</source><target>There are no payments waiting for confirmation.</target></trans-unit>
+      <trans-unit id="adminTitle" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
+      <trans-unit id="adminUserManagement" datatype="html"><source>使用者管理</source><target>User Management</target></trans-unit>
+      <trans-unit id="adminSystemStats" datatype="html"><source>系統統計</source><target>System Statistics</target></trans-unit>
+      <trans-unit id="adminAuditLogs" datatype="html"><source>稽核紀錄</source><target>Audit Logs</target></trans-unit>
+      <trans-unit id="adminEasterEggSettings" datatype="html"><source>彩蛋設定</source><target>Easter Egg Settings</target></trans-unit>
+      <trans-unit id="adminCsvExport" datatype="html"><source>匯出 CSV</source><target>Export CSV</target></trans-unit>
+      <trans-unit id="garageTitle" datatype="html"><source>隱藏車庫</source><target>Hidden Garage</target></trans-unit>
+      <trans-unit id="garageLeaderboard" datatype="html"><source>實驗室花費排行榜</source><target>Lab Spending Leaderboard</target></trans-unit>
+      <trans-unit id="garageCoffeeCounter" datatype="html"><source>咖啡支出計數</source><target>Coffee Expense Counter</target></trans-unit>
+      <trans-unit id="garageBalancedMember" datatype="html"><source>最平衡成員</source><target>Most Balanced Member</target></trans-unit>
+      <trans-unit id="garageWeirdestAmount" datatype="html"><source>最奇怪金額</source><target>Weirdest Amount</target></trans-unit>
+      <trans-unit id="garageBadges" datatype="html"><source>彩蛋徽章</source><target>Easter Egg Badges</target></trans-unit>
+    </body>
+  </file>
+</xliff>

@@ -1,0 +1,36 @@
+import { Hono } from 'hono';
+
+import { adminRoutes } from './routes/admin';
+import { authRoutes } from './routes/auth';
+import { expenseRoutes } from './routes/expenses';
+import { memberRoutes } from './routes/members';
+import { paymentRoutes } from './routes/payments';
+import { settlementRoutes } from './routes/settlements';
+import { errorResponse } from './http/error-response';
+import { validateOrigin } from './middleware/validate-origin';
+import { AppBindings } from './types';
+
+const app = new Hono<AppBindings>();
+
+app.use('/api/*', validateOrigin);
+
+app.get('/api/health', (c) => {
+  return c.json({ ok: true });
+});
+
+app.route('/api/auth', authRoutes);
+app.route('/api/members', memberRoutes);
+app.route('/api/expenses', expenseRoutes);
+app.route('/api/settlements', settlementRoutes);
+app.route('/api/payments', paymentRoutes);
+app.route('/api/admin', adminRoutes);
+
+app.notFound((c) => {
+  return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
+});
+
+app.onError((_error, c) => {
+  return errorResponse(c, 500, 'INTERNAL_ERROR', 'Unexpected server error.');
+});
+
+export default app;

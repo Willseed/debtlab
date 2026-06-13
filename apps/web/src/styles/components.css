@@ -1,0 +1,134 @@
+.button {
+  align-items: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 700;
+  gap: var(--space-2);
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0 var(--space-5);
+  text-decoration: none;
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.button:hover {
+  border-color: var(--color-gold);
+  box-shadow: var(--shadow-gold);
+  transform: translateY(-1px);
+}
+
+.button:focus-visible {
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.button--primary {
+  color: var(--color-gold-soft);
+}
+
+.button--secondary {
+  color: var(--color-text);
+}
+
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.metric-grid,
+.section-grid {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+}
+
+.metric-card,
+.panel {
+  background:
+    linear-gradient(145deg, rgb(214 168 79 / 0.08), transparent 45%), var(--color-surface-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.metric-card {
+  min-height: 8.5rem;
+}
+
+.metric-card__label {
+  color: var(--color-text-muted);
+  margin: 0 0 var(--space-3);
+}
+
+.metric-card__value {
+  color: var(--color-text);
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 900;
+  line-height: 1;
+  margin: 0;
+}
+
+.toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.field {
+  color: var(--color-text-muted);
+  display: grid;
+  gap: var(--space-2);
+  max-width: 28rem;
+}
+
+.field input {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text);
+  min-height: 2.75rem;
+  padding: 0 var(--space-3);
+}
+
+.field input:focus-visible {
+  border-color: var(--color-gold);
+  box-shadow: var(--focus-ring);
+  outline: none;
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+table {
+  border-collapse: collapse;
+  min-width: 48rem;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-3);
+  text-align: left;
+}
+
+th {
+  color: var(--color-gold-soft);
+  font-weight: 700;
+}
+
+tr:hover td {
+  border-bottom-color: var(--color-gold-muted);
+}

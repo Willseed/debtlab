@@ -1,0 +1,12 @@
+name = "labsplit-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-13"
+
+[vars]
+APP_BASE_URL = "http://localhost:4200"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "labsplit"
+database_id = "YOUR_D1_DATABASE_ID"
+migrations_dir = "../../migrations"
