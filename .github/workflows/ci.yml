@@ -43,6 +43,18 @@ jobs:
           corepack enable
           corepack prepare pnpm@10.14.0 --activate
 
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
       - name: Verify required production secrets
         shell: bash
         run: |
@@ -67,8 +79,35 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Install Playwright browsers
+      - name: Resolve Playwright version
+        shell: bash
+        run: |
+          PLAYWRIGHT_VERSION=$(pnpm --dir e2e exec playwright --version | awk '{print $2}')
+          echo "PLAYWRIGHT_VERSION=$PLAYWRIGHT_VERSION" >> "$GITHUB_ENV"
+
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v5
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ env.PLAYWRIGHT_VERSION }}
+
+      - name: Install Playwright browsers and system deps
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
         run: pnpm --dir e2e exec playwright install --with-deps
+
+      - name: Install Playwright system deps only
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm --dir e2e exec playwright install-deps
+
+      - name: Cache Angular build
+        uses: actions/cache@v5
+        with:
+          path: .angular/cache
+          key: ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-angular-
 
       - name: Format check
         run: pnpm format:check
@@ -87,3 +126,79 @@ jobs:
 
       - name: Lighthouse
         run: pnpm lhci
+
+  deploy-pages:
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.14.0 --activate
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: echo "STORE_PATH=$(pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - name: Cache pnpm store
+        uses: actions/cache@v5
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Cache Angular build
+        uses: actions/cache@v5
+        with:
+          path: .angular/cache
+          key: ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-
+            ${{ runner.os }}-angular-
+
+      - name: Build Angular web app
+        run: pnpm --filter web build
+
+      - name: Prepare Pages artifact
+        run: |
+          printf 'lab.buy2330.cc\n' > apps/web/dist/web/browser/CNAME
+          cp apps/web/dist/web/browser/index.html apps/web/dist/web/browser/404.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: apps/web/dist/web/browser
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
