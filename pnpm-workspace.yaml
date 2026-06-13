@@ -1,3 +1,11 @@
 packages:
   - 'apps/*'
   - 'e2e'
+
+onlyBuiltDependencies:
+  - '@parcel/watcher'
+  - esbuild
+  - lmdb
+  - msgpackr-extract
+  - sharp
+  - workerd

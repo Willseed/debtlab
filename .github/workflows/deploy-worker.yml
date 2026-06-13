@@ -1,0 +1,98 @@
+name: Deploy Cloudflare Worker
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.14.0 --activate
+
+      - name: Verify required production secrets
+        shell: bash
+        run: |
+          required=(
+            CLOUDFLARE_API_TOKEN
+            CLOUDFLARE_ACCOUNT_ID
+            CLOUDFLARE_D1_DATABASE_ID
+            SESSION_SECRET
+            GOOGLE_CLIENT_ID
+            GOOGLE_CLIENT_SECRET
+          )
+
+          for name in "${required[@]}"; do
+            if [ -z "${!name}" ]; then
+              echo "$name is not configured"
+              exit 1
+            fi
+          done
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Worker
+        run: pnpm --filter worker build
+
+      - name: Configure production D1 binding
+        shell: bash
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+
+          const wranglerPath = 'apps/worker/wrangler.toml';
+          const databaseId = process.env.CLOUDFLARE_D1_DATABASE_ID;
+
+          if (!databaseId) {
+            throw new Error('CLOUDFLARE_D1_DATABASE_ID is not configured');
+          }
+
+          const original = fs.readFileSync(wranglerPath, 'utf8');
+          const updated = original.replace(
+            /(\[\[env\.production\.d1_databases\]\][\s\S]*?database_id = ")[^"]*(")/u,
+            `$1${databaseId}$2`,
+          );
+
+          if (updated === original) {
+            throw new Error('Production D1 database_id placeholder was not found');
+          }
+
+          fs.writeFileSync(wranglerPath, updated);
+          NODE
+
+      - name: Deploy Worker
+        run: pnpm --filter worker exec wrangler deploy --env production
+
+      - name: Apply D1 migrations
+        run: pnpm --filter worker exec wrangler d1 migrations apply labsplit --remote --env production
+
+      - name: Sync Worker secrets
+        shell: bash
+        run: |
+          for name in SESSION_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+            printf '%s' "${!name}" | pnpm --filter worker exec wrangler secret put "$name" --env production
+          done

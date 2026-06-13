@@ -32,6 +32,16 @@ NOT_IMPLEMENTED
 
 ## Auth
 
+Production `/api/*` traffic is served by the Cloudflare Worker route `lab.buy2330.cc/api/*`.
+
+### GET `/api/auth/google/start`
+
+Starts the backend Google OAuth authorization-code flow. The Worker sets an HttpOnly OAuth state cookie and redirects the browser to Google.
+
+### GET `/api/auth/google/callback`
+
+Google redirects back to this endpoint with `code` and `state`. The Worker validates state, exchanges the code for tokens, verifies the Google ID token, creates or updates the local `provider + provider_subject` identity, issues `labsplit_session`, and redirects to `/dashboard`.
+
 ### POST `/api/auth/google`
 
 Request:

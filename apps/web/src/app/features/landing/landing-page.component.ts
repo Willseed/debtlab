@@ -1,4 +1,6 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+
+import { AuthService } from '../../core/auth/auth.service';
 
 @Component({
   selector: 'app-landing-page',
@@ -22,6 +24,7 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
           <button
             class="button button--primary"
             type="button"
+            (click)="startGoogleSignIn()"
             i18n="Google login@@landingGoogleLogin"
           >
             使用 Google 繼續
@@ -47,4 +50,10 @@ import { ChangeDetectionStrategy, Component } from '@angular/core';
     </section>
   `,
 })
-export class LandingPageComponent {}
+export class LandingPageComponent {
+  private readonly authService = inject(AuthService);
+
+  startGoogleSignIn(): void {
+    this.authService.startGoogleSignIn();
+  }
+}

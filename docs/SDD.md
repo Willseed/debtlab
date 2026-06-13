@@ -952,13 +952,14 @@ apple + Apple sub claim
 ## 12.3 Google Login Flow
 
 1. User clicks "Continue with Google".
-2. Frontend obtains Google credential or authorization code.
-3. Frontend sends token data to `POST /api/auth/google`.
-4. Worker verifies the token with Google.
-5. Worker extracts provider subject, email, name, and picture.
-6. Worker creates or updates local user identity.
-7. Worker issues app session cookie.
-8. Frontend receives current user profile.
+2. Frontend navigates to `GET /api/auth/google/start`.
+3. Worker creates an OAuth state cookie and redirects to Google.
+4. Google redirects back to `GET /api/auth/google/callback` with `code` and `state`.
+5. Worker validates state, exchanges the code for tokens, and verifies the Google ID token.
+6. Worker extracts provider subject, email, name, and picture.
+7. Worker creates or updates local user identity.
+8. Worker issues app session cookie.
+9. Worker redirects the user to `/dashboard`.
 
 ## 12.4 Apple Login Flow
 
@@ -1053,6 +1054,14 @@ INTERNAL_ERROR
 ```
 
 ## 13.3 Auth APIs
+
+## GET /api/auth/google/start
+
+Redirects the browser to Google OAuth after setting an HttpOnly OAuth state cookie.
+
+## GET /api/auth/google/callback
+
+Validates OAuth state, exchanges the Google authorization code, verifies the Google ID token, creates or updates the local user identity, issues the `labsplit_session` cookie, and redirects to `/dashboard`.
 
 ## POST /api/auth/google
 

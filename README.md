@@ -11,6 +11,8 @@ Private lab expense splitter for `https://lab.buy2330.cc`.
 - Playwright E2E tests.
 - Lighthouse CI quality gate.
 
+Production `/api/*` requests are served by the Cloudflare Worker route `lab.buy2330.cc/api/*`.
+
 ## Local Setup
 
 Enable pnpm with Corepack, then install dependencies:
