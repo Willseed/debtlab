@@ -37,7 +37,7 @@ Run the `Deploy Cloudflare Worker` workflow manually after `CLOUDFLARE_API_TOKEN
 
 ### GET `/api/auth/google/start`
 
-Starts the backend Google OAuth authorization-code flow. The Worker sets an HttpOnly OAuth state cookie and redirects the browser to Google.
+Starts the backend Google OAuth authorization-code flow. The Worker sets an HttpOnly OAuth state cookie and redirects the browser to Google without forcing account selection, so Google can reuse an existing Google session when possible.
 
 ### GET `/api/auth/google/callback`
 

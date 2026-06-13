@@ -953,7 +953,7 @@ apple + Apple sub claim
 
 1. User clicks "Continue with Google".
 2. Frontend navigates to `GET /api/auth/google/start`.
-3. Worker creates an OAuth state cookie and redirects to Google.
+3. Worker creates an OAuth state cookie and redirects to Google without forcing account selection.
 4. Google redirects back to `GET /api/auth/google/callback` with `code` and `state`.
 5. Worker validates state, exchanges the code for tokens, and verifies the Google ID token.
 6. Worker extracts provider subject, email, name, and picture.

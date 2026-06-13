@@ -73,7 +73,6 @@ export function buildGoogleAuthorizationUrl(config: GoogleOAuthConfig, state: st
   url.searchParams.set('response_type', 'code');
   url.searchParams.set('scope', 'openid email profile');
   url.searchParams.set('state', state);
-  url.searchParams.set('prompt', 'select_account');
 
   return url.toString();
 }

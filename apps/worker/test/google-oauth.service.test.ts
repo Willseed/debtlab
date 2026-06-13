@@ -32,7 +32,7 @@ test('builds a Google authorization URL with backend callback and state', () => 
   assert.equal(url.searchParams.get('response_type'), 'code');
   assert.equal(url.searchParams.get('scope'), 'openid email profile');
   assert.equal(url.searchParams.get('state'), 'csrf-state');
-  assert.equal(url.searchParams.get('prompt'), 'select_account');
+  assert.equal(url.searchParams.get('prompt'), null);
 });
 
 test('reads Google OAuth config from Worker bindings', () => {
