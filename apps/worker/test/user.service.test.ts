@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { findOrCreateGoogleUser, findCurrentUserById } from '../src/services/user.service';
+import type { SessionUser } from '../src/types';
 
 type UserRow = {
   readonly id: string;
@@ -10,6 +11,16 @@ type UserRow = {
   readonly avatar_url: string | null;
   readonly role: 'member' | 'admin';
   readonly status: 'active' | 'disabled' | 'pending';
+};
+
+type UserRowSeed = Partial<UserRow> & Pick<UserRow, 'id'>;
+type GoogleProfile = Parameters<typeof findOrCreateGoogleUser>[1];
+
+const GOOGLE_SUBJECT = 'google-subject';
+const NEW_GOOGLE_PROFILE: GoogleProfile = {
+  subject: GOOGLE_SUBJECT,
+  email: 'new-user@example.com',
+  displayName: 'New User',
 };
 
 class FakeD1Database {
@@ -93,34 +104,17 @@ class FakeD1PreparedStatement {
 }
 
 test('first Google user bootstraps as active admin in an empty database', async () => {
-  const db = new FakeD1Database();
-
-  const user = await findOrCreateGoogleUser(db as unknown as D1Database, {
-    subject: 'google-subject',
-    email: 'new-user@example.com',
-    displayName: 'New User',
-  });
+  const user = await createGoogleUser(new FakeD1Database(), NEW_GOOGLE_PROFILE);
 
   assert.equal(user.status, 'active');
   assert.equal(user.role, 'admin');
 });
 
 test('later new Google users are pending until approved', async () => {
-  const db = new FakeD1Database();
-  db.users.set('usr_existing', {
-    id: 'usr_existing',
-    email: 'existing@example.com',
-    display_name: 'Existing User',
-    avatar_url: null,
-    role: 'admin',
-    status: 'active',
-  });
-
-  const user = await findOrCreateGoogleUser(db as unknown as D1Database, {
-    subject: 'google-subject',
-    email: 'new-user@example.com',
-    displayName: 'New User',
-  });
+  const user = await createGoogleUser(
+    createDbWithExistingUser({ id: 'usr_existing', role: 'admin' }),
+    NEW_GOOGLE_PROFILE,
+  );
 
   assert.equal(user.status, 'pending');
   assert.equal(user.role, 'member');
@@ -128,105 +122,66 @@ test('later new Google users are pending until approved', async () => {
 
 test('current user lookup reads current role and status from D1', async () => {
   const db = new FakeD1Database();
-  db.users.set('usr_1', {
+  const admin = seedUser(db, {
     id: 'usr_1',
     email: 'admin@example.com',
     display_name: 'Admin',
-    avatar_url: null,
     role: 'admin',
     status: 'disabled',
   });
 
-  assert.deepEqual(await findCurrentUserById(db as unknown as D1Database, 'usr_1'), {
-    id: 'usr_1',
-    email: 'admin@example.com',
-    displayName: 'Admin',
-    avatarUrl: null,
-    role: 'admin',
-    status: 'disabled',
-  });
+  assert.deepEqual(await findCurrentUser(db, admin.id), sessionFromRow(admin));
 });
 
 test('existing Google users keep active approval while profile data updates', async () => {
   const db = new FakeD1Database();
-  db.users.set('usr_existing', {
+  const existing = seedUser(db, {
     id: 'usr_existing',
     email: 'old@example.com',
     display_name: null,
-    avatar_url: null,
     role: 'admin',
-    status: 'active',
   });
-  db.identities.set('google-subject', 'usr_existing');
+  seedGoogleIdentity(db, existing.id);
 
-  const user = await findOrCreateGoogleUser(db as unknown as D1Database, {
-    subject: 'google-subject',
+  const user = await createGoogleUser(db, {
+    subject: GOOGLE_SUBJECT,
     displayName: 'Updated Name',
     avatarUrl: 'https://example.com/avatar.png',
   });
 
-  assert.deepEqual(user, {
-    id: 'usr_existing',
-    email: 'old@example.com',
-    displayName: 'Updated Name',
-    avatarUrl: 'https://example.com/avatar.png',
-    role: 'admin',
-    status: 'active',
-  });
+  assert.deepEqual(
+    user,
+    sessionFromRow(existing, {
+      displayName: 'Updated Name',
+      avatarUrl: 'https://example.com/avatar.png',
+    }),
+  );
 });
 
 test('existing Google users update verified email and keep existing display fields when missing', async () => {
   const db = new FakeD1Database();
-  db.users.set('usr_existing', {
+  const existing = seedUser(db, {
     id: 'usr_existing',
     email: 'old@example.com',
     display_name: 'Existing Name',
     avatar_url: 'https://example.com/old.png',
-    role: 'member',
-    status: 'active',
   });
-  db.identities.set('google-subject', 'usr_existing');
+  seedGoogleIdentity(db, existing.id);
 
-  const user = await findOrCreateGoogleUser(db as unknown as D1Database, {
-    subject: 'google-subject',
+  const user = await createGoogleUser(db, {
+    subject: GOOGLE_SUBJECT,
     email: 'new@example.com',
   });
 
-  assert.deepEqual(user, {
-    id: 'usr_existing',
-    email: 'new@example.com',
-    displayName: 'Existing Name',
-    avatarUrl: 'https://example.com/old.png',
-    role: 'member',
-    status: 'active',
-  });
+  assert.deepEqual(user, sessionFromRow(existing, { email: 'new@example.com' }));
 });
 
 test('new Google users fall back to email or subject for display name', async () => {
-  const emailDb = new FakeD1Database();
-  const subjectDb = new FakeD1Database();
-  emailDb.users.set('usr_existing', {
-    id: 'usr_existing',
-    email: 'existing@example.com',
-    display_name: 'Existing User',
-    avatar_url: null,
-    role: 'admin',
-    status: 'active',
-  });
-  subjectDb.users.set('usr_existing', {
-    id: 'usr_existing',
-    email: 'existing@example.com',
-    display_name: 'Existing User',
-    avatar_url: null,
-    role: 'admin',
-    status: 'active',
-  });
-
-  const emailUser = await findOrCreateGoogleUser(emailDb as unknown as D1Database, {
+  const emailUser = await createGoogleUser(createDbWithExistingUser(), {
     subject: 'email-subject',
     email: 'email-only@example.com',
   });
-  const subjectUser = await findOrCreateGoogleUser(subjectDb as unknown as D1Database, {
+  const subjectUser = await createGoogleUser(createDbWithExistingUser(), {
     subject: 'subject-only',
   });
 
@@ -238,42 +193,75 @@ test('new Google users fall back to email or subject for display name', async ()
 
 test('current user lookup falls back to email or ID for display name', async () => {
   const db = new FakeD1Database();
-  db.users.set('usr_email', {
+  const emailFallback = seedUser(db, {
     id: 'usr_email',
     email: 'email-fallback@example.com',
     display_name: null,
-    avatar_url: null,
-    role: 'member',
-    status: 'active',
   });
-  db.users.set('usr_id', {
+  const idFallback = seedUser(db, {
     id: 'usr_id',
     email: null,
     display_name: null,
-    avatar_url: null,
-    role: 'member',
-    status: 'active',
   });
 
-  assert.equal(
-    (await findCurrentUserById(db as unknown as D1Database, 'usr_email'))?.displayName,
-    'email-fallback@example.com',
-  );
-  assert.deepEqual(await findCurrentUserById(db as unknown as D1Database, 'usr_id'), {
-    id: 'usr_id',
-    email: undefined,
-    displayName: 'usr_id',
-    avatarUrl: null,
-    role: 'member',
-    status: 'active',
-  });
+  assert.equal((await findCurrentUser(db, emailFallback.id))?.displayName, emailFallback.email);
+  assert.deepEqual(await findCurrentUser(db, idFallback.id), sessionFromRow(idFallback));
 });
 
 test('current user lookup returns null for missing users', async () => {
-  const db = new FakeD1Database();
-
-  assert.equal(await findCurrentUserById(db as unknown as D1Database, 'missing'), null);
+  assert.equal(await findCurrentUser(new FakeD1Database(), 'missing'), null);
 });
+
+function asD1(db: FakeD1Database): D1Database {
+  return db as unknown as D1Database;
+}
+
+function createGoogleUser(db: FakeD1Database, profile: GoogleProfile): Promise<SessionUser> {
+  return findOrCreateGoogleUser(asD1(db), profile);
+}
+
+function findCurrentUser(db: FakeD1Database, userId: string): Promise<SessionUser | null> {
+  return findCurrentUserById(asD1(db), userId);
+}
+
+function createDbWithExistingUser(seed: UserRowSeed = { id: 'usr_existing' }): FakeD1Database {
+  const db = new FakeD1Database();
+  seedUser(db, seed);
+  return db;
+}
+
+function seedUser(db: FakeD1Database, seed: UserRowSeed): UserRow {
+  const user = makeUserRow(seed);
+  db.users.set(user.id, user);
+  return user;
+}
+
+function makeUserRow(seed: UserRowSeed): UserRow {
+  return {
+    email: 'existing@example.com',
+    display_name: 'Existing User',
+    avatar_url: null,
+    role: 'member',
+    status: 'active',
+    ...seed,
+  };
+}
+
+function seedGoogleIdentity(db: FakeD1Database, userId: string, subject = GOOGLE_SUBJECT): void {
+  db.identities.set(subject, userId);
+}
+
+function sessionFromRow(row: UserRow, overrides: Partial<SessionUser> = {}): SessionUser {
+  return {
+    id: row.id,
+    email: row.email ?? undefined,
+    displayName: row.display_name ?? row.email ?? row.id,
+    avatarUrl: row.avatar_url,
+    role: row.role,
+    status: row.status,
+    ...overrides,
+  };
+}
 
 function readNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
