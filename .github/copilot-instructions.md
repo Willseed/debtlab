@@ -1,6 +1,6 @@
 # GitHub Copilot Instructions for DebtLab / LabSplit Black Gold
 
-These repository instructions apply to GitHub Copilot and any AI coding agent working on this project. Keep this file in sync with `.github/copilot-instructions.md` whenever agent policy changes.
+These repository instructions apply to GitHub Copilot and any AI coding agent working on this project. Keep this file in sync with `AGENTS.md` whenever agent policy changes.
 
 ## Required context
 

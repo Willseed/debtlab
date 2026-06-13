@@ -4,11 +4,11 @@
 
 ## 0. Agent Configuration
 
-Before using Codex or any AI coding agent, place `AGENTS.md` at the repository root.
+Keep `AGENTS.md` at the repository root for general AI coding agents and `.github/copilot-instructions.md` for GitHub Copilot repository instructions.
 
-`AGENTS.md` must be read before this SDD.
+`AGENTS.md` must be read before this SDD. GitHub Copilot instructions must stay synchronized with `AGENTS.md`.
 
-Required reading order for Codex:
+Required reading order for AI coding agents:
 
 1. `AGENTS.md`
 2. `docs/SDD.md`
@@ -19,7 +19,7 @@ Required reading order for Codex:
 7. `docs/LIGHTHOUSE.md`
 8. `README.md`
 
-`AGENTS.md` defines agent behavior, forbidden technologies, test requirements, secret handling rules, and implementation workflow.
+`AGENTS.md` and `.github/copilot-instructions.md` define agent behavior, forbidden technologies, test requirements, secret handling rules, and implementation workflow.
 
 This SDD defines product and system design.
 
@@ -244,6 +244,8 @@ Cloudflare D1
 
 ```txt
 lab-split/
+├── .github/
+│   └── copilot-instructions.md
 ├── AGENTS.md
 ├── apps/
 │   ├── web/
@@ -2892,14 +2894,14 @@ The MVP is complete when:
 
 ---
 
-## 29. Codex Implementation Prompt
+## 29. AI Coding Agent Implementation Prompt
 
-Use the following prompt when starting Codex:
+Use the following prompt when starting Codex or another AI coding agent:
 
 ```txt
 You are building a full-stack Cloudflare web app called LabSplit Black Gold.
 
-Read AGENTS.md first. Then read docs/SDD.md and docs/DESIGN.md before making changes.
+Read AGENTS.md first. If you are GitHub Copilot, also follow .github/copilot-instructions.md. Then read docs/SDD.md and docs/DESIGN.md before making changes.
 
 Frontend must use Angular 22, not React.
 
