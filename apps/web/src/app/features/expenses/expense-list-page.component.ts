@@ -219,7 +219,7 @@ type ExpenseForm = {
   `,
 })
 export class ExpenseListPageComponent {
-  @ViewChild('firstExpenseField') private firstExpenseField?: ElementRef<HTMLInputElement>;
+  @ViewChild('firstExpenseField') private readonly firstExpenseField?: ElementRef<HTMLInputElement>;
 
   private readonly authService = inject(AuthService);
   private readonly expenseApiService = inject(ExpenseApiService);
