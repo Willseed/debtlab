@@ -18,6 +18,9 @@ jobs:
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
     steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
       - name: Checkout
         uses: actions/checkout@v5
 

@@ -26,6 +26,9 @@ jobs:
       CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
       LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
     steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
       - name: Checkout
         uses: actions/checkout@v5
 
