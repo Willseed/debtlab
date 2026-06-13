@@ -1,5 +1,7 @@
-import { ChangeDetectionStrategy, Component } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+
+import { AuthService } from './core/auth/auth.service';
 
 @Component({
   selector: 'app-root',
@@ -16,41 +18,46 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
         </a>
 
         <nav class="app-shell__nav" aria-label="主要導覽" i18n-aria-label="Nav label@@appNavLabel">
-          <a
-            routerLink="/"
-            routerLinkActive="is-active"
-            [routerLinkActiveOptions]="{ exact: true }"
-            i18n="Home nav@@appNavHome"
-          >
-            首頁
-          </a>
-          <a
-            routerLink="/dashboard"
-            routerLinkActive="is-active"
-            i18n="Dashboard nav@@appNavDashboard"
-          >
-            儀表板
-          </a>
-          <a
-            routerLink="/expenses"
-            routerLinkActive="is-active"
-            i18n="Expenses nav@@appNavExpenses"
-          >
-            支出
-          </a>
-          <a
-            routerLink="/settlements"
-            routerLinkActive="is-active"
-            i18n="Settlements nav@@appNavSettlements"
-          >
-            結算
-          </a>
-          <a routerLink="/admin" routerLinkActive="is-active" i18n="Admin nav@@appNavAdmin">
-            管理
-          </a>
-          <a routerLink="/garage" routerLinkActive="is-active" i18n="Garage nav@@appNavGarage">
-            車庫
-          </a>
+          @if (!isAuthenticated()) {
+            <a
+              routerLink="/"
+              routerLinkActive="is-active"
+              [routerLinkActiveOptions]="{ exact: true }"
+              i18n="Home nav@@appNavHome"
+            >
+              首頁
+            </a>
+          } @else {
+            <a
+              routerLink="/dashboard"
+              routerLinkActive="is-active"
+              i18n="Dashboard nav@@appNavDashboard"
+            >
+              儀表板
+            </a>
+            <a
+              routerLink="/expenses"
+              routerLinkActive="is-active"
+              i18n="Expenses nav@@appNavExpenses"
+            >
+              支出
+            </a>
+            <a
+              routerLink="/settlements"
+              routerLinkActive="is-active"
+              i18n="Settlements nav@@appNavSettlements"
+            >
+              結算
+            </a>
+            @if (isAdmin()) {
+              <a routerLink="/admin" routerLinkActive="is-active" i18n="Admin nav@@appNavAdmin">
+                管理
+              </a>
+            }
+            <a routerLink="/garage" routerLinkActive="is-active" i18n="Garage nav@@appNavGarage">
+              車庫
+            </a>
+          }
         </nav>
       </div>
     </header>
@@ -60,4 +67,9 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
     </main>
   `,
 })
-export class AppComponent {}
+export class AppComponent {
+  private readonly authService = inject(AuthService);
+
+  protected readonly isAuthenticated = this.authService.isAuthenticated;
+  protected readonly isAdmin = this.authService.isAdmin;
+}

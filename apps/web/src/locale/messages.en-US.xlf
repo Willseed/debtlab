@@ -17,6 +17,7 @@
       <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>Continue with Google</target></trans-unit>
       <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>Continue with Apple</target></trans-unit>
       <trans-unit id="landingAppleLoginDisabledNote" datatype="html"><source>Apple 登入審核中，暫不開放。</source><target>Sign in with Apple is under review and temporarily unavailable.</target></trans-unit>
+      <trans-unit id="landingDashboardCta" datatype="html"><source>前往儀表板</source><target>Go to dashboard</target></trans-unit>
       <trans-unit id="dashboardTitle" datatype="html"><source>儀表板</source><target>Dashboard</target></trans-unit>
       <trans-unit id="dashboardMetrics" datatype="html"><source>儀表板指標</source><target>Dashboard metrics</target></trans-unit>
       <trans-unit id="dashboardThisMonth" datatype="html"><source>本月支出</source><target>This Month</target></trans-unit>
@@ -36,6 +37,9 @@
       <trans-unit id="expensesParticipants" datatype="html"><source>參與者</source><target>Participants</target></trans-unit>
       <trans-unit id="expensesActions" datatype="html"><source>操作</source><target>Actions</target></trans-unit>
       <trans-unit id="expensesEmpty" datatype="html"><source>目前沒有支出。</source><target>There are no expenses yet.</target></trans-unit>
+      <trans-unit id="expenseCreateBack" datatype="html"><source>返回支出列表</source><target>Back to expenses</target></trans-unit>
+      <trans-unit id="expenseCreateTitle" datatype="html"><source>新增支出</source><target>Add Expense</target></trans-unit>
+      <trans-unit id="expenseCreatePlaceholder" datatype="html"><source>支出表單即將開放。</source><target>The expense form is coming soon.</target></trans-unit>
       <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
       <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>Balance Summary</target></trans-unit>
       <trans-unit id="settlementSuggestedTransfers" datatype="html"><source>建議轉帳</source><target>Suggested Transfers</target></trans-unit>

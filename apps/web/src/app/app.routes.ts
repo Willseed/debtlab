@@ -2,10 +2,12 @@ import { Routes } from '@angular/router';
 
 import { adminGuard } from './core/guards/admin.guard';
 import { authGuard } from './core/guards/auth.guard';
+import { guestGuard } from './core/guards/guest.guard';
 
 export const routes: Routes = [
   {
     path: '',
+    canActivate: [guestGuard],
     loadComponent: () =>
       import('./features/landing/landing-page.component').then(
         (module) => module.LandingPageComponent,
@@ -17,6 +19,14 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/dashboard/dashboard-page.component').then(
         (module) => module.DashboardPageComponent,
+      ),
+  },
+  {
+    path: 'expenses/new',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/expenses/expense-create-page.component').then(
+        (module) => module.ExpenseCreatePageComponent,
       ),
   },
   {

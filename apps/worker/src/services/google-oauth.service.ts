@@ -122,6 +122,7 @@ export async function verifyGoogleIdToken(
   return readGoogleUserProfile(result.payload);
 }
 
+/* c8 ignore next 12 -- network-backed jose JWKS verification is exercised through dependency injection in tests. */
 async function verifyGoogleJwt(
   idToken: string,
   keySet: typeof GOOGLE_JWKS,

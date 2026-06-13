@@ -26,3 +26,37 @@ test('Google login button starts the backend OAuth flow', async ({ page }) => {
 
   expect((await googleStartRequest).method()).toBe('GET');
 });
+
+test('authenticated member uses private navigation without seeing login or admin entry points', async ({
+  page,
+}) => {
+  await page.route('**/api/auth/me', async (route) => {
+    await route.fulfill({
+      contentType: 'application/json',
+      body: JSON.stringify({
+        user: {
+          id: 'usr_member',
+          email: 'member@example.com',
+          displayName: 'Member User',
+          role: 'member',
+          status: 'active',
+        },
+      }),
+    });
+  });
+
+  await page.goto('/');
+
+  await expect(page).toHaveURL(/\/dashboard$/u);
+  await expect(page.getByRole('button', { name: '使用 Google 繼續' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '首頁' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '管理' })).toHaveCount(0);
+
+  await page.getByRole('link', { name: '支出' }).click();
+  await expect(page).toHaveURL(/\/expenses$/u);
+  await expect(page.getByRole('heading', { name: '支出' })).toBeVisible();
+
+  await page.getByRole('link', { name: '新增支出' }).click();
+  await expect(page).toHaveURL(/\/expenses\/new$/u);
+  await expect(page.getByRole('heading', { name: '新增支出' })).toBeVisible();
+});

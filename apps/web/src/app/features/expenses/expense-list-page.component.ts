@@ -1,10 +1,11 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { ReactiveFormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-expense-list-page',
   standalone: true,
-  imports: [ReactiveFormsModule],
+  imports: [ReactiveFormsModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="page-section" aria-labelledby="expenses-title">
@@ -13,9 +14,13 @@ import { ReactiveFormsModule } from '@angular/forms';
           <h1 id="expenses-title" class="heading-section" i18n="Expenses title@@expensesTitle">
             支出
           </h1>
-          <button class="button button--primary" type="button" i18n="Add expense@@expensesAdd">
+          <a
+            class="button button--primary"
+            routerLink="/expenses/new"
+            i18n="Add expense@@expensesAdd"
+          >
             新增支出
-          </button>
+          </a>
         </div>
 
         <label class="field">

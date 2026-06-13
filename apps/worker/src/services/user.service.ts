@@ -34,7 +34,7 @@ export async function findOrCreateGoogleUser(
     db
       .prepare(
         `INSERT INTO users (id, email, display_name, avatar_url, role, status)
-         VALUES (?, ?, ?, ?, 'member', 'active')`,
+         VALUES (?, ?, ?, ?, 'member', 'pending')`,
       )
       .bind(userId, profile.email ?? null, displayName, profile.avatarUrl ?? null),
     db
@@ -51,8 +51,24 @@ export async function findOrCreateGoogleUser(
     displayName,
     avatarUrl: profile.avatarUrl,
     role: 'member',
-    status: 'active',
+    status: 'pending',
   };
+}
+
+export async function findCurrentUserById(
+  db: D1Database,
+  userId: string,
+): Promise<SessionUser | null> {
+  const row = await db
+    .prepare(
+      `SELECT id, email, display_name, avatar_url, role, status
+       FROM users
+       WHERE id = ?`,
+    )
+    .bind(userId)
+    .first<UserRow>();
+
+  return row ? mapUserRow(row) : null;
 }
 
 async function findUserByGoogleSubject(

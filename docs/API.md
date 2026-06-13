@@ -2,7 +2,7 @@
 
 All API routes live under `/api`.
 
-All request bodies must be validated with Zod. Private routes require a valid `labsplit_session` cookie. Admin routes also require admin authorization.
+All request bodies must be validated with Zod. Private routes require a valid `labsplit_session` cookie and a current active user record in D1. Admin routes also require current D1 admin authorization; role and status must not be trusted from stale session claims alone.
 
 ## Standard Error
 
@@ -53,7 +53,7 @@ Request:
 }
 ```
 
-The Worker must verify the token with Google before creating a local session.
+The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as pending users and must not receive an active private API session until approved.
 
 ### POST `/api/auth/apple`
 
