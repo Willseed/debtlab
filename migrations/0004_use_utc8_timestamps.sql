@@ -154,7 +154,9 @@ INSERT INTO users_new (id, email, display_name, avatar_url, role, status, create
 SELECT id, email, display_name, avatar_url, role, status, created_at, updated_at FROM users;
 
 INSERT INTO groups_new (id, name, description, currency, created_by, created_at, updated_at)
-SELECT id, name, description, currency, created_by, created_at, updated_at FROM groups;
+SELECT id, name, description, currency, created_by, created_at, updated_at
+FROM groups
+WHERE created_by IN (SELECT id FROM users);
 
 INSERT INTO easter_eggs_new (
   id,
@@ -170,10 +172,14 @@ SELECT id, code, name, description, trigger_type, trigger_value, is_enabled, cre
 FROM easter_eggs;
 
 INSERT INTO user_identities_new (id, user_id, provider, provider_subject, provider_email, created_at)
-SELECT id, user_id, provider, provider_subject, provider_email, created_at FROM user_identities;
+SELECT id, user_id, provider, provider_subject, provider_email, created_at
+FROM user_identities
+WHERE user_id IN (SELECT id FROM users);
 
 INSERT INTO group_members_new (id, group_id, user_id, role, status, joined_at)
-SELECT id, group_id, user_id, role, status, joined_at FROM group_members;
+SELECT id, group_id, user_id, role, status, joined_at
+FROM group_members
+WHERE group_id IN (SELECT id FROM groups) AND user_id IN (SELECT id FROM users);
 
 INSERT INTO expenses_new (
   id,
@@ -206,7 +212,11 @@ SELECT
   created_at,
   updated_at,
   deleted_at
-FROM expenses;
+FROM expenses
+WHERE
+  group_id IN (SELECT id FROM groups)
+  AND paid_by_user_id IN (SELECT id FROM users)
+  AND created_by IN (SELECT id FROM users);
 
 INSERT INTO expense_participants_new (
   id,
@@ -218,7 +228,8 @@ INSERT INTO expense_participants_new (
   settled_at
 )
 SELECT id, expense_id, user_id, share_amount, share_ratio, is_settled, settled_at
-FROM expense_participants;
+FROM expense_participants
+WHERE expense_id IN (SELECT id FROM expenses) AND user_id IN (SELECT id FROM users);
 
 INSERT INTO payments_new (
   id,
@@ -245,7 +256,12 @@ SELECT
   created_by,
   created_at,
   confirmed_at
-FROM payments;
+FROM payments
+WHERE
+  group_id IN (SELECT id FROM groups)
+  AND from_user_id IN (SELECT id FROM users)
+  AND to_user_id IN (SELECT id FROM users)
+  AND created_by IN (SELECT id FROM users);
 
 INSERT INTO audit_logs_new (
   id,
@@ -270,10 +286,13 @@ SELECT
   ip_address,
   user_agent,
   created_at
-FROM audit_logs;
+FROM audit_logs
+WHERE user_id IS NULL OR user_id IN (SELECT id FROM users);
 
 INSERT INTO user_easter_egg_unlocks_new (id, user_id, easter_egg_id, unlocked_at)
-SELECT id, user_id, easter_egg_id, unlocked_at FROM user_easter_egg_unlocks;
+SELECT id, user_id, easter_egg_id, unlocked_at
+FROM user_easter_egg_unlocks
+WHERE user_id IN (SELECT id FROM users) AND easter_egg_id IN (SELECT id FROM easter_eggs);
 
 DROP TABLE user_easter_egg_unlocks;
 DROP TABLE expense_participants;
