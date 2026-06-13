@@ -6,6 +6,9 @@ on:
     branches:
       - main
 
+env:
+  NODE_OPTIONS: --disable-warning=DEP0040
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -30,6 +33,7 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 24
+          package-manager-cache: false
 
       - name: Enable pnpm
         run: |
