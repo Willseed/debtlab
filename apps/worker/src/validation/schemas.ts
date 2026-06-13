@@ -51,6 +51,8 @@ export const expenseCreateSchema = z.object({
   participants: z.array(splitParticipantSchema).min(1),
 });
 
+export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
+
 export const memberPatchSchema = z
   .object({
     role: z.enum(['member', 'admin']).optional(),

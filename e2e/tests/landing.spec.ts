@@ -56,7 +56,39 @@ test('authenticated member uses private navigation without seeing login or admin
   await expect(page).toHaveURL(/\/expenses$/u);
   await expect(page.getByRole('heading', { name: '支出' })).toBeVisible();
 
-  await page.getByRole('link', { name: '新增支出' }).click();
-  await expect(page).toHaveURL(/\/expenses\/new$/u);
-  await expect(page.getByRole('heading', { name: '新增支出' })).toBeVisible();
+  await page.route('**/api/expenses', async (route) => {
+    if (route.request().method() === 'POST') {
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ expense: { id: 'exp_e2e' } }),
+      });
+      return;
+    }
+
+    await route.fallback();
+  });
+
+  await page.getByRole('button', { name: '新增支出' }).click();
+  const dialog = page.getByRole('dialog', { name: '新增支出' });
+  await expect(dialog).toBeVisible();
+  await dialog.getByLabel('標題').fill('E2E Coffee');
+  await dialog.getByLabel('金額').fill('1280');
+  await dialog.getByLabel('分類').selectOption('coffee');
+  await dialog.getByLabel('日期').fill('2026-06-13');
+
+  const createExpenseRequest = page.waitForRequest(
+    (request) => request.url().endsWith('/api/expenses') && request.method() === 'POST',
+  );
+  await page.getByRole('button', { name: '儲存' }).click();
+
+  const request = await createExpenseRequest;
+  expect(request.postDataJSON()).toMatchObject({
+    title: 'E2E Coffee',
+    amount: 1280,
+    category: 'coffee',
+    expenseDate: '2026-06-13',
+    splitMethod: 'equal',
+  });
+  await expect(page.getByText('E2E Coffee')).toBeVisible();
 });

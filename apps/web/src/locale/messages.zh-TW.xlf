@@ -37,9 +37,31 @@
       <trans-unit id="expensesParticipants" datatype="html"><source>參與者</source><target>參與者</target></trans-unit>
       <trans-unit id="expensesActions" datatype="html"><source>操作</source><target>操作</target></trans-unit>
       <trans-unit id="expensesEmpty" datatype="html"><source>目前沒有支出。</source><target>目前沒有支出。</target></trans-unit>
-      <trans-unit id="expenseCreateBack" datatype="html"><source>返回支出列表</source><target>返回支出列表</target></trans-unit>
+      <trans-unit id="expensesSelfParticipant" datatype="html"><source>本人</source><target>本人</target></trans-unit>
+      <trans-unit id="expensesCreatedAction" datatype="html"><source>已建立</source><target>已建立</target></trans-unit>
+      <trans-unit id="expenseModalEyebrow" datatype="html"><source>LabSplit Entry</source><target>LabSplit Entry</target></trans-unit>
       <trans-unit id="expenseCreateTitle" datatype="html"><source>新增支出</source><target>新增支出</target></trans-unit>
-      <trans-unit id="expenseCreatePlaceholder" datatype="html"><source>支出表單即將開放。</source><target>支出表單即將開放。</target></trans-unit>
+      <trans-unit id="expenseModalCloseLabel" datatype="html"><source>關閉新增支出視窗</source><target>關閉新增支出視窗</target></trans-unit>
+      <trans-unit id="expenseFieldTitle" datatype="html"><source>標題</source><target>標題</target></trans-unit>
+      <trans-unit id="expenseTitleError" datatype="html"><source>請輸入 1 到 120 個字的標題。</source><target>請輸入 1 到 120 個字的標題。</target></trans-unit>
+      <trans-unit id="expenseFieldAmount" datatype="html"><source>金額</source><target>金額</target></trans-unit>
+      <trans-unit id="expenseAmountError" datatype="html"><source>金額必須是正整數。</source><target>金額必須是正整數。</target></trans-unit>
+      <trans-unit id="expenseFieldCategory" datatype="html"><source>分類</source><target>分類</target></trans-unit>
+      <trans-unit id="expenseFieldDate" datatype="html"><source>日期</source><target>日期</target></trans-unit>
+      <trans-unit id="expenseFieldDescription" datatype="html"><source>備註</source><target>備註</target></trans-unit>
+      <trans-unit id="expensePayerSummary" datatype="html"><source>付款人</source><target>付款人</target></trans-unit>
+      <trans-unit id="expenseSplitSummary" datatype="html"><source>平均分攤：目前先記錄為本人支出。</source><target>平均分攤：目前先記錄為本人支出。</target></trans-unit>
+      <trans-unit id="expenseCancel" datatype="html"><source>取消</source><target>取消</target></trans-unit>
+      <trans-unit id="expenseSave" datatype="html"><source>儲存</source><target>儲存</target></trans-unit>
+      <trans-unit id="expenseAuthRequired" datatype="html"><source>請先登入後再新增支出。</source><target>請先登入後再新增支出。</target></trans-unit>
+      <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>支出建立失敗，請稍後再試。</target></trans-unit>
+      <trans-unit id="expenseCategoryFood" datatype="html"><source>食物</source><target>食物</target></trans-unit>
+      <trans-unit id="expenseCategoryCoffee" datatype="html"><source>咖啡</source><target>咖啡</target></trans-unit>
+      <trans-unit id="expenseCategoryEquipment" datatype="html"><source>設備</source><target>設備</target></trans-unit>
+      <trans-unit id="expenseCategoryReagent" datatype="html"><source>試劑</source><target>試劑</target></trans-unit>
+      <trans-unit id="expenseCategoryTravel" datatype="html"><source>差旅</source><target>差旅</target></trans-unit>
+      <trans-unit id="expenseCategoryMeeting" datatype="html"><source>會議</source><target>會議</target></trans-unit>
+      <trans-unit id="expenseCategoryOther" datatype="html"><source>其他</source><target>其他</target></trans-unit>
       <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>結算</target></trans-unit>
       <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>餘額總覽</target></trans-unit>
       <trans-unit id="settlementSuggestedTransfers" datatype="html"><source>建議轉帳</source><target>建議轉帳</target></trans-unit>

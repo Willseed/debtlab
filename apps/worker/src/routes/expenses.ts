@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { errorResponse, notImplemented } from '../http/error-response';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
+import { createExpense } from '../services/expense.service';
 import { calculateExpenseShares } from '../services/split.service';
 import { AppBindings } from '../types';
 import { expenseCreateSchema } from '../validation/schemas';
@@ -29,8 +30,24 @@ expenseRoutes.post('/', async (c) => {
     );
   }
 
+  const currentUser = c.get('currentUser');
+
+  if (
+    parsed.data.paidByUserId !== currentUser.id ||
+    parsed.data.participants.some((participant) => participant.userId !== currentUser.id)
+  ) {
+    return errorResponse(
+      c,
+      403,
+      'FORBIDDEN',
+      'Expense creation is currently limited to the authenticated user.',
+    );
+  }
+
+  let shares: ReturnType<typeof calculateExpenseShares>;
+
   try {
-    calculateExpenseShares({
+    shares = calculateExpenseShares({
       amount: parsed.data.amount,
       splitMethod: parsed.data.splitMethod,
       participants: parsed.data.participants,
@@ -39,7 +56,9 @@ expenseRoutes.post('/', async (c) => {
     return errorResponse(c, 422, 'SPLIT_TOTAL_MISMATCH', readErrorMessage(error));
   }
 
-  return notImplemented(c, 'Expense persistence is not implemented yet.');
+  const expenseId = await createExpense(c.env.DB, currentUser, parsed.data, shares);
+
+  return c.json({ expense: { id: expenseId } }, 201);
 });
 
 expenseRoutes.get('/:expenseId', (c) => {

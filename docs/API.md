@@ -4,6 +4,8 @@ All API routes live under `/api`.
 
 All request bodies must be validated with Zod. Private routes require a valid `labsplit_session` cookie and a current active user record in D1. Admin routes also require current D1 admin authorization; role and status must not be trusted from stale session claims alone.
 
+D1 timestamp defaults and Worker-managed timestamp updates use `datetime('now', '+8 hours')` so stored operational timestamps are UTC+8 text values.
+
 ## Standard Error
 
 ```json
@@ -124,7 +126,7 @@ cursor
 
 ### POST `/api/expenses`
 
-Private active member route. Creates an expense and participant shares. The sum of shares must equal `amount`.
+Private active member route. Creates an expense and participant shares in D1. The sum of shares must equal `amount`. The MVP UI creates a self-paid/self-participated expense for the authenticated user; direct API calls cannot create expenses on behalf of other users.
 
 Required split methods:
 

@@ -100,7 +100,7 @@ async function updateGoogleUserProfile(
          SET email = COALESCE(?, email),
              display_name = COALESCE(?, display_name),
              avatar_url = COALESCE(?, avatar_url),
-             updated_at = CURRENT_TIMESTAMP
+             updated_at = datetime('now', '+8 hours')
          WHERE id = ?`,
       )
       .bind(profile.email ?? null, profile.displayName ?? null, profile.avatarUrl ?? null, userId),

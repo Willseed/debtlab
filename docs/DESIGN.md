@@ -137,6 +137,13 @@ Modals use:
 3. Accessible focus trap.
 4. Clear primary and cancel actions.
 
+Modal motion:
+
+1. Backdrop fades in under `180ms`.
+2. Panel fades and translates up to `10px` under `180ms`.
+3. Form fields may reveal with short staggered opacity/translate transitions.
+4. Reduced-motion preferences must disable these transitions.
+
 ## Motion
 
 Allowed motion:

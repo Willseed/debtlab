@@ -22,14 +22,6 @@ export const routes: Routes = [
       ),
   },
   {
-    path: 'expenses/new',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/expenses/expense-create-page.component').then(
-        (module) => module.ExpenseCreatePageComponent,
-      ),
-  },
-  {
     path: 'expenses',
     canActivate: [authGuard],
     loadComponent: () =>

@@ -107,7 +107,13 @@
   max-width: 28rem;
 }
 
-.field input {
+.field--wide {
+  max-width: none;
+}
+
+.field input,
+.field select,
+.field textarea {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
@@ -116,10 +122,22 @@
   padding: 0 var(--space-3);
 }
 
-.field input:focus-visible {
+.field textarea {
+  padding: var(--space-3);
+  resize: vertical;
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
   border-color: var(--color-gold);
   box-shadow: var(--focus-ring);
   outline: none;
+}
+
+.field__error {
+  color: var(--color-danger);
+  font-size: 0.9rem;
 }
 
 .table-wrap {
@@ -146,4 +164,92 @@ th {
 
 tr:hover td {
   border-bottom-color: var(--color-gold-muted);
+}
+
+.modal-backdrop {
+  animation: modal-fade 160ms ease-out;
+  background: rgb(0 0 0 / 0.72);
+  inset: 0;
+  position: fixed;
+  z-index: 20;
+}
+
+.modal-panel {
+  animation: modal-panel-in 170ms ease-out;
+  background:
+    linear-gradient(145deg, rgb(214 168 79 / 0.1), transparent 42%), var(--color-surface-elevated);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-gold);
+  color: var(--color-text);
+  left: 50%;
+  max-height: min(90vh, 46rem);
+  max-width: min(92vw, 42rem);
+  overflow: auto;
+  padding: var(--space-5);
+  position: fixed;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  z-index: 21;
+}
+
+.modal-panel:focus {
+  outline: none;
+}
+
+.modal-panel__header,
+.modal-panel__actions {
+  align-items: center;
+  display: flex;
+  gap: var(--space-4);
+  justify-content: space-between;
+}
+
+.modal-panel__actions {
+  justify-content: flex-end;
+}
+
+.expense-form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.expense-modal__field {
+  animation: field-rise 160ms ease-out both;
+  animation-delay: calc(var(--field-index, 0) * 34ms);
+}
+
+.expense-modal__summary {
+  background: rgb(214 168 79 / 0.08);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+}
+
+.expense-modal__summary strong {
+  color: var(--color-text);
+}
+
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modal-panel-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 10px)) scale(0.98);
+  }
+}
+
+@keyframes field-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
 }
