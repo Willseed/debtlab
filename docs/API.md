@@ -55,7 +55,7 @@ Request:
 }
 ```
 
-The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as pending users and must not receive an active private API session until approved.
+The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as pending users and must not receive an active private API session until approved, except the first user in an empty reset database, who bootstraps as active admin.
 
 ### POST `/api/auth/apple`
 

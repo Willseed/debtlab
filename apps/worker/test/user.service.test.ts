@@ -39,6 +39,10 @@ class FakeD1PreparedStatement {
   }
 
   async first<T>() {
+    if (this.sql.includes('COUNT(*) AS count')) {
+      return { count: this.db.users.size } as T;
+    }
+
     if (this.sql.includes('FROM user_identities')) {
       const subject = String(this.values[0]);
       const userId = this.db.identities.get(subject);
@@ -54,14 +58,14 @@ class FakeD1PreparedStatement {
 
   async run() {
     if (this.sql.includes('INSERT INTO users')) {
-      const [id, email, displayName, avatarUrl] = this.values;
+      const [id, email, displayName, avatarUrl, role, status] = this.values;
       this.db.users.set(String(id), {
         id: String(id),
         email: readNullableString(email),
         display_name: readNullableString(displayName),
         avatar_url: readNullableString(avatarUrl),
-        role: 'member',
-        status: 'pending',
+        role: role === 'admin' ? 'admin' : 'member',
+        status: status === 'active' ? 'active' : 'pending',
       });
     }
 
@@ -88,8 +92,29 @@ class FakeD1PreparedStatement {
   }
 }
 
-test('new Google users are pending until approved', async () => {
+test('first Google user bootstraps as active admin in an empty database', async () => {
   const db = new FakeD1Database();
+
+  const user = await findOrCreateGoogleUser(db as unknown as D1Database, {
+    subject: 'google-subject',
+    email: 'new-user@example.com',
+    displayName: 'New User',
+  });
+
+  assert.equal(user.status, 'active');
+  assert.equal(user.role, 'admin');
+});
+
+test('later new Google users are pending until approved', async () => {
+  const db = new FakeD1Database();
+  db.users.set('usr_existing', {
+    id: 'usr_existing',
+    email: 'existing@example.com',
+    display_name: 'Existing User',
+    avatar_url: null,
+    role: 'admin',
+    status: 'active',
+  });
 
   const user = await findOrCreateGoogleUser(db as unknown as D1Database, {
     subject: 'google-subject',
@@ -180,6 +205,22 @@ test('existing Google users update verified email and keep existing display fiel
 test('new Google users fall back to email or subject for display name', async () => {
   const emailDb = new FakeD1Database();
   const subjectDb = new FakeD1Database();
+  emailDb.users.set('usr_existing', {
+    id: 'usr_existing',
+    email: 'existing@example.com',
+    display_name: 'Existing User',
+    avatar_url: null,
+    role: 'admin',
+    status: 'active',
+  });
+  subjectDb.users.set('usr_existing', {
+    id: 'usr_existing',
+    email: 'existing@example.com',
+    display_name: 'Existing User',
+    avatar_url: null,
+    role: 'admin',
+    status: 'active',
+  });
 
   const emailUser = await findOrCreateGoogleUser(emailDb as unknown as D1Database, {
     subject: 'email-subject',

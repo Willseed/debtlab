@@ -29,14 +29,17 @@ export async function findOrCreateGoogleUser(
   const userId = crypto.randomUUID();
   const identityId = crypto.randomUUID();
   const displayName = profile.displayName ?? profile.email ?? `Google user ${profile.subject}`;
+  const shouldBootstrapFirstUser = (await countUsers(db)) === 0;
+  const role: UserRole = shouldBootstrapFirstUser ? 'admin' : 'member';
+  const status: UserStatus = shouldBootstrapFirstUser ? 'active' : 'pending';
 
   await db.batch([
     db
       .prepare(
         `INSERT INTO users (id, email, display_name, avatar_url, role, status)
-         VALUES (?, ?, ?, ?, 'member', 'pending')`,
+         VALUES (?, ?, ?, ?, ?, ?)`,
       )
-      .bind(userId, profile.email ?? null, displayName, profile.avatarUrl ?? null),
+      .bind(userId, profile.email ?? null, displayName, profile.avatarUrl ?? null, role, status),
     db
       .prepare(
         `INSERT INTO user_identities (id, user_id, provider, provider_subject, provider_email)
@@ -50,9 +53,17 @@ export async function findOrCreateGoogleUser(
     email: profile.email,
     displayName,
     avatarUrl: profile.avatarUrl,
-    role: 'member',
-    status: 'pending',
+    role,
+    status,
   };
+}
+
+async function countUsers(db: D1Database): Promise<number> {
+  const row = await db
+    .prepare('SELECT COUNT(*) AS count FROM users')
+    .first<{ readonly count: number }>();
+
+  return row?.count ?? 0;
 }
 
 export async function findCurrentUserById(

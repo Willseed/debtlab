@@ -959,7 +959,7 @@ apple + Apple sub claim
 5. Worker validates state, exchanges the code for tokens, and verifies the Google ID token.
 6. Worker extracts provider subject, email, name, and picture.
 7. Worker creates or updates local user identity.
-8. Worker issues app session cookie only for active approved users.
+8. Worker issues app session cookie only for active approved users. In an empty reset database, the first Google user bootstraps as active admin; later unknown users remain pending.
 9. Worker redirects the user to `/dashboard`.
 
 ## 12.4 Apple Login Flow
@@ -1963,7 +1963,7 @@ Precision Rookie
 3. Frontend OAuth claims must not be trusted.
 4. JWT session must verify signature, expiration, and issued-at values.
 5. Disabled users must not be able to create new sessions.
-6. Unknown OAuth identities must start as pending users until approved.
+6. Unknown OAuth identities must start as pending users until approved, except the first user in an empty reset database.
 7. Private and admin API authorization must use the current D1 user role/status instead of trusting stale session claims alone.
 
 ## 18.2 Authorization
