@@ -120,6 +120,6 @@ describe('BROWSER_WINDOW', () => {
   it('uses the global browser window by default', () => {
     TestBed.configureTestingModule({});
 
-    expect(TestBed.inject(BROWSER_WINDOW)).toBe(window);
+    expect(TestBed.inject(BROWSER_WINDOW)).toBe(globalThis.window);
   });
 });

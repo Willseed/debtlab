@@ -14,7 +14,7 @@ type LogoutResponse = {
 };
 
 export const BROWSER_WINDOW = new InjectionToken<Window>('Browser window', {
-  factory: () => window,
+  factory: () => globalThis.window,
 });
 
 @Injectable({ providedIn: 'root' })

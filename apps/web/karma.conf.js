@@ -1,3 +1,5 @@
+const path = require('node:path');
+
 module.exports = function configureKarma(config) {
   config.set({
     basePath: '',
@@ -16,7 +18,7 @@ module.exports = function configureKarma(config) {
       suppressAll: true,
     },
     coverageReporter: {
-      dir: require('path').join(__dirname, '../../coverage/apps/web'),
+      dir: path.join(__dirname, '../../coverage/apps/web'),
       subdir: '.',
       reporters: [{ type: 'html' }, { type: 'text-summary' }, { type: 'lcovonly' }],
       check: {

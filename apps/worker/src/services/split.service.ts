@@ -120,23 +120,20 @@ export function calculateRatioSplit(
 
   const floorTotal = floors.reduce((sum, participant) => sum + participant.shareAmount, 0);
   const remainder = amount - floorTotal;
+  const sortedByRemainder = [...floors].sort((left, right) => {
+    const fractionDelta = right.fractionalRemainder - left.fractionalRemainder;
+    return fractionDelta === 0 ? left.index - right.index : fractionDelta;
+  });
   const remainderWinners = new Set(
-    [...floors]
-      .sort((left, right) => {
-        const fractionDelta = right.fractionalRemainder - left.fractionalRemainder;
-        return fractionDelta === 0 ? left.index - right.index : fractionDelta;
-      })
-      .slice(0, remainder)
-      .map((participant) => participant.index),
+    sortedByRemainder.slice(0, remainder).map((participant) => participant.index),
   );
+  const sortedByInputOrder = [...floors].sort((left, right) => left.index - right.index);
 
-  return floors
-    .sort((left, right) => left.index - right.index)
-    .map((participant) => ({
-      userId: participant.userId,
-      shareAmount: participant.shareAmount + (remainderWinners.has(participant.index) ? 1 : 0),
-      shareRatio: participant.ratio,
-    }));
+  return sortedByInputOrder.map((participant) => ({
+    userId: participant.userId,
+    shareAmount: participant.shareAmount + (remainderWinners.has(participant.index) ? 1 : 0),
+    shareRatio: participant.ratio,
+  }));
 }
 
 function assertPositiveInteger(value: number, message: string): void {

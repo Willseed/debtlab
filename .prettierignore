@@ -6,3 +6,4 @@ coverage
 .wrangler
 playwright-report
 apps/web/src/locale/*.xlf
+sonar-project.properties
