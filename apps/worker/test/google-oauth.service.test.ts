@@ -6,6 +6,7 @@ import {
   buildGoogleRedirectUri,
   createGoogleOAuthState,
   exchangeGoogleAuthorizationCode,
+  getGoogleOAuthStateCookieName,
   readGoogleOAuthConfig,
   readGoogleUserProfile,
   verifyGoogleIdToken,
@@ -75,6 +76,13 @@ test('creates high-entropy OAuth states', () => {
 
   assert.match(firstState, /^[0-9a-f]{64}$/u);
   assert.notEqual(firstState, secondState);
+});
+
+test('builds distinct OAuth state cookie names', () => {
+  assert.equal(
+    getGoogleOAuthStateCookieName('csrf-state'),
+    'labsplit_google_oauth_state_csrf-state',
+  );
 });
 
 test('exchanges a Google authorization code for an ID token', async () => {

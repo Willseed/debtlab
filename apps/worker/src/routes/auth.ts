@@ -12,7 +12,7 @@ import {
   buildGoogleAuthorizationUrl,
   createGoogleOAuthState,
   exchangeGoogleAuthorizationCode,
-  GOOGLE_OAUTH_STATE_COOKIE_NAME,
+  getGoogleOAuthStateCookieName,
   GoogleOAuthConfigurationError,
   GoogleOAuthVerificationError,
   readGoogleOAuthConfig,
@@ -40,15 +40,18 @@ authRoutes.get('/google/start', (c) => {
 });
 
 authRoutes.get('/google/callback', async (c) => {
-  const expectedState = getCookie(c, GOOGLE_OAUTH_STATE_COOKIE_NAME);
   const returnedState = c.req.query('state');
   const code = c.req.query('code');
+  const stateCookieName = returnedState ? getGoogleOAuthStateCookieName(returnedState) : null;
+  const expectedState = stateCookieName ? getCookie(c, stateCookieName) : undefined;
 
-  deleteCookie(c, GOOGLE_OAUTH_STATE_COOKIE_NAME, {
-    path: '/api/auth/google',
-    secure: true,
-    sameSite: 'Lax',
-  });
+  if (stateCookieName) {
+    deleteCookie(c, stateCookieName, {
+      path: '/api/auth/google',
+      secure: true,
+      sameSite: 'Lax',
+    });
+  }
 
   if (!expectedState || !returnedState || returnedState !== expectedState) {
     return errorResponse(c, 403, 'FORBIDDEN', 'Google OAuth state is invalid.');
@@ -124,7 +127,7 @@ authRoutes.post('/logout', (c) => {
 });
 
 function setGoogleStateCookie(c: Parameters<typeof setCookie>[0], state: string): void {
-  setCookie(c, GOOGLE_OAUTH_STATE_COOKIE_NAME, state, {
+  setCookie(c, getGoogleOAuthStateCookieName(state), state, {
     httpOnly: true,
     maxAge: OAUTH_STATE_TTL_SECONDS,
     path: '/api/auth/google',

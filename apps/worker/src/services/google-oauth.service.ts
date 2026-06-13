@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { Env } from '../types';
 
-export const GOOGLE_OAUTH_STATE_COOKIE_NAME = 'labsplit_google_oauth_state';
+export const GOOGLE_OAUTH_STATE_COOKIE_PREFIX = 'labsplit_google_oauth_state_';
 
 const GOOGLE_AUTHORIZATION_ENDPOINT = 'https://accounts.google.com/o/oauth2/v2/auth';
 const GOOGLE_TOKEN_ENDPOINT = 'https://oauth2.googleapis.com/token';
@@ -64,6 +64,10 @@ export function createGoogleOAuthState(): string {
   const bytes = new Uint8Array(STATE_BYTE_LENGTH);
   crypto.getRandomValues(bytes);
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+export function getGoogleOAuthStateCookieName(state: string): string {
+  return `${GOOGLE_OAUTH_STATE_COOKIE_PREFIX}${state}`;
 }
 
 export function buildGoogleAuthorizationUrl(config: GoogleOAuthConfig, state: string): string {
