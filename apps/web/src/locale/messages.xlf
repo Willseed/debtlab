@@ -331,7 +331,7 @@
         <note priority="1" from="description">Landing hero title</note>
       </trans-unit>
       <trans-unit id="landingHeroSubtitle" datatype="html">
-        <source> 給實驗室共同支出使用的私有拆帳儀表板。 </source>
+        <source> 給任何人使用的共同支出拆帳儀表板。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
           <context context-type="linenumber">15,20</context>
@@ -371,7 +371,7 @@
         <note priority="1" from="description">Apple login disabled note</note>
       </trans-unit>
       <trans-unit id="landingGoogleLoginInactiveError" datatype="html">
-        <source> Google 登入未完成：你的帳號尚未啟用或已停用，請聯絡管理員。 </source>
+        <source> Google 登入未完成：你的帳號已停用，請聯絡管理員。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
           <context context-type="linenumber">52,61</context>

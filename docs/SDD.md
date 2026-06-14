@@ -47,9 +47,9 @@ This SDD defines product and system design.
 
 ## 2. Executive Summary
 
-LabSplit Black Gold is a private expense-splitting web application for a laboratory. It allows lab members to record shared expenses, split costs among participants, calculate balances, suggest optimized settlements, and track payments. The application will be deployed on Cloudflare infrastructure and will use Cloudflare Workers for backend APIs, Cloudflare D1 for persistent relational storage, and Angular 22 for the frontend.
+LabSplit Black Gold is a publicly available, OAuth-gated expense-splitting web application. Any person with a supported OAuth identity can sign in, become an active member, record shared expenses, split costs among participants, calculate balances, suggest optimized settlements, and track payments. The application will be deployed on Cloudflare infrastructure and will use Cloudflare Workers for backend APIs, Cloudflare D1 for persistent relational storage, and Angular 22 for the frontend.
 
-The product must support Google OAuth and Sign in with Apple. Authentication must be verified on the backend, and local application authorization must be managed independently through local users, roles, and group membership records. While Apple review is pending, the Sign in with Apple UI remains visible but disabled and the backend Apple auth endpoint returns a disabled response without requiring Apple credentials.
+The product must support Google OAuth and Sign in with Apple. Authentication must be verified on the backend, and local application authorization must be managed independently through local users, roles, and group membership records. Verified Google users do not require admin approval before first use; disabled users remain blocked. While Apple review is pending, the Sign in with Apple UI remains visible but disabled and the backend Apple auth endpoint returns a disabled response without requiring Apple credentials.
 
 The visual style should be inspired by a luxury black-and-gold supercar dashboard aesthetic, referencing the provided Lamborghini-style design inspiration only as a mood reference. The application must not use Lamborghini logos, trademarks, copyrighted visual assets, or any copied brand identity.
 
@@ -63,8 +63,8 @@ This SDD is intended to be directly usable by Codex or another AI coding agent a
 
 ## 3.1 Product Goals
 
-1. Provide a private web application for laboratory expense tracking.
-2. Allow members to record shared expenses.
+1. Provide a publicly available OAuth-gated web application for shared expense tracking.
+2. Allow any authenticated active member to record shared expenses.
 3. Support equal split, custom amount split, and ratio-based split.
 4. Calculate member balances accurately.
 5. Suggest simplified settlement transfers.
@@ -100,7 +100,7 @@ The MVP will not include:
 1. Receipt OCR.
 2. Bank integration.
 3. LINE Pay, Apple Pay, or automatic money transfer.
-4. Public self-registration without OAuth.
+4. Password-based or email-only public self-registration without OAuth.
 5. Multi-currency exchange rate conversion.
 6. Native mobile applications.
 7. Complex approval workflows.
@@ -124,7 +124,7 @@ Guests can:
 
 Guests cannot:
 
-1. Access private expense data.
+1. Access authenticated expense data.
 2. View members.
 3. Create expenses.
 4. View settlements.
@@ -132,7 +132,7 @@ Guests cannot:
 
 ## 5.2 Member
 
-A member is an authenticated active lab user.
+A member is an authenticated active user.
 
 Members can:
 
@@ -463,13 +463,13 @@ Lab Expenses. Split With Precision.
 Required subtitle in zh-TW:
 
 ```txt
-給實驗室共同支出使用的私有拆帳儀表板。
+給任何人使用的共同支出拆帳儀表板。
 ```
 
 Required subtitle in en-US:
 
 ```txt
-A private expense cockpit for shared lab spending.
+An expense cockpit for shared spending, open to anyone with a supported sign-in.
 ```
 
 ## 9.2 Dashboard Page
@@ -864,7 +864,7 @@ Example:
 ```html
 <h1 i18n="Landing hero title@@landingHeroTitle">實驗室花費，精準拆帳</h1>
 
-<p i18n="Landing hero subtitle@@landingHeroSubtitle">給實驗室共同支出使用的私有拆帳儀表板。</p>
+<p i18n="Landing hero subtitle@@landingHeroSubtitle">給任何人使用的共同支出拆帳儀表板。</p>
 ```
 
 ## 11.3 TypeScript i18n
@@ -959,7 +959,7 @@ apple + Apple sub claim
 5. Worker validates state, exchanges the code for tokens, and verifies the Google ID token.
 6. Worker extracts provider subject, email, name, and picture.
 7. Worker creates or updates local user identity.
-8. Worker issues app session cookie only for active approved users. In an empty reset database, the first Google user bootstraps as active admin; later unknown users remain pending.
+8. Worker issues app session cookie only for active users. In an empty reset database, the first Google user bootstraps as active admin; later unknown Google users are created as active members without admin approval. Existing pending Google users are activated on their next verified login. Disabled users remain disabled and cannot receive a new session.
 9. Worker redirects the user to `/dashboard`.
 
 ## 12.4 Apple Login Flow
@@ -1958,20 +1958,20 @@ Precision Rookie
 
 ## 18.1 Authentication
 
-1. All private APIs must require valid session.
+1. All authenticated data APIs must require a valid session.
 2. OAuth credentials must be verified by the backend.
 3. Frontend OAuth claims must not be trusted.
 4. JWT session must verify signature, expiration, and issued-at values.
 5. Disabled users must not be able to create new sessions.
-6. Unknown OAuth identities must start as pending users until approved, except the first user in an empty reset database.
-7. Private and admin API authorization must use the current D1 user role/status instead of trusting stale session claims alone.
+6. Unknown Google OAuth identities are created as active users immediately after backend verification; the first user in an empty reset database bootstraps as admin, later users are members. Existing pending Google users are activated on their next verified login. No admin approval is required before first use.
+7. Authenticated and admin API authorization must use the current D1 user role/status instead of trusting stale session claims alone.
 
 ## 18.2 Authorization
 
 Rules:
 
 ```txt
-Guest: no private data access
+Guest: no authenticated data access
 Member: group data access
 Admin: full group administration access
 ```
@@ -2322,7 +2322,7 @@ CI must test:
 3. Mock login as member.
 4. Member redirects to dashboard.
 5. Logout clears session.
-6. Private route redirects guest to landing page.
+6. Authenticated route redirects guest to landing page.
 
 ## Dashboard Flow
 
@@ -2890,7 +2890,7 @@ The MVP is complete when:
 23. At least 3 Easter eggs are implemented.
 24. D1 migrations are reproducible.
 25. App deploys to Cloudflare.
-26. No unauthenticated user can access private data.
+26. No unauthenticated user can access authenticated user data.
 27. `ng test` passes.
 28. `ng lint` passes.
 29. ESLint has 0 errors and 0 warnings.

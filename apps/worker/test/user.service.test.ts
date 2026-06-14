@@ -77,7 +77,7 @@ class FakeD1PreparedStatement {
         display_name: readNullableString(displayName),
         avatar_url: readNullableString(avatarUrl),
         role: role === 'admin' ? 'admin' : 'member',
-        status: status === 'active' ? 'active' : 'pending',
+        status: readUserStatus(status),
       });
     }
 
@@ -96,6 +96,7 @@ class FakeD1PreparedStatement {
           email: readNullableString(email) ?? existing.email,
           display_name: readNullableString(displayName) ?? existing.display_name,
           avatar_url: readNullableString(avatarUrl) ?? existing.avatar_url,
+          status: existing.status === 'pending' ? 'active' : existing.status,
         });
       }
     }
@@ -111,13 +112,13 @@ test('first Google user bootstraps as active admin in an empty database', async 
   assert.equal(user.role, 'admin');
 });
 
-test('later new Google users are pending until approved', async () => {
+test('later new Google users activate immediately as members', async () => {
   const user = await createGoogleUser(
     createDbWithExistingUser({ id: 'usr_existing', role: 'admin' }),
     NEW_GOOGLE_PROFILE,
   );
 
-  assert.equal(user.status, 'pending');
+  assert.equal(user.status, 'active');
   assert.equal(user.role, 'member');
 });
 
@@ -157,6 +158,34 @@ test('existing Google users keep active approval while profile data updates', as
       avatarUrl: 'https://example.com/avatar.png',
     }),
   );
+});
+
+test('existing pending Google users activate on their next verified login', async () => {
+  const db = new FakeD1Database();
+  const existing = seedUser(db, {
+    id: 'usr_existing',
+    status: 'pending',
+  });
+  seedGoogleIdentity(db, existing.id);
+
+  const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
+
+  assert.equal(user.status, 'active');
+  assert.equal(db.users.get(existing.id)?.status, 'active');
+});
+
+test('existing disabled Google users stay disabled on verified login', async () => {
+  const db = new FakeD1Database();
+  const existing = seedUser(db, {
+    id: 'usr_existing',
+    status: 'disabled',
+  });
+  seedGoogleIdentity(db, existing.id);
+
+  const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
+
+  assert.equal(user.status, 'disabled');
+  assert.equal(db.users.get(existing.id)?.status, 'disabled');
 });
 
 test('existing Google users update verified email and keep existing display fields when missing', async () => {
@@ -266,4 +295,12 @@ function sessionFromRow(row: UserRow, overrides: Partial<SessionUser> = {}): Ses
 
 function readNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
+}
+
+function readUserStatus(value: unknown): UserRow['status'] {
+  if (value === 'active' || value === 'disabled' || value === 'pending') {
+    return value;
+  }
+
+  return 'pending';
 }

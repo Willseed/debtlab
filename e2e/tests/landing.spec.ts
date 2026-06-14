@@ -8,7 +8,7 @@ test('guest can view the zh-TW landing page login options', async ({ page }) => 
       name: '實驗室花費，精準拆帳',
     }),
   ).toBeVisible();
-  await expect(page.getByText('給實驗室共同支出使用的私有拆帳儀表板。')).toBeVisible();
+  await expect(page.getByText('給任何人使用的共同支出拆帳儀表板。')).toBeVisible();
   await expect(page.getByRole('button', { name: '使用 Google 繼續' })).toBeVisible();
   await expect(page.getByRole('button', { name: '使用 Apple 繼續' })).toBeDisabled();
   await expect(page.getByText('Apple 登入審核中，暫不開放。')).toBeVisible();
@@ -27,7 +27,7 @@ test('Google login button starts the backend OAuth flow', async ({ page }) => {
   expect((await googleStartRequest).method()).toBe('GET');
 });
 
-test('authenticated member uses private navigation without seeing login or admin entry points', async ({
+test('authenticated member uses authenticated navigation without seeing login or admin entry points', async ({
   page,
 }) => {
   await page.route('**/api/auth/me', async (route) => {

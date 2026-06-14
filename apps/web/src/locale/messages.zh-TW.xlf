@@ -12,12 +12,12 @@
       <trans-unit id="appNavAdmin" datatype="html"><source>管理</source><target>管理</target></trans-unit>
       <trans-unit id="appNavGarage" datatype="html"><source>車庫</source><target>車庫</target></trans-unit>
       <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>實驗室花費，精準拆帳</target></trans-unit>
-      <trans-unit id="landingHeroSubtitle" datatype="html"><source>給實驗室共同支出使用的私有拆帳儀表板。</source><target>給實驗室共同支出使用的私有拆帳儀表板。</target></trans-unit>
+      <trans-unit id="landingHeroSubtitle" datatype="html"><source>給任何人使用的共同支出拆帳儀表板。</source><target>給任何人使用的共同支出拆帳儀表板。</target></trans-unit>
       <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>登入提供者</target></trans-unit>
       <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>使用 Google 繼續</target></trans-unit>
       <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>使用 Apple 繼續</target></trans-unit>
       <trans-unit id="landingAppleLoginDisabledNote" datatype="html"><source>Apple 登入審核中，暫不開放。</source><target>Apple 登入審核中，暫不開放。</target></trans-unit>
-      <trans-unit id="landingGoogleLoginInactiveError" datatype="html"><source>Google 登入未完成：你的帳號尚未啟用或已停用，請聯絡管理員。</source><target>Google 登入未完成：你的帳號尚未啟用或已停用，請聯絡管理員。</target></trans-unit>
+      <trans-unit id="landingGoogleLoginInactiveError" datatype="html"><source>Google 登入未完成：你的帳號已停用，請聯絡管理員。</source><target>Google 登入未完成：你的帳號已停用，請聯絡管理員。</target></trans-unit>
       <trans-unit id="landingGoogleLoginGenericError" datatype="html"><source>Google 登入未完成，請稍後再試或聯絡管理員。</source><target>Google 登入未完成，請稍後再試或聯絡管理員。</target></trans-unit>
       <trans-unit id="landingDashboardCta" datatype="html"><source>前往儀表板</source><target>前往儀表板</target></trans-unit>
       <trans-unit id="dashboardTitle" datatype="html"><source>儀表板</source><target>儀表板</target></trans-unit>

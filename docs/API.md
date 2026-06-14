@@ -2,7 +2,7 @@
 
 All API routes live under `/api`.
 
-All request bodies must be validated with Zod. Private routes require a valid `labsplit_session` cookie and a current active user record in D1. Admin routes also require current D1 admin authorization; role and status must not be trusted from stale session claims alone.
+All request bodies must be validated with Zod. Authenticated routes require a valid `labsplit_session` cookie and a current active user record in D1. Admin routes also require current D1 admin authorization; role and status must not be trusted from stale session claims alone.
 
 D1 timestamp defaults and Worker-managed timestamp updates use `datetime('now', '+8 hours')` so stored operational timestamps are UTC+8 text values.
 
@@ -55,7 +55,7 @@ Request:
 }
 ```
 
-The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as pending users and must not receive an active private API session until approved, except the first user in an empty reset database, who bootstraps as active admin.
+The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as active users immediately: the first user in an empty reset database bootstraps as active admin, and later users are active members. Existing pending Google users are activated on their next verified login. Disabled users remain disabled and must not receive a new session.
 
 ### POST `/api/auth/apple`
 
@@ -103,7 +103,7 @@ Clears `labsplit_session`.
 
 ### GET `/api/members`
 
-Private. Returns active and historical members visible to the group.
+Authenticated. Returns active and historical members visible to the group.
 
 ### PATCH `/api/members/:userId`
 
@@ -113,7 +113,7 @@ Admin only. Updates role or status and writes audit logs for role/status changes
 
 ### GET `/api/expenses`
 
-Private. Supports filters:
+Authenticated. Supports filters:
 
 ```txt
 from
@@ -126,7 +126,7 @@ cursor
 
 ### POST `/api/expenses`
 
-Private active member route. Creates an expense and participant shares in D1. The sum of shares must equal `amount`. The MVP UI creates a self-paid/self-participated expense for the authenticated user; direct API calls cannot create expenses on behalf of other users.
+Authenticated active member route. Creates an expense and participant shares in D1. The sum of shares must equal `amount`. The MVP UI creates a self-paid/self-participated expense for the authenticated user; direct API calls cannot create expenses on behalf of other users.
 
 Required split methods:
 
@@ -138,7 +138,7 @@ ratio
 
 ### GET `/api/expenses/:expenseId`
 
-Private. Returns the expense detail with participant shares.
+Authenticated. Returns the expense detail with participant shares.
 
 ### PATCH `/api/expenses/:expenseId`
 
@@ -152,13 +152,13 @@ Admin only for MVP. Soft-deletes by setting `deleted_at`.
 
 ### GET `/api/settlements/summary`
 
-Private. Returns balances and simplified suggested transfers.
+Authenticated. Returns balances and simplified suggested transfers.
 
 Soft-deleted expenses are ignored. Pending payments do not reduce balances. Confirmed payments reduce outstanding balances.
 
 ### POST `/api/payments`
 
-Private. Records a pending payment.
+Authenticated. Records a pending payment.
 
 ### PATCH `/api/payments/:paymentId/confirm`
 

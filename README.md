@@ -1,6 +1,6 @@
 # LabSplit Black Gold
 
-Private lab expense splitter for `https://lab.buy2330.cc`.
+OAuth-gated expense splitter for `https://lab.buy2330.cc`, available to anyone with a supported sign-in.
 
 ## Stack
 

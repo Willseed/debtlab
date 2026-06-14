@@ -51,6 +51,14 @@ describe('LandingPageComponent', () => {
     expect(authService.startGoogleSignIn).toHaveBeenCalledOnceWith();
   });
 
+  it('renders the public OAuth-gated landing subtitle', () => {
+    createComponent();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(compiled.textContent).toContain('給任何人使用的共同支出拆帳儀表板。');
+  });
+
   it('hides login buttons from authenticated users', () => {
     createComponent();
 
@@ -68,9 +76,7 @@ describe('LandingPageComponent', () => {
 
     const alert = fixture.nativeElement.querySelector('[role="alert"]') as HTMLElement;
 
-    expect(alert.textContent).toContain(
-      'Google 登入未完成：你的帳號尚未啟用或已停用，請聯絡管理員。',
-    );
+    expect(alert.textContent).toContain('Google 登入未完成：你的帳號已停用，請聯絡管理員。');
   });
 
   it('shows a generic Google auth error from the callback redirect', () => {

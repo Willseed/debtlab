@@ -16,7 +16,7 @@ import { AuthService } from '../../core/auth/auth.service';
           實驗室花費，精準拆帳
         </h1>
         <p class="hero-band__subtitle" i18n="Landing hero subtitle@@landingHeroSubtitle">
-          給實驗室共同支出使用的私有拆帳儀表板。
+          給任何人使用的共同支出拆帳儀表板。
         </p>
         @if (!isAuthenticated()) {
           <div
@@ -55,7 +55,7 @@ import { AuthService } from '../../core/auth/auth.service';
               role="alert"
               i18n="Google login inactive user error@@landingGoogleLoginInactiveError"
             >
-              Google 登入未完成：你的帳號尚未啟用或已停用，請聯絡管理員。
+              Google 登入未完成：你的帳號已停用，請聯絡管理員。
             </p>
           } @else if (authErrorCode) {
             <p

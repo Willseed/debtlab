@@ -43,7 +43,7 @@ describe('route guards', () => {
     expect(runGuard(authGuard)).toBeTrue();
   });
 
-  it('redirects guests from private routes to landing', () => {
+  it('redirects guests from authenticated routes to landing', () => {
     expect(runGuard(authGuard)).toEqual(router.createUrlTree(['/']));
   });
 

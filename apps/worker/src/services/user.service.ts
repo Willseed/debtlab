@@ -18,11 +18,14 @@ export async function findOrCreateGoogleUser(
 
   if (existingUser) {
     await updateGoogleUserProfile(db, existingUser.id, profile);
+    const status: UserStatus = existingUser.status === 'pending' ? 'active' : existingUser.status;
+
     return {
       ...existingUser,
       email: profile.email ?? existingUser.email,
       displayName: profile.displayName ?? existingUser.displayName,
       avatarUrl: profile.avatarUrl ?? existingUser.avatarUrl,
+      status,
     };
   }
 
@@ -31,7 +34,7 @@ export async function findOrCreateGoogleUser(
   const displayName = profile.displayName ?? profile.email ?? `Google user ${profile.subject}`;
   const shouldBootstrapFirstUser = (await countUsers(db)) === 0;
   const role: UserRole = shouldBootstrapFirstUser ? 'admin' : 'member';
-  const status: UserStatus = shouldBootstrapFirstUser ? 'active' : 'pending';
+  const status: UserStatus = 'active';
 
   await db.batch([
     db
@@ -111,6 +114,7 @@ async function updateGoogleUserProfile(
          SET email = COALESCE(?, email),
              display_name = COALESCE(?, display_name),
              avatar_url = COALESCE(?, avatar_url),
+             status = CASE WHEN status = 'pending' THEN 'active' ELSE status END,
              updated_at = datetime('now', '+8 hours')
          WHERE id = ?`,
       )
