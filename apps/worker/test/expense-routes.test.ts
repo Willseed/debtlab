@@ -62,8 +62,7 @@ class FakeExpenseRouteD1 {
     return statements.map((statement) => ({
       success: true,
       meta: {
-        changes:
-          statement.sql.includes('UPDATE expenses') && this.expenseOwnerRow === null ? 0 : 1,
+        changes: statement.sql.includes('UPDATE expenses') && this.expenseOwnerRow === null ? 0 : 1,
       },
     }));
   }
