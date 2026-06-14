@@ -1,4 +1,4 @@
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import {
   ApplicationConfig,
   inject,
@@ -9,12 +9,13 @@ import { provideRouter, withInMemoryScrolling } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 
 import { AuthService } from './core/auth/auth.service';
+import { apiCredentialsInterceptor } from './core/http/api-credentials.interceptor';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
-    provideHttpClient(withFetch()),
+    provideHttpClient(withFetch(), withInterceptors([apiCredentialsInterceptor])),
     provideAppInitializer(() => firstValueFrom(inject(AuthService).refresh())),
     provideRouter(
       routes,
