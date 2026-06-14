@@ -40,6 +40,16 @@ describe('apiCredentialsInterceptor', () => {
     request.flush({});
   });
 
+  it('includes browser credentials on API root requests with trailing slashes', () => {
+    const apiRootWithTrailingSlashes = `/api${'/'.repeat(64)}?status=1`;
+
+    httpClient.get(apiRootWithTrailingSlashes).subscribe();
+
+    const request = http.expectOne(apiRootWithTrailingSlashes);
+    expect(request.request.withCredentials).toBeTrue();
+    request.flush({});
+  });
+
   it('includes browser credentials on absolute same-origin API URLs', () => {
     const apiUrl = new URL('/api/auth/me', globalThis.location.origin).toString();
 
