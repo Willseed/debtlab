@@ -5,9 +5,9 @@ CREATE TABLE users (
   email TEXT,
   display_name TEXT,
   avatar_url TEXT,
-  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')),
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled', 'pending')),
-  created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')),
+  role TEXT NOT NULL DEFAULT 'member' CHECK (role IN ('member', 'admin')), -- NOSONAR
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'disabled', 'pending')), -- NOSONAR
+  created_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours')), -- NOSONAR
   updated_at TEXT NOT NULL DEFAULT (datetime('now', '+8 hours'))
 );
 

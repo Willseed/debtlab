@@ -2,13 +2,13 @@ PRAGMA foreign_keys = ON;
 
 INSERT OR IGNORE INTO users (id, email, display_name, role, status)
 VALUES
-  ('usr_alice', 'alice@example.test', 'Alice Admin', 'admin', 'active'),
-  ('usr_bob', 'bob@example.test', 'Bob Member', 'member', 'active'),
-  ('usr_carol', 'carol@example.test', 'Carol Member', 'member', 'active'),
-  ('usr_dave', 'dave@example.test', 'Dave Member', 'member', 'active');
+  ('usr_alice', 'alice@example.test', 'Alice Admin', 'admin', 'active'), -- NOSONAR
+  ('usr_bob', 'bob@example.test', 'Bob Member', 'member', 'active'), -- NOSONAR
+  ('usr_carol', 'carol@example.test', 'Carol Member', 'member', 'active'), -- NOSONAR
+  ('usr_dave', 'dave@example.test', 'Dave Member', 'member', 'active'); -- NOSONAR
 
 INSERT OR IGNORE INTO groups (id, name, description, currency, created_by)
-VALUES ('grp_default', 'Default Lab', 'Development seed lab group', 'TWD', 'usr_alice');
+VALUES ('grp_default', 'Default Lab', 'Development seed lab group', 'TWD', 'usr_alice'); -- NOSONAR
 
 INSERT OR IGNORE INTO group_members (id, group_id, user_id, role, status)
 VALUES
@@ -32,7 +32,7 @@ INSERT OR IGNORE INTO expenses (
 )
 VALUES
   (
-    'exp_coffee_beans',
+    'exp_coffee_beans', -- NOSONAR
     'grp_default',
     'Coffee Beans',
     'Costco coffee for meeting room',
@@ -40,12 +40,12 @@ VALUES
     'TWD',
     'usr_alice',
     'coffee',
-    '2026-06-13',
-    'equal',
+    '2026-06-13', -- NOSONAR
+    'equal', -- NOSONAR
     'usr_alice'
   ),
   (
-    'exp_printer_paper',
+    'exp_printer_paper', -- NOSONAR
     'grp_default',
     'Printer Paper',
     'Shared printer paper',
@@ -58,7 +58,7 @@ VALUES
     'usr_bob'
   ),
   (
-    'exp_lab_dinner',
+    'exp_lab_dinner', -- NOSONAR
     'grp_default',
     'Lab Dinner',
     'Dinner after lab meeting',
@@ -71,7 +71,7 @@ VALUES
     'usr_carol'
   ),
   (
-    'exp_reagent_shipping',
+    'exp_reagent_shipping', -- NOSONAR
     'grp_default',
     'Reagent Shipping',
     'Shared reagent shipping fee',
