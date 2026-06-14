@@ -89,7 +89,7 @@ describe('apiCredentialsInterceptor', () => {
   });
 
   it('leaves malformed absolute URLs unchanged', () => {
-    const malformedUrl = 'http://%';
+    const malformedUrl = 'https://%';
 
     httpClient.get(malformedUrl).subscribe();
 

@@ -15,7 +15,7 @@ export const apiCredentialsInterceptor: HttpInterceptorFn = (request, next) => {
 };
 
 function isApiRequest(url: string): boolean {
-  const currentOrigin = globalThis.location?.origin ?? 'http://localhost';
+  const currentOrigin = globalThis.location?.origin ?? 'https://localhost';
   const apiBaseUrl = parseUrl(environment.apiBaseUrl, currentOrigin);
   const requestUrl = parseUrl(url, currentOrigin);
 
