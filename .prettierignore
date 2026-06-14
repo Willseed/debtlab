@@ -4,6 +4,7 @@ coverage
 .angular
 .lighthouseci
 .wrangler
+.claude/
 playwright-report
 apps/web/src/locale/*.xlf
 sonar-project.properties
