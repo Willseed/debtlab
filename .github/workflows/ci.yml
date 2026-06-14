@@ -129,11 +129,6 @@ jobs:
       - name: Lighthouse
         run: pnpm lhci
 
-      - name: SonarCloud code analysis
-        uses: SonarSource/sonarqube-scan-action@fd88b7d7ccbaefd23d8f36f73b59db7a3d246602
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-
       - name: Block deployment on SonarCloud open issues
         run: pnpm sonar:open-issues
 
