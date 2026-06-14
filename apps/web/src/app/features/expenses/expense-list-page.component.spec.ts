@@ -114,6 +114,72 @@ describe('ExpenseListPageComponent', () => {
     request.flush({ expense: { id: 'exp_with_description' } });
   });
 
+  it('opens edit mode when a row is clicked and PATCHes the changes', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    setInputValue('textarea[formcontrolname="description"]', 'Initial note');
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_alice' } });
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement
+    ).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('編輯支出');
+    expect(
+      (fixture.nativeElement.querySelector('input[formcontrolname="title"]') as HTMLInputElement)
+        .value,
+    ).toBe('Coffee Beans');
+    expect(
+      (fixture.nativeElement.querySelector('textarea[formcontrolname="description"]') as HTMLTextAreaElement)
+        .value,
+    ).toBe('Initial note');
+
+    setInputValue('input[formcontrolname="title"]', 'Coffee Refill');
+    setInputValue('input[formcontrolname="amount"]', '1500');
+    clickButton('儲存');
+
+    const patch = http.expectOne('/api/expenses/exp_alice');
+    expect(patch.request.method).toBe('PATCH');
+    expect(patch.request.body).toEqual({
+      title: 'Coffee Refill',
+      description: 'Initial note',
+      amount: 1500,
+      category: 'ingredients',
+      expenseDate: '2026-06-13',
+    });
+    patch.flush({ expense: { id: 'exp_alice' } });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Coffee Refill');
+    expect(fixture.nativeElement.textContent).toContain('NT$1500');
+    expect(fixture.nativeElement.textContent).not.toContain('Coffee Beans');
+  });
+
+  it('sends a null description when the user clears it before updating', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    setInputValue('textarea[formcontrolname="description"]', 'will be cleared');
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_blank' } });
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('.expense-row button') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+    setInputValue('textarea[formcontrolname="description"]', '');
+    clickButton('儲存');
+
+    const patch = http.expectOne('/api/expenses/exp_blank');
+    expect(patch.request.body.description).toBeNull();
+    patch.flush({ expense: { id: 'exp_blank' } });
+  });
+
   it('keeps the modal open while submitting and then surfaces the API error message', () => {
     clickButton('新增支出');
     fixture.detectChanges();

@@ -179,6 +179,14 @@ tr:hover td {
   border-bottom-color: var(--color-gold-muted);
 }
 
+.expense-row {
+  cursor: pointer;
+}
+
+.expense-row:focus-within td {
+  border-bottom-color: var(--color-gold);
+}
+
 .modal-backdrop {
   animation: modal-fade 160ms ease-out;
   background: rgb(0 0 0 / 0.72);

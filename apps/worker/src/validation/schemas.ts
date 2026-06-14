@@ -45,6 +45,20 @@ export const expenseCreateSchema = z.object({
 
 export type ExpenseCreateInput = z.infer<typeof expenseCreateSchema>;
 
+export const expenseUpdateSchema = z
+  .object({
+    title: z.string().min(1).max(120).optional(),
+    description: z.string().max(1000).nullable().optional(),
+    amount: z.number().int().positive().optional(),
+    category: categorySchema.optional(),
+    expenseDate: isoDateSchema.optional(),
+  })
+  .refine((value) => Object.values(value).some((field) => field !== undefined), {
+    message: 'At least one field must be provided.',
+  });
+
+export type ExpenseUpdateInput = z.infer<typeof expenseUpdateSchema>;
+
 export const memberPatchSchema = z
   .object({
     role: z.enum(['member', 'admin']).optional(),

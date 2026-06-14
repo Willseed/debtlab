@@ -3,10 +3,15 @@ import { Hono } from 'hono';
 import { errorResponse, notImplemented } from '../http/error-response';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
-import { createExpense } from '../services/expense.service';
+import {
+  createExpense,
+  ExpenseAccessDeniedError,
+  ExpenseNotFoundError,
+  updateExpense,
+} from '../services/expense.service';
 import { calculateExpenseShares } from '../services/split.service';
 import { AppBindings } from '../types';
-import { expenseCreateSchema } from '../validation/schemas';
+import { expenseCreateSchema, expenseUpdateSchema } from '../validation/schemas';
 
 export const expenseRoutes = new Hono<AppBindings>();
 
@@ -65,8 +70,36 @@ expenseRoutes.get('/:expenseId', (c) => {
   return notImplemented(c, `Expense ${c.req.param('expenseId')} detail is not implemented yet.`);
 });
 
-expenseRoutes.patch('/:expenseId', (c) => {
-  return notImplemented(c, `Expense ${c.req.param('expenseId')} update is not implemented yet.`);
+expenseRoutes.patch('/:expenseId', async (c) => {
+  const body: unknown = await c.req.json().catch(() => null);
+  const parsed = expenseUpdateSchema.safeParse(body);
+
+  if (!parsed.success) {
+    return errorResponse(
+      c,
+      422,
+      'VALIDATION_ERROR',
+      'Expense update is invalid.',
+      parsed.error.flatten(),
+    );
+  }
+
+  const currentUser = c.get('currentUser');
+  const expenseId = c.req.param('expenseId');
+
+  try {
+    await updateExpense(c.env.DB, currentUser, expenseId, parsed.data);
+  } catch (error) {
+    if (error instanceof ExpenseNotFoundError) {
+      return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    if (error instanceof ExpenseAccessDeniedError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
+    }
+    throw error;
+  }
+
+  return c.json({ expense: { id: expenseId } });
 });
 
 expenseRoutes.delete('/:expenseId', requireAdmin, (c) => {

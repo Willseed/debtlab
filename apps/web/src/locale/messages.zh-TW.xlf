@@ -41,9 +41,10 @@
       <trans-unit id="expensesActions" datatype="html"><source>操作</source><target>操作</target></trans-unit>
       <trans-unit id="expensesEmpty" datatype="html"><source>目前沒有支出。</source><target>目前沒有支出。</target></trans-unit>
       <trans-unit id="expensesSelfParticipant" datatype="html"><source>本人</source><target>本人</target></trans-unit>
-      <trans-unit id="expensesCreatedAction" datatype="html"><source>已建立</source><target>已建立</target></trans-unit>
+      <trans-unit id="expensesEditAction" datatype="html"><source>編輯</source><target>編輯</target></trans-unit>
       <trans-unit id="expenseModalEyebrow" datatype="html"><source>LabSplit Entry</source><target>LabSplit Entry</target></trans-unit>
       <trans-unit id="expenseCreateTitle" datatype="html"><source>新增支出</source><target>新增支出</target></trans-unit>
+      <trans-unit id="expenseEditTitle" datatype="html"><source>編輯支出</source><target>編輯支出</target></trans-unit>
       <trans-unit id="expenseModalCloseLabel" datatype="html"><source>關閉新增支出視窗</source><target>關閉新增支出視窗</target></trans-unit>
       <trans-unit id="expenseFieldTitle" datatype="html"><source>標題</source><target>標題</target></trans-unit>
       <trans-unit id="expenseTitleError" datatype="html"><source>請輸入 1 到 120 個字的標題。</source><target>請輸入 1 到 120 個字的標題。</target></trans-unit>

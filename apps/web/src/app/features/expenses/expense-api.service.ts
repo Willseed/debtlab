@@ -24,6 +24,16 @@ export type ExpenseCreateResponse = {
   };
 };
 
+export type ExpenseUpdateRequest = {
+  readonly title?: string;
+  readonly description?: string | null;
+  readonly amount?: number;
+  readonly category?: ExpenseCategory;
+  readonly expenseDate?: string;
+};
+
+export type ExpenseUpdateResponse = ExpenseCreateResponse;
+
 @Injectable({ providedIn: 'root' })
 export class ExpenseApiService {
   private readonly http = inject(HttpClient);
@@ -31,5 +41,15 @@ export class ExpenseApiService {
 
   createExpense(request: ExpenseCreateRequest): Observable<ExpenseCreateResponse> {
     return this.http.post<ExpenseCreateResponse>(`${this.apiBaseUrl}/expenses`, request);
+  }
+
+  updateExpense(
+    expenseId: string,
+    request: ExpenseUpdateRequest,
+  ): Observable<ExpenseUpdateResponse> {
+    return this.http.patch<ExpenseUpdateResponse>(
+      `${this.apiBaseUrl}/expenses/${expenseId}`,
+      request,
+    );
   }
 }

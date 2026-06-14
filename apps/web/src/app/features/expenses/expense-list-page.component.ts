@@ -11,8 +11,15 @@ import {
 } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 
+import { Observable } from 'rxjs';
+
 import { AuthService } from '../../core/auth/auth.service';
-import { ExpenseApiService, ExpenseCategory } from './expense-api.service';
+import {
+  ExpenseApiService,
+  ExpenseCategory,
+  ExpenseCreateResponse,
+  ExpenseUpdateResponse,
+} from './expense-api.service';
 
 declare const $localize: (
   messageParts: TemplateStringsArray,
@@ -26,6 +33,7 @@ type ExpenseRow = {
   readonly amount: number;
   readonly expenseDate: string;
   readonly paidBy: string;
+  readonly description: string;
 };
 
 type ExpenseForm = {
@@ -83,14 +91,23 @@ type ExpenseForm = {
                 </tr>
               } @else {
                 @for (expense of expenses(); track expense.id) {
-                  <tr>
+                  <tr class="expense-row" (click)="openEditModal(expense)">
                     <td>{{ expense.expenseDate }}</td>
                     <td>{{ expense.title }}</td>
                     <td>{{ expense.category }}</td>
                     <td>{{ expense.paidBy }}</td>
                     <td class="money">NT&#36;{{ expense.amount }}</td>
                     <td i18n="Self participant label@@expensesSelfParticipant">本人</td>
-                    <td i18n="Created action label@@expensesCreatedAction">已建立</td>
+                    <td>
+                      <button
+                        type="button"
+                        class="button button--secondary"
+                        (click)="openEditModal(expense); $event.stopPropagation()"
+                        i18n="Edit expense action@@expensesEditAction"
+                      >
+                        編輯
+                      </button>
+                    </td>
                   </tr>
                 }
               }
@@ -116,13 +133,23 @@ type ExpenseForm = {
               <p class="eyebrow" i18n="Expense modal eyebrow@@expenseModalEyebrow">
                 LabSplit Entry
               </p>
-              <h2
-                id="expense-create-title"
-                class="heading-section"
-                i18n="Expense modal title@@expenseCreateTitle"
-              >
-                新增支出
-              </h2>
+              @if (isEditing()) {
+                <h2
+                  id="expense-create-title"
+                  class="heading-section"
+                  i18n="Expense edit modal title@@expenseEditTitle"
+                >
+                  編輯支出
+                </h2>
+              } @else {
+                <h2
+                  id="expense-create-title"
+                  class="heading-section"
+                  i18n="Expense modal title@@expenseCreateTitle"
+                >
+                  新增支出
+                </h2>
+              }
             </div>
             <button
               class="button button--secondary"
@@ -240,6 +267,8 @@ export class ExpenseListPageComponent {
   protected readonly isCreateModalOpen = signal(false);
   protected readonly isSubmitting = signal(false);
   protected readonly statusMessage = signal('');
+  protected readonly editingExpenseId = signal<string | null>(null);
+  protected readonly isEditing = computed(() => this.editingExpenseId() !== null);
   protected readonly currentUserName = computed(
     () =>
       this.authService.currentUser()?.displayName ??
@@ -267,7 +296,29 @@ export class ExpenseListPageComponent {
   });
 
   protected openCreateModal(): void {
+    this.editingExpenseId.set(null);
     this.statusMessage.set('');
+    this.form.reset({
+      title: '',
+      amount: null,
+      category: 'other',
+      expenseDate: new Date().toISOString().slice(0, 10),
+      description: '',
+    });
+    this.isCreateModalOpen.set(true);
+    queueMicrotask(() => this.firstExpenseField?.nativeElement.focus());
+  }
+
+  protected openEditModal(expense: ExpenseRow): void {
+    this.editingExpenseId.set(expense.id);
+    this.statusMessage.set('');
+    this.form.reset({
+      title: expense.title,
+      amount: expense.amount,
+      category: expense.category,
+      expenseDate: expense.expenseDate,
+      description: expense.description,
+    });
     this.isCreateModalOpen.set(true);
     queueMicrotask(() => this.firstExpenseField?.nativeElement.focus());
   }
@@ -278,6 +329,7 @@ export class ExpenseListPageComponent {
     }
 
     this.isCreateModalOpen.set(false);
+    this.editingExpenseId.set(null);
     this.form.reset({
       title: '',
       amount: null,
@@ -307,39 +359,51 @@ export class ExpenseListPageComponent {
     this.isSubmitting.set(true);
     this.statusMessage.set('');
 
-    this.expenseApiService
-      .createExpense({
-        title: formValue.title.trim(),
-        description: formValue.description.trim() || undefined,
-        amount,
-        currency: 'TWD',
-        paidByUserId: currentUser.id,
-        category: formValue.category,
-        expenseDate: formValue.expenseDate,
-        splitMethod: 'equal',
-        participants: [{ userId: currentUser.id }],
-      })
-      .subscribe({
-        next: (response) => {
-          this.expenses.update((expenses) => [
-            {
-              id: response.expense.id,
-              title: formValue.title.trim(),
-              category: formValue.category,
-              amount,
-              expenseDate: formValue.expenseDate,
-              paidBy: currentUser.displayName,
-            },
-            ...expenses,
-          ]);
-          this.isSubmitting.set(false);
-          this.closeCreateModal();
-        },
-        error: (err: HttpErrorResponse) => {
-          this.isSubmitting.set(false);
-          this.statusMessage.set(this.formatSubmitError(err));
-        },
-      });
+    const editingId = this.editingExpenseId();
+    const request$: Observable<ExpenseCreateResponse | ExpenseUpdateResponse> = editingId
+      ? this.expenseApiService.updateExpense(editingId, {
+          title: formValue.title.trim(),
+          description: formValue.description.trim() || null,
+          amount,
+          category: formValue.category,
+          expenseDate: formValue.expenseDate,
+        })
+      : this.expenseApiService.createExpense({
+          title: formValue.title.trim(),
+          description: formValue.description.trim() || undefined,
+          amount,
+          currency: 'TWD',
+          paidByUserId: currentUser.id,
+          category: formValue.category,
+          expenseDate: formValue.expenseDate,
+          splitMethod: 'equal',
+          participants: [{ userId: currentUser.id }],
+        });
+
+    request$.subscribe({
+      next: (response) => {
+        const row: ExpenseRow = {
+          id: response.expense.id,
+          title: formValue.title.trim(),
+          category: formValue.category,
+          amount,
+          expenseDate: formValue.expenseDate,
+          paidBy: currentUser.displayName,
+          description: formValue.description.trim(),
+        };
+        this.expenses.update((expenses) =>
+          editingId
+            ? expenses.map((expense) => (expense.id === editingId ? row : expense))
+            : [row, ...expenses],
+        );
+        this.isSubmitting.set(false);
+        this.closeCreateModal();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.isSubmitting.set(false);
+        this.statusMessage.set(this.formatSubmitError(err));
+      },
+    });
   }
 
   protected handleModalKeydown(event: KeyboardEvent): void {

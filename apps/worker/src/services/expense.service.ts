@@ -1,9 +1,28 @@
 import { CalculatedShare } from './split.service';
 import { SessionUser } from '../types';
-import { ExpenseCreateInput } from '../validation/schemas';
+import { ExpenseCreateInput, ExpenseUpdateInput } from '../validation/schemas';
 
 const DEFAULT_GROUP_ID = 'grp_default';
 const DEFAULT_GROUP_NAME = 'Default Lab';
+
+export class ExpenseNotFoundError extends Error {
+  constructor() {
+    super('Expense not found.');
+    this.name = 'ExpenseNotFoundError';
+  }
+}
+
+export class ExpenseAccessDeniedError extends Error {
+  constructor() {
+    super('Expense is not editable by the current user.');
+    this.name = 'ExpenseAccessDeniedError';
+  }
+}
+
+type ExpenseOwnerRow = {
+  readonly created_by: string;
+  readonly amount: number;
+};
 
 export async function createExpense(
   db: D1Database,
@@ -91,4 +110,75 @@ export async function createExpense(
   ]);
 
   return expenseId;
+}
+
+export async function updateExpense(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+  input: ExpenseUpdateInput,
+): Promise<void> {
+  const owner = await db
+    .prepare(
+      `SELECT created_by, amount
+       FROM expenses
+       WHERE id = ? AND deleted_at IS NULL`,
+    )
+    .bind(expenseId)
+    .first<ExpenseOwnerRow>();
+
+  if (!owner) {
+    throw new ExpenseNotFoundError();
+  }
+
+  if (owner.created_by !== user.id) {
+    throw new ExpenseAccessDeniedError();
+  }
+
+  const descriptionProvided = input.description !== undefined ? 1 : 0;
+  const statements: D1PreparedStatement[] = [
+    db
+      .prepare(
+        `UPDATE expenses
+         SET title = COALESCE(?, title),
+             description = CASE WHEN ? = 1 THEN ? ELSE description END,
+             amount = COALESCE(?, amount),
+             category = COALESCE(?, category),
+             expense_date = COALESCE(?, expense_date),
+             updated_at = datetime('now', '+8 hours')
+         WHERE id = ?`,
+      )
+      .bind(
+        input.title ?? null,
+        descriptionProvided,
+        input.description ?? null,
+        input.amount ?? null,
+        input.category ?? null,
+        input.expenseDate ?? null,
+        expenseId,
+      ),
+  ];
+
+  if (input.amount !== undefined && input.amount !== owner.amount) {
+    statements.push(
+      db
+        .prepare(
+          `UPDATE expense_participants
+           SET share_amount = ?
+           WHERE expense_id = ?`,
+        )
+        .bind(input.amount, expenseId),
+    );
+  }
+
+  statements.push(
+    db
+      .prepare(
+        `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, after_json)
+         VALUES (?, ?, 'expense_updated', 'expense', ?, ?)`,
+      )
+      .bind(crypto.randomUUID(), user.id, expenseId, JSON.stringify(input)),
+  );
+
+  await db.batch(statements);
 }
