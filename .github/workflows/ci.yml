@@ -105,7 +105,7 @@ jobs:
       - name: Cache Angular build
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
-          path: .angular/cache
+          path: apps/web/.angular/cache
           key: ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-
@@ -182,7 +182,7 @@ jobs:
       - name: Cache Angular build
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae
         with:
-          path: .angular/cache
+          path: apps/web/.angular/cache
           key: ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-angular-${{ hashFiles('**/pnpm-lock.yaml') }}-
