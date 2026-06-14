@@ -107,4 +107,21 @@ describe('AppComponent', () => {
     expect(signOutSpy).toHaveBeenCalledTimes(1);
     expect(navigateSpy).not.toHaveBeenCalled();
   });
+
+  it('swallows landing-page navigation failures after sign-out', async () => {
+    isAuthenticated.set(true);
+
+    const fixture = await createComponent();
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigateByUrl').and.rejectWith(
+      new Error('navigation failed'),
+    );
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.app-shell__signout')
+      ?.click();
+    await fixture.whenStable();
+
+    expect(signOutSpy).toHaveBeenCalledTimes(1);
+    expect(navigateSpy).toHaveBeenCalledOnceWith('/');
+  });
 });

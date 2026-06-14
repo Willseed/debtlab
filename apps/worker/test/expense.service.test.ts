@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   createExpense,
+  deleteExpense,
   ExpenseAccessDeniedError,
   ExpenseNotFoundError,
   listExpenses,
@@ -173,6 +174,35 @@ test('listExpenses reads persisted expenses with payer and participant data', as
   ]);
 });
 
+test('listExpenses returns an empty list without reading participants', async () => {
+  const db = new FakeD1Database();
+
+  const expenses = await listExpenses(db as unknown as D1Database);
+
+  assert.deepEqual(expenses, []);
+});
+
+test('listExpenses falls back to no participants when none are returned', async () => {
+  const db = new FakeD1Database();
+  db.expenseRows = [
+    {
+      id: 'exp_without_participants',
+      title: 'Lab ingredients',
+      description: null,
+      amount: 1280,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-13',
+      paid_by_user_id: 'usr_alice',
+      paid_by_display_name: 'Alice',
+    },
+  ];
+
+  const expenses = await listExpenses(db as unknown as D1Database);
+
+  assert.deepEqual(expenses[0]?.participants, []);
+});
+
 const sessionUser: SessionUser = {
   id: 'usr_alice',
   email: 'alice@example.test',
@@ -254,4 +284,13 @@ test('updateExpense passes through a null description so it clears the stored va
   const update = db.statements[0]?.[0];
   assert.equal(update?.[2], 1);
   assert.equal(update?.[3], null);
+});
+
+test('deleteExpense rejects deletes when D1 reports no changed rows', async () => {
+  const db = new FakeD1Database();
+
+  await assert.rejects(
+    () => deleteExpense(db as unknown as D1Database, sessionUser, 'exp_missing'),
+    ExpenseNotFoundError,
+  );
 });

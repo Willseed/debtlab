@@ -292,6 +292,64 @@ describe('ExpenseListPageComponent', () => {
     expect(globalThis.confirm).toHaveBeenCalledWith('確定要刪除這筆支出嗎？');
   });
 
+  it('surfaces an API delete error and reloads the list', () => {
+    currentUserState.set({ ...currentUser, role: 'admin' });
+    spyOn(globalThis, 'confirm').and.returnValue(true);
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_delete_error' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_delete_error' })]);
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
+    ).click();
+    http.expectOne('/api/expenses/exp_delete_error').flush(
+      {
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Only admins can delete expenses.',
+          details: {},
+        },
+      },
+      { status: 403, statusText: 'Forbidden' },
+    );
+    flushExpenseList([createExpenseItem({ id: 'exp_delete_error' })]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Only admins can delete expenses.');
+    expect(
+      (fixture.nativeElement.querySelector('button[aria-label="編輯支出"]') as HTMLButtonElement)
+        .disabled,
+    ).toBeFalse();
+  });
+
+  it('falls back to a generic message when deleting fails without an API message', () => {
+    currentUserState.set({ ...currentUser, role: 'admin' });
+    spyOn(globalThis, 'confirm').and.returnValue(true);
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_delete_network' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_delete_network' })]);
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
+    ).click();
+    http.expectOne('/api/expenses/exp_delete_network').error(new ProgressEvent('error'), {
+      status: 0,
+      statusText: 'Network Error',
+    });
+    flushExpenseList([createExpenseItem({ id: 'exp_delete_network' })]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('支出刪除失敗，請稍後再試。');
+  });
+
   it('keeps the modal open while submitting and then surfaces the API error message', () => {
     clickButton('新增支出');
     fixture.detectChanges();
@@ -331,6 +389,22 @@ describe('ExpenseListPageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('支出建立失敗，請稍後再試。');
+  });
+
+  it('clears the expense list when reloading expenses fails', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_reload_error' } });
+
+    http.expectOne('/api/expenses').error(new ProgressEvent('error'), {
+      status: 0,
+      statusText: 'Network Error',
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('目前沒有支出。');
   });
 
   it('shows an auth-required message when no current user is available', () => {
@@ -380,6 +454,24 @@ describe('ExpenseListPageComponent', () => {
     dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     fixture.detectChanges();
     expect(fixture.nativeElement.textContent).not.toContain('LabSplit Entry');
+  });
+
+  it('leaves Tab alone when the modal has no focusable controls', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    for (const control of dialog.querySelectorAll<
+      HTMLButtonElement | HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >('button, input, select, textarea')) {
+      control.disabled = true;
+    }
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true });
+    const preventDefaultSpy = spyOn(event, 'preventDefault');
+    dialog.dispatchEvent(event);
+
+    expect(preventDefaultSpy).not.toHaveBeenCalled();
   });
 
   function clickButton(name: string): void {

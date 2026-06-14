@@ -289,7 +289,7 @@ export async function deleteExpense(
       .bind(crypto.randomUUID(), user.id, expenseId),
   ]);
 
-  if ((deleteResult?.meta.changes ?? 0) === 0) {
+  if ((deleteResult?.meta?.changes ?? 0) === 0) {
     throw new ExpenseNotFoundError();
   }
 }
