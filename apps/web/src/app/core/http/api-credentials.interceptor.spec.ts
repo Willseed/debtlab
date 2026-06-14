@@ -78,6 +78,26 @@ describe('apiCredentialsInterceptor', () => {
     request.flush({});
   });
 
+  it('leaves unparsable request URLs unchanged', () => {
+    const invalidUrl = 'https://[invalid-host]/api/auth/me';
+
+    httpClient.get(invalidUrl).subscribe();
+
+    const request = http.expectOne(invalidUrl);
+    expect(request.request.withCredentials).toBeFalse();
+    request.flush({});
+  });
+
+  it('leaves malformed absolute URLs unchanged', () => {
+    const malformedUrl = 'http://%';
+
+    httpClient.get(malformedUrl).subscribe();
+
+    const request = http.expectOne(malformedUrl);
+    expect(request.request.withCredentials).toBeFalse();
+    request.flush({});
+  });
+
   it('does not treat similarly prefixed non-API paths as API requests', () => {
     httpClient.get('/apiary/config.json').subscribe();
 
