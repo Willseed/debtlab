@@ -116,7 +116,10 @@ export function createAuthRoutes(
 
     try {
       const config = readGoogleOAuthConfig(c.env, c.req.url);
-      const profile = await dependencies.verifyGoogleIdToken(parsed.data.credential, config.clientId);
+      const profile = await dependencies.verifyGoogleIdToken(
+        parsed.data.credential,
+        config.clientId,
+      );
       const user = await dependencies.findOrCreateGoogleUser(c.env.DB, profile);
       const sessionResult = await issueSession(c, user);
 

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 
@@ -49,6 +49,23 @@ import { AuthService } from '../../core/auth/auth.service';
           >
             Apple 登入審核中，暫不開放。
           </p>
+          @if (authErrorCode === 'user_not_active') {
+            <p
+              class="hero-band__login-error"
+              role="alert"
+              i18n="Google login inactive user error@@landingGoogleLoginInactiveError"
+            >
+              Google 登入未完成：你的帳號尚未啟用或已停用，請聯絡管理員。
+            </p>
+          } @else if (authErrorCode) {
+            <p
+              class="hero-band__login-error"
+              role="alert"
+              i18n="Google login generic error@@landingGoogleLoginGenericError"
+            >
+              Google 登入未完成，請稍後再試或聯絡管理員。
+            </p>
+          }
         } @else {
           <a
             class="button button--primary"
@@ -64,8 +81,10 @@ import { AuthService } from '../../core/auth/auth.service';
 })
 export class LandingPageComponent {
   private readonly authService = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly isAuthenticated = this.authService.isAuthenticated;
+  protected readonly authErrorCode = this.route.snapshot.queryParamMap.get('auth_error');
 
   startGoogleSignIn(): void {
     this.authService.startGoogleSignIn();

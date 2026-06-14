@@ -144,6 +144,11 @@ a {
   margin: calc(var(--space-3) * -1) 0 0;
 }
 
+.hero-band__login-error {
+  color: var(--color-danger);
+  margin: var(--space-3) 0 0;
+}
+
 .money {
   font-variant-numeric: tabular-nums;
 }

@@ -3,7 +3,7 @@ import test from 'node:test';
 
 import { Hono } from 'hono';
 
-import app from '../src/index';
+import { validateOrigin } from '../src/middleware/validate-origin';
 import { authRoutes, createAuthRoutes } from '../src/routes/auth';
 import { createSessionToken, SESSION_COOKIE_NAME } from '../src/services/auth.service';
 import {
@@ -77,9 +77,7 @@ test('Google OAuth callback rejects requests without the matching state cookie',
 });
 
 test('Google OAuth callback rejects malformed state values before touching cookies', async () => {
-  const response = await requestAuth(
-    '/api/auth/google/callback?state=invalid%3Dstate&code=code',
-  );
+  const response = await requestAuth('/api/auth/google/callback?state=invalid%3Dstate&code=code');
 
   assertAuthRedirect(response, 'google_state_invalid');
 });
@@ -338,8 +336,12 @@ test('Google one-tap endpoint refuses disabled identities without issuing a new 
   assert.match(setCookie, new RegExp(`${SESSION_COOKIE_NAME}=; Max-Age=0`));
 });
 
-test('full Worker app validates Origin before Google one-tap mutations', async () => {
-  const blockedResponse = await app.request(
+test('auth routes validate Origin before Google one-tap mutations', async () => {
+  const routeApp = createOriginProtectedAuthApp();
+  const startResponse = await routeApp.request('/api/auth/google/start', undefined, TEST_ENV);
+  assert.equal(startResponse.status, 302);
+
+  const blockedResponse = await routeApp.request(
     '/api/auth/google',
     {
       method: 'POST',
@@ -352,7 +354,7 @@ test('full Worker app validates Origin before Google one-tap mutations', async (
   );
   await assertApiError(blockedResponse, 403, 'FORBIDDEN', 'Mutation origin is not allowed.');
 
-  const allowedResponse = await app.request(
+  const allowedResponse = await routeApp.request(
     '/api/auth/google',
     {
       method: 'POST',
@@ -432,6 +434,14 @@ function requestAuth(
       ...envOverrides,
     }),
   );
+}
+
+function createOriginProtectedAuthApp(): Hono<AppBindings> {
+  const routeApp = new Hono<AppBindings>();
+  routeApp.use('/api/*', validateOrigin);
+  routeApp.route('/api/auth', authRoutes);
+
+  return routeApp;
 }
 
 async function assertApiError(
@@ -542,5 +552,7 @@ function readSetCookie(response: Response): string {
     readonly getSetCookie?: () => string[];
   };
 
-  return headersWithSetCookie.getSetCookie?.().join('\n') ?? response.headers.get('Set-Cookie') ?? '';
+  return (
+    headersWithSetCookie.getSetCookie?.().join('\n') ?? response.headers.get('Set-Cookie') ?? ''
+  );
 }
