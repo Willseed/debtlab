@@ -1,4 +1,5 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -334,11 +335,9 @@ export class ExpenseListPageComponent {
           this.isSubmitting.set(false);
           this.closeCreateModal();
         },
-        error: () => {
+        error: (err: HttpErrorResponse) => {
           this.isSubmitting.set(false);
-          this.statusMessage.set(
-            $localize`:Expense create failed@@expenseCreateFailed:支出建立失敗，請稍後再試。`,
-          );
+          this.statusMessage.set(this.formatSubmitError(err));
         },
       });
   }
@@ -373,6 +372,12 @@ export class ExpenseListPageComponent {
       event.preventDefault();
       first.focus();
     }
+  }
+
+  private formatSubmitError(error: HttpErrorResponse): string {
+    const fallback = $localize`:Expense create failed@@expenseCreateFailed:支出建立失敗，請稍後再試。`;
+    const apiError = (error.error as { error?: { message?: string } } | null)?.error;
+    return apiError?.message ?? fallback;
   }
 
   protected titleInvalid(): boolean {

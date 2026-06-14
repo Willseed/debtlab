@@ -114,7 +114,7 @@ describe('ExpenseListPageComponent', () => {
     request.flush({ expense: { id: 'exp_with_description' } });
   });
 
-  it('keeps the modal open while submitting and then shows API failures', () => {
+  it('keeps the modal open while submitting and then surfaces the API error message', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -128,13 +128,28 @@ describe('ExpenseListPageComponent', () => {
     http.expectOne('/api/expenses').flush(
       {
         error: {
-          code: 'INTERNAL_ERROR',
-          message: 'Unexpected server error.',
+          code: 'VALIDATION_ERROR',
+          message: 'Expense request is invalid.',
           details: {},
         },
       },
-      { status: 500, statusText: 'Server Error' },
+      { status: 422, statusText: 'Unprocessable Entity' },
     );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Expense request is invalid.');
+  });
+
+  it('falls back to a generic message when the API error has no message', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+
+    http.expectOne('/api/expenses').error(new ProgressEvent('error'), {
+      status: 0,
+      statusText: 'Network Error',
+    });
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('支出建立失敗，請稍後再試。');

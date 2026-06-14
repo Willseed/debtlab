@@ -29,7 +29,8 @@ app.notFound((c) => {
   return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
 });
 
-app.onError((_error, c) => {
+app.onError((error, c) => {
+  console.error('Unhandled worker error', error);
   return errorResponse(c, 500, 'INTERNAL_ERROR', 'Unexpected server error.');
 });
 
