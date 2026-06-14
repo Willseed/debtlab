@@ -14,12 +14,7 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Observable } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
-import {
-  ExpenseApiService,
-  ExpenseCategory,
-  ExpenseCreateResponse,
-  ExpenseUpdateResponse,
-} from './expense-api.service';
+import { ExpenseApiService, ExpenseCategory, ExpenseCreateResponse } from './expense-api.service';
 
 declare const $localize: (
   messageParts: TemplateStringsArray,
@@ -360,7 +355,7 @@ export class ExpenseListPageComponent {
     this.statusMessage.set('');
 
     const editingId = this.editingExpenseId();
-    const request$: Observable<ExpenseCreateResponse | ExpenseUpdateResponse> = editingId
+    const request$: Observable<ExpenseCreateResponse> = editingId
       ? this.expenseApiService.updateExpense(editingId, {
           title: formValue.title.trim(),
           description: formValue.description.trim() || null,

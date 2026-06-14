@@ -32,8 +32,6 @@ export type ExpenseUpdateRequest = {
   readonly expenseDate?: string;
 };
 
-export type ExpenseUpdateResponse = ExpenseCreateResponse;
-
 @Injectable({ providedIn: 'root' })
 export class ExpenseApiService {
   private readonly http = inject(HttpClient);
@@ -46,8 +44,8 @@ export class ExpenseApiService {
   updateExpense(
     expenseId: string,
     request: ExpenseUpdateRequest,
-  ): Observable<ExpenseUpdateResponse> {
-    return this.http.patch<ExpenseUpdateResponse>(
+  ): Observable<ExpenseCreateResponse> {
+    return this.http.patch<ExpenseCreateResponse>(
       `${this.apiBaseUrl}/expenses/${expenseId}`,
       request,
     );

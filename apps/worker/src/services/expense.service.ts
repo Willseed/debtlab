@@ -135,7 +135,7 @@ export async function updateExpense(
     throw new ExpenseAccessDeniedError();
   }
 
-  const descriptionProvided = input.description !== undefined ? 1 : 0;
+  const descriptionProvided = input.description === undefined ? 0 : 1;
   const statements: D1PreparedStatement[] = [
     db
       .prepare(
