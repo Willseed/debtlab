@@ -161,6 +161,18 @@ test('verifies Google ID token payloads through the configured verifier', async 
   });
 });
 
+test('wraps lower-level JWT verification failures as OAuth verification failures', async () => {
+  await assert.rejects(
+    () =>
+      verifyGoogleIdToken('signed-id-token', 'google-client-id', async () => {
+        throw new Error('jose rejected the token');
+      }),
+    (error: unknown) =>
+      error instanceof GoogleOAuthVerificationError &&
+      error.message === 'Google ID token verification failed.',
+  );
+});
+
 test('reads verified Google user profile payloads', () => {
   assert.deepEqual(
     readGoogleUserProfile({

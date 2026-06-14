@@ -118,10 +118,20 @@ export async function verifyGoogleIdToken(
   clientId: string,
   verifier: GoogleJwtVerifier = verifyGoogleJwt,
 ): Promise<GoogleUserProfile> {
-  const result = await verifier(idToken, GOOGLE_JWKS, {
-    audience: clientId,
-    issuer: GOOGLE_ISSUERS,
-  });
+  let result: { readonly payload: JWTPayload };
+
+  try {
+    result = await verifier(idToken, GOOGLE_JWKS, {
+      audience: clientId,
+      issuer: GOOGLE_ISSUERS,
+    });
+  } catch (error) {
+    if (error instanceof GoogleOAuthVerificationError) {
+      throw error;
+    }
+
+    throw new GoogleOAuthVerificationError('Google ID token verification failed.');
+  }
 
   return readGoogleUserProfile(result.payload);
 }

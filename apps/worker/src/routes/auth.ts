@@ -22,109 +22,140 @@ import { findOrCreateGoogleUser } from '../services/user.service';
 import { AppBindings, SessionUser } from '../types';
 import { googleAuthSchema } from '../validation/schemas';
 
-export const authRoutes = new Hono<AppBindings>();
-
 const OAUTH_STATE_TTL_SECONDS = 600;
+const GOOGLE_OAUTH_STATE_PATTERN = /^[0-9a-f]{64}$/u;
 
-authRoutes.get('/google/start', (c) => {
-  try {
-    const config = readGoogleOAuthConfig(c.env, c.req.url);
-    const state = createGoogleOAuthState();
+type GoogleAuthDependencies = {
+  readonly exchangeGoogleAuthorizationCode: typeof exchangeGoogleAuthorizationCode;
+  readonly findOrCreateGoogleUser: typeof findOrCreateGoogleUser;
+  readonly verifyGoogleIdToken: typeof verifyGoogleIdToken;
+};
 
-    setGoogleStateCookie(c, state);
+const defaultGoogleAuthDependencies: GoogleAuthDependencies = {
+  exchangeGoogleAuthorizationCode,
+  findOrCreateGoogleUser,
+  verifyGoogleIdToken,
+};
 
-    return c.redirect(buildGoogleAuthorizationUrl(config, state), 302);
-  } catch (error) {
-    return handleGoogleOAuthError(c, error);
-  }
-});
+export function createAuthRoutes(
+  dependencies: GoogleAuthDependencies = defaultGoogleAuthDependencies,
+): Hono<AppBindings> {
+  const routes = new Hono<AppBindings>();
 
-authRoutes.get('/google/callback', async (c) => {
-  const returnedState = c.req.query('state');
-  const code = c.req.query('code');
-  const stateCookieName = returnedState ? getGoogleOAuthStateCookieName(returnedState) : null;
-  const expectedState = stateCookieName ? getCookie(c, stateCookieName) : undefined;
+  routes.get('/google/start', (c) => {
+    try {
+      const config = readGoogleOAuthConfig(c.env, c.req.url);
+      const state = createGoogleOAuthState();
 
-  if (stateCookieName) {
+      setGoogleStateCookie(c, state);
+
+      return c.redirect(buildGoogleAuthorizationUrl(config, state), 302);
+    } catch (error) {
+      return handleGoogleOAuthError(c, error);
+    }
+  });
+
+  routes.get('/google/callback', async (c) => {
+    const returnedState = c.req.query('state');
+    const code = c.req.query('code');
+
+    if (!isValidGoogleOAuthState(returnedState)) {
+      return redirectGoogleCallbackError(c, 'google_state_invalid');
+    }
+
+    const stateCookieName = getGoogleOAuthStateCookieName(returnedState);
+    const expectedState = getCookie(c, stateCookieName);
+
     deleteCookie(c, stateCookieName, {
       path: '/api/auth/google',
       secure: true,
       sameSite: 'Lax',
     });
-  }
 
-  if (!expectedState || !returnedState || returnedState !== expectedState) {
-    return errorResponse(c, 403, 'FORBIDDEN', 'Google OAuth state is invalid.');
-  }
-
-  if (!code) {
-    return errorResponse(c, 422, 'VALIDATION_ERROR', 'Google authorization code is missing.');
-  }
-
-  try {
-    const config = readGoogleOAuthConfig(c.env, c.req.url);
-    const idToken = await exchangeGoogleAuthorizationCode(code, config);
-    const profile = await verifyGoogleIdToken(idToken, config.clientId);
-    const user = await findOrCreateGoogleUser(c.env.DB, profile);
-    const sessionResult = await issueSession(c, user);
-
-    if (sessionResult) {
-      return sessionResult;
+    if (!expectedState || returnedState !== expectedState) {
+      return redirectGoogleCallbackError(c, 'google_state_invalid');
     }
 
-    return c.redirect(new URL('/dashboard', config.appBaseUrl).toString(), 302);
-  } catch (error) {
-    return handleGoogleOAuthError(c, error);
-  }
-});
-
-authRoutes.post('/google', async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const parsed = googleAuthSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return errorResponse(
-      c,
-      422,
-      'VALIDATION_ERROR',
-      'Google credential is invalid.',
-      parsed.error.flatten(),
-    );
-  }
-
-  try {
-    const config = readGoogleOAuthConfig(c.env, c.req.url);
-    const profile = await verifyGoogleIdToken(parsed.data.credential, config.clientId);
-    const user = await findOrCreateGoogleUser(c.env.DB, profile);
-    const sessionResult = await issueSession(c, user);
-
-    if (sessionResult) {
-      return sessionResult;
+    if (!code) {
+      return redirectGoogleCallbackError(c, 'google_code_missing');
     }
 
-    return c.json({ user });
-  } catch (error) {
-    return handleGoogleOAuthError(c, error);
-  }
-});
+    try {
+      const config = readGoogleOAuthConfig(c.env, c.req.url);
+      const idToken = await dependencies.exchangeGoogleAuthorizationCode(code, config);
+      const profile = await dependencies.verifyGoogleIdToken(idToken, config.clientId);
+      const user = await dependencies.findOrCreateGoogleUser(c.env.DB, profile);
+      const sessionResult = await issueSession(c, user);
 
-authRoutes.post('/apple', (c) => {
-  return errorResponse(c, 403, 'FORBIDDEN', 'Sign in with Apple is temporarily disabled.');
-});
+      if (sessionResult) {
+        return redirectGoogleCallbackError(
+          c,
+          user.status === 'active' ? 'session_unavailable' : 'user_not_active',
+        );
+      }
 
-authRoutes.get('/me', requireAuth, (c) => {
-  return c.json({ user: c.get('currentUser') });
-});
+      return c.redirect(new URL('/dashboard', config.appBaseUrl).toString(), 302);
+    } catch (error) {
+      return handleGoogleOAuthCallbackError(c, error);
+    }
+  });
 
-authRoutes.post('/logout', (c) => {
+  routes.post('/google', async (c) => {
+    const body: unknown = await c.req.json().catch(() => null);
+    const parsed = googleAuthSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return errorResponse(
+        c,
+        422,
+        'VALIDATION_ERROR',
+        'Google credential is invalid.',
+        parsed.error.flatten(),
+      );
+    }
+
+    try {
+      const config = readGoogleOAuthConfig(c.env, c.req.url);
+      const profile = await dependencies.verifyGoogleIdToken(parsed.data.credential, config.clientId);
+      const user = await dependencies.findOrCreateGoogleUser(c.env.DB, profile);
+      const sessionResult = await issueSession(c, user);
+
+      if (sessionResult) {
+        return sessionResult;
+      }
+
+      return c.json({ user });
+    } catch (error) {
+      return handleGoogleOAuthError(c, error);
+    }
+  });
+
+  routes.post('/apple', (c) => {
+    return errorResponse(c, 403, 'FORBIDDEN', 'Sign in with Apple is temporarily disabled.');
+  });
+
+  routes.get('/me', requireAuth, (c) => {
+    return c.json({ user: c.get('currentUser') });
+  });
+
+  routes.post('/logout', (c) => {
+    clearSessionCookie(c);
+
+    return c.json({ ok: true });
+  });
+
+  return routes;
+}
+
+export const authRoutes = createAuthRoutes();
+
+function clearSessionCookie(c: Parameters<typeof deleteCookie>[0]): void {
   deleteCookie(c, SESSION_COOKIE_NAME, {
     path: '/',
     secure: true,
     sameSite: 'Lax',
   });
-
-  return c.json({ ok: true });
-});
+}
 
 function setGoogleStateCookie(c: Parameters<typeof setCookie>[0], state: string): void {
   setCookie(c, getGoogleOAuthStateCookieName(state), state, {
@@ -136,6 +167,10 @@ function setGoogleStateCookie(c: Parameters<typeof setCookie>[0], state: string)
   });
 }
 
+function isValidGoogleOAuthState(state: string | undefined): state is string {
+  return typeof state === 'string' && GOOGLE_OAUTH_STATE_PATTERN.test(state);
+}
+
 async function issueSession(
   c: Parameters<typeof setCookie>[0],
   user: SessionUser,
@@ -145,6 +180,7 @@ async function issueSession(
   }
 
   if (user.status !== 'active') {
+    clearSessionCookie(c);
     return errorResponse(c, 403, 'FORBIDDEN', 'User is not active.');
   }
 
@@ -171,4 +207,29 @@ function handleGoogleOAuthError(c: Parameters<typeof setCookie>[0], error: unkno
   }
 
   throw error;
+}
+
+function handleGoogleOAuthCallbackError(
+  c: Parameters<typeof setCookie>[0],
+  error: unknown,
+): Response {
+  if (error instanceof GoogleOAuthConfigurationError) {
+    return redirectGoogleCallbackError(c, 'google_oauth_not_configured');
+  }
+
+  if (error instanceof GoogleOAuthVerificationError) {
+    return redirectGoogleCallbackError(c, 'google_verification_failed');
+  }
+
+  return redirectGoogleCallbackError(c, 'google_callback_failed');
+}
+
+function redirectGoogleCallbackError(
+  c: Parameters<typeof setCookie>[0],
+  errorCode: string,
+): Response {
+  const redirectUrl = new URL('/', c.env.APP_BASE_URL ?? new URL(c.req.url).origin);
+  redirectUrl.searchParams.set('auth_error', errorCode);
+
+  return c.redirect(redirectUrl.toString(), 302);
 }
