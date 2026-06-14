@@ -123,9 +123,7 @@ describe('ExpenseListPageComponent', () => {
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_alice' } });
     fixture.detectChanges();
 
-    (
-      fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement
-    ).click();
+    (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('編輯支出');
@@ -134,8 +132,11 @@ describe('ExpenseListPageComponent', () => {
         .value,
     ).toBe('Coffee Beans');
     expect(
-      (fixture.nativeElement.querySelector('textarea[formcontrolname="description"]') as HTMLTextAreaElement)
-        .value,
+      (
+        fixture.nativeElement.querySelector(
+          'textarea[formcontrolname="description"]',
+        ) as HTMLTextAreaElement
+      ).value,
     ).toBe('Initial note');
 
     setInputValue('input[formcontrolname="title"]', 'Coffee Refill');
@@ -168,9 +169,7 @@ describe('ExpenseListPageComponent', () => {
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_blank' } });
     fixture.detectChanges();
 
-    (
-      fixture.nativeElement.querySelector('.expense-row button') as HTMLButtonElement
-    ).click();
+    (fixture.nativeElement.querySelector('.expense-row button') as HTMLButtonElement).click();
     fixture.detectChanges();
     setInputValue('textarea[formcontrolname="description"]', '');
     clickButton('儲存');
