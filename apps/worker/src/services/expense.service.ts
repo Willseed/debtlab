@@ -266,6 +266,34 @@ export async function updateExpense(
   await db.batch(statements);
 }
 
+export async function deleteExpense(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+): Promise<void> {
+  const [deleteResult] = await db.batch([
+    db
+      .prepare(
+        `UPDATE expenses
+         SET deleted_at = datetime('now', '+8 hours'),
+             updated_at = datetime('now', '+8 hours')
+         WHERE id = ? AND deleted_at IS NULL`,
+      )
+      .bind(expenseId),
+    db
+      .prepare(
+        `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id)
+         SELECT ?, ?, 'expense_deleted', 'expense', ?
+         WHERE changes() = 1`,
+      )
+      .bind(crypto.randomUUID(), user.id, expenseId),
+  ]);
+
+  if ((deleteResult?.meta.changes ?? 0) === 0) {
+    throw new ExpenseNotFoundError();
+  }
+}
+
 async function listParticipantsByExpenseId(
   db: D1Database,
 ): Promise<ReadonlyMap<string, ExpenseListItem['participants']>> {

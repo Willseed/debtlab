@@ -56,6 +56,10 @@ export type ExpenseUpdateRequest = {
   readonly expenseDate?: string;
 };
 
+export type ExpenseDeleteResponse = {
+  readonly ok: true;
+};
+
 @Injectable({ providedIn: 'root' })
 export class ExpenseApiService {
   private readonly http = inject(HttpClient);
@@ -77,5 +81,9 @@ export class ExpenseApiService {
       `${this.apiBaseUrl}/expenses/${expenseId}`,
       request,
     );
+  }
+
+  deleteExpense(expenseId: string): Observable<ExpenseDeleteResponse> {
+    return this.http.delete<ExpenseDeleteResponse>(`${this.apiBaseUrl}/expenses/${expenseId}`);
   }
 }

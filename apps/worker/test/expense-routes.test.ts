@@ -17,7 +17,7 @@ const currentUser: SessionUser = {
 };
 
 class FakeExpenseRouteD1 {
-  readonly batchStatements: unknown[][] = [];
+  readonly batchStatements: [string, ...unknown[]][][] = [];
   readonly expenseRows: readonly unknown[];
   readonly participantRows: readonly unknown[];
 
@@ -56,8 +56,16 @@ class FakeExpenseRouteD1 {
   }
 
   async batch(statements: readonly FakeExpenseRouteStatement[]) {
-    this.batchStatements.push(statements.map((statement) => [statement.sql, ...statement.values]));
-    return statements.map(() => ({ success: true }));
+    this.batchStatements.push(
+      statements.map((statement): [string, ...unknown[]] => [statement.sql, ...statement.values]),
+    );
+    return statements.map((statement) => ({
+      success: true,
+      meta: {
+        changes:
+          statement.sql.includes('UPDATE expenses') && this.expenseOwnerRow === null ? 0 : 1,
+      },
+    }));
   }
 }
 
@@ -87,6 +95,10 @@ class FakeExpenseRouteStatement {
 
     if (this.sql.includes('SELECT created_by, amount')) {
       return (this.db.expenseOwnerRow ?? null) as T | null;
+    }
+
+    if (this.sql.includes('SELECT id') && this.sql.includes('FROM expenses')) {
+      return this.db.expenseOwnerRow ? ({ id: 'exp_route' } as T) : null;
     }
 
     return null;
@@ -271,18 +283,39 @@ test('PATCH /api/expenses/:expenseId forbids non-creators', async () => {
   assert.equal(response.status, 403);
 });
 
-test('DELETE /api/expenses/:expenseId reaches the admin placeholder response', async () => {
+test('DELETE /api/expenses/:expenseId soft deletes an expense for admins', async () => {
   const adminUser: SessionUser = { ...currentUser, role: 'admin' };
+  const db = new FakeExpenseRouteD1(adminUser);
   const response = await requestExpenseRoute(
     '/api/expenses/exp_route',
-    new FakeExpenseRouteD1(adminUser),
+    db,
     {
       method: 'DELETE',
     },
     adminUser,
   );
 
-  assert.equal(response.status, 501);
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { ok: true });
+  assert.equal(db.batchStatements.length, 1);
+  assert.match(db.batchStatements[0]?.[0]?.[0] ?? '', /SET deleted_at = datetime/u);
+  assert.match(db.batchStatements[0]?.[1]?.[0] ?? '', /expense_deleted/u);
+});
+
+test('DELETE /api/expenses/:expenseId maps missing expenses to not found', async () => {
+  const adminUser: SessionUser = { ...currentUser, role: 'admin' };
+  const db = new FakeExpenseRouteD1(adminUser, null);
+  const response = await requestExpenseRoute(
+    '/api/expenses/exp_missing',
+    db,
+    {
+      method: 'DELETE',
+    },
+    adminUser,
+  );
+
+  assert.equal(response.status, 404);
+  assert.equal(db.batchStatements.length, 1);
 });
 
 async function requestExpenseRoute(

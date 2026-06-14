@@ -222,6 +222,76 @@ describe('ExpenseListPageComponent', () => {
     ]);
   });
 
+  it('renders pencil edit and trash delete icon actions for admins', () => {
+    currentUserState.set({ ...currentUser, role: 'admin' });
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_icons' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_icons' })]);
+    fixture.detectChanges();
+
+    const editButton = fixture.nativeElement.querySelector(
+      'button[aria-label="編輯支出"]',
+    ) as HTMLButtonElement | null;
+    const deleteButton = fixture.nativeElement.querySelector(
+      'button[aria-label="刪除支出"]',
+    ) as HTMLButtonElement | null;
+
+    expect(editButton?.querySelector('svg')).not.toBeNull();
+    expect(deleteButton?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('soft deletes an expense after admin confirmation and reloads the list', () => {
+    currentUserState.set({ ...currentUser, role: 'admin' });
+    spyOn(globalThis, 'confirm').and.returnValue(true);
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_delete' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_delete' })]);
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    const request = http.expectOne('/api/expenses/exp_delete');
+    expect(request.request.method).toBe('DELETE');
+    expect(
+      (fixture.nativeElement.querySelector('button[aria-label="編輯支出"]') as HTMLButtonElement)
+        .disabled,
+    ).toBeTrue();
+    request.flush({ ok: true });
+    flushExpenseList();
+    fixture.detectChanges();
+
+    expect(globalThis.confirm).toHaveBeenCalledWith('確定要刪除這筆支出嗎？');
+    expect(fixture.nativeElement.textContent).toContain('目前沒有支出。');
+  });
+
+  it('does not delete when admin confirmation is cancelled', () => {
+    currentUserState.set({ ...currentUser, role: 'admin' });
+    spyOn(globalThis, 'confirm').and.returnValue(false);
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_keep' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_keep' })]);
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
+    ).click();
+
+    http.expectNone('/api/expenses/exp_keep');
+    expect(globalThis.confirm).toHaveBeenCalledWith('確定要刪除這筆支出嗎？');
+  });
+
   it('keeps the modal open while submitting and then surfaces the API error message', () => {
     clickButton('新增支出');
     fixture.detectChanges();

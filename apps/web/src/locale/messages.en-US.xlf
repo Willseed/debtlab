@@ -42,6 +42,10 @@
       <trans-unit id="expensesEmpty" datatype="html"><source>目前沒有支出。</source><target>There are no expenses yet.</target></trans-unit>
       <trans-unit id="expensesSelfParticipant" datatype="html"><source>本人</source><target>Me</target></trans-unit>
       <trans-unit id="expensesEditAction" datatype="html"><source>編輯</source><target>Edit</target></trans-unit>
+      <trans-unit id="expensesEditActionLabel" datatype="html"><source>編輯支出</source><target>Edit expense</target></trans-unit>
+      <trans-unit id="expensesEditActionTitle" datatype="html"><source>編輯支出</source><target>Edit expense</target></trans-unit>
+      <trans-unit id="expensesDeleteActionLabel" datatype="html"><source>刪除支出</source><target>Delete expense</target></trans-unit>
+      <trans-unit id="expensesDeleteActionTitle" datatype="html"><source>刪除支出</source><target>Delete expense</target></trans-unit>
       <trans-unit id="expenseModalEyebrow" datatype="html"><source>LabSplit Entry</source><target>LabSplit Entry</target></trans-unit>
       <trans-unit id="expenseCreateTitle" datatype="html"><source>新增支出</source><target>Add Expense</target></trans-unit>
       <trans-unit id="expenseEditTitle" datatype="html"><source>編輯支出</source><target>Edit Expense</target></trans-unit>
@@ -59,6 +63,8 @@
       <trans-unit id="expenseSave" datatype="html"><source>儲存</source><target>Save</target></trans-unit>
       <trans-unit id="expenseAuthRequired" datatype="html"><source>請先登入後再新增支出。</source><target>Sign in before adding an expense.</target></trans-unit>
       <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>Could not create the expense. Please try again later.</target></trans-unit>
+      <trans-unit id="expenseDeleteConfirm" datatype="html"><source>確定要刪除這筆支出嗎？</source><target>Delete this expense?</target></trans-unit>
+      <trans-unit id="expenseDeleteFailed" datatype="html"><source>支出刪除失敗，請稍後再試。</source><target>Could not delete the expense. Please try again later.</target></trans-unit>
       <trans-unit id="expenseCategoryIngredients" datatype="html"><source>食材</source><target>Ingredients</target></trans-unit>
       <trans-unit id="expenseCategoryPrize" datatype="html"><source>獎品</source><target>Prize</target></trans-unit>
       <trans-unit id="expenseCategoryOther" datatype="html"><source>其他</source><target>Other</target></trans-unit>

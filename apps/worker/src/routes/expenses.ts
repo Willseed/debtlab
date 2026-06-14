@@ -5,6 +5,7 @@ import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
 import {
   createExpense,
+  deleteExpense,
   ExpenseAccessDeniedError,
   ExpenseNotFoundError,
   listExpenses,
@@ -105,11 +106,20 @@ expenseRoutes.patch('/:expenseId', async (c) => {
   return c.json({ expense: { id: expenseId } });
 });
 
-expenseRoutes.delete('/:expenseId', requireAdmin, (c) => {
-  return notImplemented(
-    c,
-    `Expense ${c.req.param('expenseId')} soft delete is not implemented yet.`,
-  );
+expenseRoutes.delete('/:expenseId', requireAdmin, async (c) => {
+  const currentUser = c.get('currentUser');
+  const expenseId = c.req.param('expenseId');
+
+  try {
+    await deleteExpense(c.env.DB, currentUser, expenseId);
+  } catch (error) {
+    if (error instanceof ExpenseNotFoundError) {
+      return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    throw error;
+  }
+
+  return c.json({ ok: true });
 });
 
 function readErrorMessage(error: unknown): string {

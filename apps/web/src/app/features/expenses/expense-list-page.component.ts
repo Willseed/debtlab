@@ -101,14 +101,86 @@ type ExpenseForm = {
                     <td class="money">NT&#36;{{ expense.amount }}</td>
                     <td>{{ expense.participantsLabel }}</td>
                     <td>
-                      <button
-                        type="button"
-                        class="button button--secondary"
-                        (click)="openEditModal(expense); $event.stopPropagation()"
-                        i18n="Edit expense action@@expensesEditAction"
-                      >
-                        編輯
-                      </button>
+                      <div class="action-group">
+                        <button
+                          type="button"
+                          class="button button--secondary button--icon"
+                          (click)="openEditModal(expense); $event.stopPropagation()"
+                          [disabled]="deletingExpenseIds().has(expense.id)"
+                          aria-label="編輯支出"
+                          title="編輯支出"
+                          i18n-aria-label="Edit expense action label@@expensesEditActionLabel"
+                          i18n-title="Edit expense action title@@expensesEditActionTitle"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            focusable="false"
+                            viewBox="0 0 24 24"
+                            width="20"
+                            height="20"
+                          >
+                            <path
+                              d="M4 20h4.2L18.6 9.6a2 2 0 0 0 0-2.8l-1.4-1.4a2 2 0 0 0-2.8 0L4 15.8V20Z"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="1.8"
+                            />
+                            <path
+                              d="m13.5 6.5 4 4"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-width="1.8"
+                            />
+                          </svg>
+                        </button>
+                        @if (canDeleteExpenses()) {
+                          <button
+                            type="button"
+                            class="button button--secondary button--icon"
+                            (click)="confirmDeleteExpense(expense); $event.stopPropagation()"
+                            [disabled]="deletingExpenseIds().has(expense.id)"
+                            aria-label="刪除支出"
+                            title="刪除支出"
+                            i18n-aria-label="Delete expense action label@@expensesDeleteActionLabel"
+                            i18n-title="Delete expense action title@@expensesDeleteActionTitle"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              viewBox="0 0 24 24"
+                              width="20"
+                              height="20"
+                            >
+                              <path
+                                d="M5 7h14"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="m8 10 .6 8.2A2 2 0 0 0 10.6 20h2.8a2 2 0 0 0 2-1.8L16 10"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                            </svg>
+                          </button>
+                        }
+                      </div>
                     </td>
                   </tr>
                 }
@@ -116,6 +188,9 @@ type ExpenseForm = {
             </tbody>
           </table>
         </div>
+        @if (listStatusMessage()) {
+          <p class="field__error" role="status">{{ listStatusMessage() }}</p>
+        }
       </div>
     </section>
 
@@ -268,9 +343,14 @@ export class ExpenseListPageComponent implements OnInit {
   protected readonly expenses = signal<readonly ExpenseRow[]>([]);
   protected readonly isCreateModalOpen = signal(false);
   protected readonly isSubmitting = signal(false);
+  protected readonly deletingExpenseIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly listStatusMessage = signal('');
   protected readonly statusMessage = signal('');
   protected readonly editingExpenseId = signal<string | null>(null);
   protected readonly isEditing = computed(() => this.editingExpenseId() !== null);
+  protected readonly canDeleteExpenses = computed(
+    () => this.authService.currentUser()?.role === 'admin',
+  );
   protected readonly currentUserName = computed(
     () =>
       this.authService.currentUser()?.displayName ??
@@ -431,8 +511,57 @@ export class ExpenseListPageComponent implements OnInit {
     }
   }
 
+  protected confirmDeleteExpense(expense: ExpenseRow): void {
+    const confirmed = globalThis.confirm(
+      $localize`:Expense delete confirmation@@expenseDeleteConfirm:確定要刪除這筆支出嗎？`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.trackDeletingExpense(expense.id);
+    this.listStatusMessage.set('');
+    this.expenseApiService.deleteExpense(expense.id).subscribe({
+      next: () => {
+        this.expenses.update((expenses) =>
+          expenses.filter((candidate) => candidate.id !== expense.id),
+        );
+        this.untrackDeletingExpense(expense.id);
+        if (this.deletingExpenseIds().size === 0) {
+          this.loadExpensesFromDatabase();
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.untrackDeletingExpense(expense.id);
+        this.listStatusMessage.set(this.formatDeleteError(err));
+        if (this.deletingExpenseIds().size === 0) {
+          this.loadExpensesFromDatabase();
+        }
+      },
+    });
+  }
+
+  private trackDeletingExpense(expenseId: string): void {
+    this.deletingExpenseIds.update((ids) => new Set(ids).add(expenseId));
+  }
+
+  private untrackDeletingExpense(expenseId: string): void {
+    this.deletingExpenseIds.update((ids) => {
+      const nextIds = new Set(ids);
+      nextIds.delete(expenseId);
+      return nextIds;
+    });
+  }
+
   private formatSubmitError(error: HttpErrorResponse): string {
     const fallback = $localize`:Expense create failed@@expenseCreateFailed:支出建立失敗，請稍後再試。`;
+    const apiError = (error.error as { error?: { message?: string } } | null)?.error;
+    return apiError?.message ?? fallback;
+  }
+
+  private formatDeleteError(error: HttpErrorResponse): string {
+    const fallback = $localize`:Expense delete failed@@expenseDeleteFailed:支出刪除失敗，請稍後再試。`;
     const apiError = (error.error as { error?: { message?: string } } | null)?.error;
     return apiError?.message ?? fallback;
   }

@@ -282,6 +282,48 @@
         </context-group>
         <note priority="1" from="description">Expenses empty state</note>
       </trans-unit>
+      <trans-unit id="expensesEditActionLabel" datatype="html">
+        <source>編輯支出</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+        </context-group>
+        <note priority="1" from="description">Edit expense action label</note>
+      </trans-unit>
+      <trans-unit id="expensesEditActionTitle" datatype="html">
+        <source>編輯支出</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+        </context-group>
+        <note priority="1" from="description">Edit expense action title</note>
+      </trans-unit>
+      <trans-unit id="expensesDeleteActionLabel" datatype="html">
+        <source>刪除支出</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+        </context-group>
+        <note priority="1" from="description">Delete expense action label</note>
+      </trans-unit>
+      <trans-unit id="expensesDeleteActionTitle" datatype="html">
+        <source>刪除支出</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+        </context-group>
+        <note priority="1" from="description">Delete expense action title</note>
+      </trans-unit>
+      <trans-unit id="expenseDeleteConfirm" datatype="html">
+        <source>確定要刪除這筆支出嗎？</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+        </context-group>
+        <note priority="1" from="description">Expense delete confirmation</note>
+      </trans-unit>
+      <trans-unit id="expenseDeleteFailed" datatype="html">
+        <source>支出刪除失敗，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+        </context-group>
+        <note priority="1" from="description">Expense delete failed</note>
+      </trans-unit>
       <trans-unit id="garageTitle" datatype="html">
         <source>隱藏車庫</source>
         <context-group purpose="location">
