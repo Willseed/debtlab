@@ -6,9 +6,10 @@
 --   * every other legacy category collapses to other
 -- expense_participants foreign keys are preserved by keeping the same primary
 -- key values and re-enabling foreign_keys after the swap.
+--
+-- Cloudflare D1 forbids BEGIN TRANSACTION / COMMIT in remote SQL; the
+-- migration runner wraps each file in its own batch.
 PRAGMA foreign_keys = OFF;
-
-BEGIN TRANSACTION;
 
 CREATE TABLE expenses_new (
   id TEXT PRIMARY KEY,
@@ -56,7 +57,5 @@ CREATE INDEX idx_expenses_group_date ON expenses(group_id, expense_date);
 CREATE INDEX idx_expenses_paid_by ON expenses(paid_by_user_id);
 CREATE INDEX idx_expenses_created_by ON expenses(created_by);
 CREATE INDEX idx_expenses_deleted_at ON expenses(deleted_at);
-
-COMMIT;
 
 PRAGMA foreign_keys = ON;
