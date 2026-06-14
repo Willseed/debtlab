@@ -85,7 +85,7 @@ export class AppComponent {
   protected signOut(): void {
     this.authService.signOut().subscribe((isSignedOut) => {
       if (isSignedOut) {
-        void this.router.navigateByUrl('/');
+        this.router.navigateByUrl('/').catch(() => undefined);
       }
     });
   }

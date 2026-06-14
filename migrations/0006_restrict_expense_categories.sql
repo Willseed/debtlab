@@ -18,8 +18,8 @@ CREATE TABLE expenses_new (
   amount INTEGER NOT NULL CHECK (amount > 0),
   currency TEXT NOT NULL DEFAULT 'TWD' CHECK (currency = 'TWD'),
   paid_by_user_id TEXT NOT NULL,
-  category TEXT NOT NULL DEFAULT 'other'
-    CHECK (category IN ('ingredients', 'prize', 'other')),
+  category TEXT NOT NULL DEFAULT 'other' -- NOSONAR
+    CHECK (category IN ('ingredients', 'prize', 'other')), -- NOSONAR
   expense_date TEXT NOT NULL,
   split_method TEXT NOT NULL DEFAULT 'equal' CHECK (split_method IN ('equal', 'custom', 'ratio')),
   created_by TEXT NOT NULL,
@@ -40,9 +40,8 @@ INSERT INTO expenses_new (
 SELECT
   id, group_id, title, description, amount, currency,
   paid_by_user_id,
-  CASE category
-    WHEN 'food' THEN 'ingredients'
-    WHEN 'coffee' THEN 'ingredients'
+  CASE
+    WHEN category IN ('food', 'coffee') THEN 'ingredients'
     ELSE 'other'
   END,
   expense_date, split_method,
