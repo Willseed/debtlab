@@ -25,6 +25,7 @@ jobs:
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
       LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
@@ -67,6 +68,7 @@ jobs:
             CLOUDFLARE_ACCOUNT_ID
             CLOUDFLARE_D1_DATABASE_ID
             LHCI_GITHUB_APP_TOKEN
+            SONAR_TOKEN
           )
 
           for name in "${required[@]}"; do
@@ -126,6 +128,14 @@ jobs:
 
       - name: Lighthouse
         run: pnpm lhci
+
+      - name: SonarCloud code analysis
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Block deployment on SonarCloud open issues
+        run: pnpm sonar:open-issues
 
   deploy-pages:
     needs: quality

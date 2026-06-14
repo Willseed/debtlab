@@ -14,6 +14,7 @@
     "test:coverage": "pnpm --filter web test:coverage && pnpm --filter worker test:coverage",
     "e2e": "pnpm --dir e2e test",
     "lhci": "lhci autorun",
+    "sonar:open-issues": "node scripts/check-sonar-open-issues.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "pnpm --filter web typecheck && pnpm --filter worker typecheck"

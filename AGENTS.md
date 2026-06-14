@@ -155,6 +155,8 @@ ESLint must use flat config `eslint.config.js`, not `.eslintrc.json`. Lint accep
 
 Mobile Lighthouse minimums are Performance 90, Accessibility 100, Best Practices 100, and SEO 100 (`90 / 100 / 100 / 100`). Do not add dependencies, fonts, images, charts, or animations that make Lighthouse fail.
 
+SonarCloud is a hard quality and deployment gate. The project must have zero open SonarCloud issues at `https://sonarcloud.io/project/issues?issueStatuses=OPEN&id=Willseed_debtlab`; any open issue there is not allowed. Do not report work as complete, merge, or deploy while SonarCloud has open issues. Fix issues in code or valid configuration first; do not silence, ignore, downgrade, or bypass SonarCloud findings unless the rule is demonstrably false-positive and the exception is explicit, narrow, documented, and approved. CI and deployment workflows must keep SonarCloud code analysis and the open-issues check before any GitHub Pages or Cloudflare Worker deployment.
+
 ## Development workflow
 
 Make precise, minimal, complete changes. Reuse existing helpers and patterns before adding new abstractions. Keep TypeScript strict and avoid unnecessary casts. Add or update tests when behavior changes. Update SDD/API/DESIGN/I18N/TESTING/LIGHTHOUSE docs when behavior changes. Do not rewrite unrelated code, introduce unrequested dependencies, ignore failing tests, change quality gates, commit generated secrets, or implement UI outside `docs/DESIGN.md`.

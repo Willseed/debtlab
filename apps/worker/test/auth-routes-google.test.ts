@@ -548,11 +548,19 @@ function createGoogleDependencies(
 }
 
 function readSetCookie(response: Response): string {
-  const headersWithSetCookie = response.headers as Headers & {
-    readonly getSetCookie?: () => string[];
+  if (hasGetSetCookie(response.headers)) {
+    return response.headers.getSetCookie().join('\n');
+  }
+
+  return response.headers.get('Set-Cookie') ?? '';
+}
+
+function hasGetSetCookie(headers: Headers): headers is Headers & {
+  readonly getSetCookie: () => string[];
+} {
+  const maybeHeaders = headers as Headers & {
+    readonly getSetCookie?: unknown;
   };
 
-  return (
-    headersWithSetCookie.getSetCookie?.().join('\n') ?? response.headers.get('Set-Cookie') ?? ''
-  );
+  return typeof maybeHeaders.getSetCookie === 'function';
 }

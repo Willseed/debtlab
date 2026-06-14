@@ -17,6 +17,7 @@ jobs:
       SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
@@ -45,6 +46,7 @@ jobs:
             SESSION_SECRET
             GOOGLE_CLIENT_ID
             GOOGLE_CLIENT_SECRET
+            SONAR_TOKEN
           )
 
           for name in "${required[@]}"; do
@@ -59,6 +61,14 @@ jobs:
 
       - name: Build Worker
         run: pnpm --filter worker build
+
+      - name: SonarCloud code analysis
+        uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+      - name: Block deployment on SonarCloud open issues
+        run: pnpm sonar:open-issues
 
       - name: Configure production D1 binding
         shell: bash

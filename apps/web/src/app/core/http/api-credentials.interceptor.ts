@@ -2,8 +2,6 @@ import { HttpInterceptorFn } from '@angular/common/http';
 
 import { environment } from '../../../environments/environment';
 
-const SLASH_CHAR_CODE = 47;
-
 export const apiCredentialsInterceptor: HttpInterceptorFn = (request, next) => {
   if (!isApiRequest(request.url)) {
     return next(request);
@@ -21,7 +19,11 @@ function isApiRequest(url: string): boolean {
   const apiBaseUrl = parseUrl(environment.apiBaseUrl, currentOrigin);
   const requestUrl = parseUrl(url, currentOrigin);
 
-  if (!apiBaseUrl || !requestUrl || requestUrl.origin !== apiBaseUrl.origin) {
+  if (apiBaseUrl === null || requestUrl === null) {
+    return false;
+  }
+
+  if (requestUrl.origin !== apiBaseUrl.origin) {
     return false;
   }
 
@@ -46,7 +48,7 @@ function pathMatchesApiBase(pathname: string, apiBasePathname: string): boolean 
 function withoutTrailingSlash(value: string): string {
   let end = value.length;
 
-  while (end > 0 && value.charCodeAt(end - 1) === SLASH_CHAR_CODE) {
+  while (end > 0 && value[end - 1] === '/') {
     end -= 1;
   }
 

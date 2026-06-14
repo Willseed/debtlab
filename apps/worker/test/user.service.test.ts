@@ -22,6 +22,7 @@ const NEW_GOOGLE_PROFILE: GoogleProfile = {
   email: 'new-user@example.com',
   displayName: 'New User',
 };
+const DEFAULT_EXISTING_USER_SEED: UserRowSeed = { id: 'usr_existing' };
 
 class FakeD1Database {
   readonly users = new Map<string, UserRow>();
@@ -224,7 +225,7 @@ function findCurrentUser(db: FakeD1Database, userId: string): Promise<SessionUse
   return findCurrentUserById(asD1(db), userId);
 }
 
-function createDbWithExistingUser(seed: UserRowSeed = { id: 'usr_existing' }): FakeD1Database {
+function createDbWithExistingUser(seed: UserRowSeed = DEFAULT_EXISTING_USER_SEED): FakeD1Database {
   const db = new FakeD1Database();
   seedUser(db, seed);
   return db;
