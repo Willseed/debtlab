@@ -78,7 +78,7 @@ describe('ExpenseListPageComponent', () => {
     setInputValue('input[formcontrolname="title"]', 'Coffee Beans');
     setInputValue('input[formcontrolname="amount"]', '1280');
     setInputValue('input[formcontrolname="expenseDate"]', '2026-06-13');
-    setSelectValue('select[formcontrolname="category"]', 'coffee');
+    setSelectValue('select[formcontrolname="category"]', 'ingredients');
     clickButton('儲存');
 
     const request = http.expectOne('/api/expenses');
@@ -89,7 +89,7 @@ describe('ExpenseListPageComponent', () => {
       amount: 1280,
       currency: 'TWD',
       paidByUserId: 'usr_member',
-      category: 'coffee',
+      category: 'ingredients',
       expenseDate: '2026-06-13',
       splitMethod: 'equal',
       participants: [{ userId: 'usr_member' }],
@@ -217,6 +217,6 @@ describe('ExpenseListPageComponent', () => {
     setInputValue('input[formcontrolname="title"]', 'Coffee Beans');
     setInputValue('input[formcontrolname="amount"]', '1280');
     setInputValue('input[formcontrolname="expenseDate"]', '2026-06-13');
-    setSelectValue('select[formcontrolname="category"]', 'coffee');
+    setSelectValue('select[formcontrolname="category"]', 'ingredients');
   }
 });

@@ -1,5 +1,5 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
-import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 
 import { AuthService } from './core/auth/auth.service';
 
@@ -57,6 +57,14 @@ import { AuthService } from './core/auth/auth.service';
             <a routerLink="/garage" routerLinkActive="is-active" i18n="Garage nav@@appNavGarage">
               車庫
             </a>
+            <button
+              type="button"
+              class="app-shell__signout"
+              (click)="signOut()"
+              i18n="Sign out nav@@appNavSignOut"
+            >
+              登出
+            </button>
           }
         </nav>
       </div>
@@ -69,7 +77,16 @@ import { AuthService } from './core/auth/auth.service';
 })
 export class AppComponent {
   private readonly authService = inject(AuthService);
+  private readonly router = inject(Router);
 
   protected readonly isAuthenticated = this.authService.isAuthenticated;
   protected readonly isAdmin = this.authService.isAdmin;
+
+  protected signOut(): void {
+    this.authService.signOut().subscribe((isSignedOut) => {
+      if (isSignedOut) {
+        void this.router.navigateByUrl('/');
+      }
+    });
+  }
 }

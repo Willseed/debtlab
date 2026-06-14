@@ -29,12 +29,12 @@ class FakeD1PreparedStatement {
 }
 
 const expenseInput: ExpenseCreateInput = {
-  title: 'Lab coffee',
+  title: 'Lab ingredients',
   description: 'Beans',
   amount: 1280,
   currency: 'TWD',
   paidByUserId: 'usr_alice',
-  category: 'coffee',
+  category: 'ingredients',
   expenseDate: '2026-06-13',
   splitMethod: 'equal',
   participants: [{ userId: 'usr_alice' }],
@@ -65,6 +65,6 @@ test('createExpense persists group, membership, expense, shares, and audit log',
   assert.match(String(db.statements[0]?.[2]?.[0]), /INSERT INTO expenses/u);
   assert.match(String(db.statements[0]?.[3]?.[0]), /INSERT INTO expense_participants/u);
   assert.match(String(db.statements[0]?.[4]?.[0]), /INSERT INTO audit_logs/u);
-  assert.equal(db.statements[0]?.[2]?.[3], 'Lab coffee');
+  assert.equal(db.statements[0]?.[2]?.[3], 'Lab ingredients');
   assert.equal(db.statements[0]?.[3]?.[3], 'usr_alice');
 });

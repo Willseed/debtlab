@@ -74,7 +74,7 @@ test('authenticated member uses authenticated navigation without seeing login or
   await expect(dialog).toBeVisible();
   await dialog.getByLabel('標題').fill('E2E Coffee');
   await dialog.getByLabel('金額').fill('1280');
-  await dialog.getByLabel('分類').selectOption('coffee');
+  await dialog.getByLabel('分類').selectOption('ingredients');
   await dialog.getByLabel('日期').fill('2026-06-13');
 
   const createExpenseRequest = page.waitForRequest(
@@ -86,7 +86,7 @@ test('authenticated member uses authenticated navigation without seeing login or
   expect(request.postDataJSON()).toMatchObject({
     title: 'E2E Coffee',
     amount: 1280,
-    category: 'coffee',
+    category: 'ingredients',
     expenseDate: '2026-06-13',
     splitMethod: 'equal',
   });

@@ -3,15 +3,7 @@ import { z } from 'zod';
 const userIdSchema = z.string().min(1).max(128);
 const isoDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/u);
 
-export const categorySchema = z.enum([
-  'food',
-  'coffee',
-  'equipment',
-  'reagent',
-  'travel',
-  'meeting',
-  'other',
-]);
+export const categorySchema = z.enum(['ingredients', 'prize', 'other']);
 
 export const googleAuthSchema = z.object({
   credential: z.string().min(1),

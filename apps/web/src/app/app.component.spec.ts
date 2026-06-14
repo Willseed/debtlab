@@ -1,6 +1,7 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import { of } from 'rxjs';
 
 import { AppComponent } from './app.component';
 import { AuthService } from './core/auth/auth.service';
@@ -8,10 +9,12 @@ import { AuthService } from './core/auth/auth.service';
 describe('AppComponent', () => {
   let isAuthenticated: ReturnType<typeof signal<boolean>>;
   let isAdmin: ReturnType<typeof signal<boolean>>;
+  let signOutSpy: jasmine.Spy;
 
   beforeEach(() => {
     isAuthenticated = signal(false);
     isAdmin = signal(false);
+    signOutSpy = jasmine.createSpy('signOut').and.returnValue(of(true));
   });
 
   async function createComponent() {
@@ -24,47 +27,84 @@ describe('AppComponent', () => {
           useValue: {
             isAuthenticated,
             isAdmin,
-          } satisfies Pick<AuthService, 'isAuthenticated' | 'isAdmin'>,
+            signOut: signOutSpy,
+          } satisfies Pick<AuthService, 'isAuthenticated' | 'isAdmin' | 'signOut'>,
         },
       ],
     }).compileComponents();
 
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
-    return fixture.nativeElement as HTMLElement;
+    return fixture;
   }
 
   it('renders the product shell brand', async () => {
-    const compiled = await createComponent();
+    const fixture = await createComponent();
 
-    expect(compiled.textContent).toContain('LabSplit Black Gold');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('LabSplit Black Gold');
   });
 
   it('shows only public navigation to guests', async () => {
-    const compiled = await createComponent();
+    const fixture = await createComponent();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(compiled.textContent).toContain('首頁');
-    expect(compiled.textContent).not.toContain('支出');
-    expect(compiled.textContent).not.toContain('管理');
+    expect(text).toContain('首頁');
+    expect(text).not.toContain('支出');
+    expect(text).not.toContain('管理');
+    expect(text).not.toContain('登出');
   });
 
   it('hides home and admin navigation from authenticated non-admin members', async () => {
     isAuthenticated.set(true);
 
-    const compiled = await createComponent();
+    const fixture = await createComponent();
+    const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
 
-    expect(compiled.textContent).not.toContain('首頁');
-    expect(compiled.textContent).toContain('儀表板');
-    expect(compiled.textContent).toContain('支出');
-    expect(compiled.textContent).not.toContain('管理');
+    expect(text).not.toContain('首頁');
+    expect(text).toContain('儀表板');
+    expect(text).toContain('支出');
+    expect(text).not.toContain('管理');
+    expect(text).toContain('登出');
   });
 
   it('shows admin navigation only to admins', async () => {
     isAuthenticated.set(true);
     isAdmin.set(true);
 
-    const compiled = await createComponent();
+    const fixture = await createComponent();
 
-    expect(compiled.textContent).toContain('管理');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('管理');
+  });
+
+  it('signs out and navigates to the landing page when the sign-out button is clicked', async () => {
+    isAuthenticated.set(true);
+
+    const fixture = await createComponent();
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+    const button = (fixture.nativeElement as HTMLElement).querySelector<HTMLButtonElement>(
+      '.app-shell__signout',
+    );
+
+    expect(button).not.toBeNull();
+    button?.click();
+
+    expect(signOutSpy).toHaveBeenCalledTimes(1);
+    expect(navigateSpy).toHaveBeenCalledOnceWith('/');
+  });
+
+  it('does not navigate when sign-out is not acknowledged by the backend', async () => {
+    isAuthenticated.set(true);
+    signOutSpy.and.returnValue(of(false));
+
+    const fixture = await createComponent();
+    const router = TestBed.inject(Router);
+    const navigateSpy = spyOn(router, 'navigateByUrl').and.resolveTo(true);
+    (fixture.nativeElement as HTMLElement)
+      .querySelector<HTMLButtonElement>('.app-shell__signout')
+      ?.click();
+
+    expect(signOutSpy).toHaveBeenCalledTimes(1);
+    expect(navigateSpy).not.toHaveBeenCalled();
   });
 });

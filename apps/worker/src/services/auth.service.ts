@@ -3,7 +3,7 @@ import { jwtVerify, SignJWT } from 'jose';
 import { SessionUser, UserRole, UserStatus } from '../types';
 
 export const SESSION_COOKIE_NAME = 'labsplit_session';
-export const SESSION_TTL_SECONDS = 604_800;
+export const SESSION_TTL_SECONDS = 86_400;
 
 type SessionClaims = {
   readonly userId: string;

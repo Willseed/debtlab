@@ -228,15 +228,11 @@ export class ExpenseListPageComponent {
     readonly value: ExpenseCategory;
     readonly label: string;
   }[] = [
-    { value: 'food', label: $localize`:Expense category food@@expenseCategoryFood:食物` },
-    { value: 'coffee', label: $localize`:Expense category coffee@@expenseCategoryCoffee:咖啡` },
     {
-      value: 'equipment',
-      label: $localize`:Expense category equipment@@expenseCategoryEquipment:設備`,
+      value: 'ingredients',
+      label: $localize`:Expense category ingredients@@expenseCategoryIngredients:食材`,
     },
-    { value: 'reagent', label: $localize`:Expense category reagent@@expenseCategoryReagent:試劑` },
-    { value: 'travel', label: $localize`:Expense category travel@@expenseCategoryTravel:差旅` },
-    { value: 'meeting', label: $localize`:Expense category meeting@@expenseCategoryMeeting:會議` },
+    { value: 'prize', label: $localize`:Expense category prize@@expenseCategoryPrize:獎品` },
     { value: 'other', label: $localize`:Expense category other@@expenseCategoryOther:其他` },
   ];
   protected readonly expenses = signal<readonly ExpenseRow[]>([]);

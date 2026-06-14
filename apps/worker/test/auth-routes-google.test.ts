@@ -121,7 +121,7 @@ test('Google OAuth callback exchanges the code, verifies the ID token, creates a
   assert.match(setCookie, /Max-Age=0/u);
   assert.match(setCookie, new RegExp(`${SESSION_COOKIE_NAME}=`));
   assert.match(setCookie, /HttpOnly/u);
-  assert.match(setCookie, /Max-Age=604800/u);
+  assert.match(setCookie, /Max-Age=86400/u);
   assert.match(setCookie, /(?:^|;\s*)Path=\/(?:;|$)/u);
   assert.match(setCookie, /SameSite=Lax/u);
   assert.match(setCookie, /Secure/u);
@@ -282,7 +282,7 @@ test('Google one-tap endpoint verifies credentials before issuing a session cook
   const setCookie = readSetCookie(response);
   assert.match(setCookie, new RegExp(`${SESSION_COOKIE_NAME}=`));
   assert.match(setCookie, /HttpOnly/u);
-  assert.match(setCookie, /Max-Age=604800/u);
+  assert.match(setCookie, /Max-Age=86400/u);
   assert.match(setCookie, /(?:^|;\s*)Path=\/(?:;|$)/u);
   assert.match(setCookie, /SameSite=Lax/u);
   assert.match(setCookie, /Secure/u);

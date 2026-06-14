@@ -11,6 +11,7 @@
       <trans-unit id="appNavSettlements" datatype="html"><source>結算</source><target>結算</target></trans-unit>
       <trans-unit id="appNavAdmin" datatype="html"><source>管理</source><target>管理</target></trans-unit>
       <trans-unit id="appNavGarage" datatype="html"><source>車庫</source><target>車庫</target></trans-unit>
+      <trans-unit id="appNavSignOut" datatype="html"><source>登出</source><target>登出</target></trans-unit>
       <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>實驗室花費，精準拆帳</target></trans-unit>
       <trans-unit id="landingHeroSubtitle" datatype="html"><source>給任何人使用的共同支出拆帳儀表板。</source><target>給任何人使用的共同支出拆帳儀表板。</target></trans-unit>
       <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>登入提供者</target></trans-unit>
@@ -57,12 +58,8 @@
       <trans-unit id="expenseSave" datatype="html"><source>儲存</source><target>儲存</target></trans-unit>
       <trans-unit id="expenseAuthRequired" datatype="html"><source>請先登入後再新增支出。</source><target>請先登入後再新增支出。</target></trans-unit>
       <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>支出建立失敗，請稍後再試。</target></trans-unit>
-      <trans-unit id="expenseCategoryFood" datatype="html"><source>食物</source><target>食物</target></trans-unit>
-      <trans-unit id="expenseCategoryCoffee" datatype="html"><source>咖啡</source><target>咖啡</target></trans-unit>
-      <trans-unit id="expenseCategoryEquipment" datatype="html"><source>設備</source><target>設備</target></trans-unit>
-      <trans-unit id="expenseCategoryReagent" datatype="html"><source>試劑</source><target>試劑</target></trans-unit>
-      <trans-unit id="expenseCategoryTravel" datatype="html"><source>差旅</source><target>差旅</target></trans-unit>
-      <trans-unit id="expenseCategoryMeeting" datatype="html"><source>會議</source><target>會議</target></trans-unit>
+      <trans-unit id="expenseCategoryIngredients" datatype="html"><source>食材</source><target>食材</target></trans-unit>
+      <trans-unit id="expenseCategoryPrize" datatype="html"><source>獎品</source><target>獎品</target></trans-unit>
       <trans-unit id="expenseCategoryOther" datatype="html"><source>其他</source><target>其他</target></trans-unit>
       <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>結算</target></trans-unit>
       <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>餘額總覽</target></trans-unit>

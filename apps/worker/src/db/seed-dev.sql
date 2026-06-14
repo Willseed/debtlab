@@ -39,7 +39,7 @@ VALUES
     1280,
     'TWD',
     'usr_alice',
-    'coffee',
+    'ingredients',
     '2026-06-13', -- NOSONAR
     'equal', -- NOSONAR
     'usr_alice'
@@ -52,7 +52,7 @@ VALUES
     420,
     'TWD',
     'usr_bob',
-    'equipment',
+    'other',
     '2026-06-13',
     'equal',
     'usr_bob'
@@ -65,7 +65,7 @@ VALUES
     3600,
     'TWD',
     'usr_carol',
-    'food',
+    'ingredients',
     '2026-06-13',
     'equal',
     'usr_carol'
@@ -78,7 +78,7 @@ VALUES
     2500,
     'TWD',
     'usr_dave',
-    'reagent',
+    'other',
     '2026-06-13',
     'equal',
     'usr_dave'
