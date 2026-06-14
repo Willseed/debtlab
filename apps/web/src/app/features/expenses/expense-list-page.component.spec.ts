@@ -5,6 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { CurrentUser } from '../../shared/models/current-user.model';
+import { ExpenseListItem } from './expense-api.service';
 import { ExpenseListPageComponent } from './expense-list-page.component';
 
 describe('ExpenseListPageComponent', () => {
@@ -40,6 +41,7 @@ describe('ExpenseListPageComponent', () => {
     fixture = TestBed.createComponent(ExpenseListPageComponent);
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
+    flushExpenseList();
   });
 
   afterEach(() => {
@@ -96,6 +98,15 @@ describe('ExpenseListPageComponent', () => {
     });
 
     request.flush({ expense: { id: 'exp_created' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_created',
+        title: 'Coffee Beans',
+        amount: 1280,
+        category: 'ingredients',
+        expenseDate: '2026-06-13',
+      }),
+    ]);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Coffee Beans');
@@ -112,6 +123,12 @@ describe('ExpenseListPageComponent', () => {
     const request = http.expectOne('/api/expenses');
     expect(request.request.body.description).toBe('Shared coffee beans');
     request.flush({ expense: { id: 'exp_with_description' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_with_description',
+        description: 'Shared coffee beans',
+      }),
+    ]);
   });
 
   it('opens edit mode when a row is clicked and PATCHes the changes', () => {
@@ -121,6 +138,12 @@ describe('ExpenseListPageComponent', () => {
     setInputValue('textarea[formcontrolname="description"]', 'Initial note');
     clickButton('儲存');
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_alice' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_alice',
+        description: 'Initial note',
+      }),
+    ]);
     fixture.detectChanges();
 
     (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
@@ -153,6 +176,14 @@ describe('ExpenseListPageComponent', () => {
       expenseDate: '2026-06-13',
     });
     patch.flush({ expense: { id: 'exp_alice' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_alice',
+        title: 'Coffee Refill',
+        amount: 1500,
+        description: 'Initial note',
+      }),
+    ]);
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Coffee Refill');
@@ -167,6 +198,12 @@ describe('ExpenseListPageComponent', () => {
     setInputValue('textarea[formcontrolname="description"]', 'will be cleared');
     clickButton('儲存');
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_blank' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_blank',
+        description: 'will be cleared',
+      }),
+    ]);
     fixture.detectChanges();
 
     (fixture.nativeElement.querySelector('.expense-row button') as HTMLButtonElement).click();
@@ -177,6 +214,12 @@ describe('ExpenseListPageComponent', () => {
     const patch = http.expectOne('/api/expenses/exp_blank');
     expect(patch.request.body.description).toBeNull();
     patch.flush({ expense: { id: 'exp_blank' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_blank',
+        description: null,
+      }),
+    ]);
   });
 
   it('keeps the modal open while submitting and then surfaces the API error message', () => {
@@ -298,5 +341,36 @@ describe('ExpenseListPageComponent', () => {
     setInputValue('input[formcontrolname="amount"]', '1280');
     setInputValue('input[formcontrolname="expenseDate"]', '2026-06-13');
     setSelectValue('select[formcontrolname="category"]', 'ingredients');
+  }
+
+  function flushExpenseList(expenses: readonly ExpenseListItem[] = []): void {
+    const request = http.expectOne('/api/expenses');
+    expect(request.request.method).toBe('GET');
+    request.flush({ expenses, nextCursor: null });
+    fixture.detectChanges();
+  }
+
+  function createExpenseItem(overrides: Partial<ExpenseListItem> = {}): ExpenseListItem {
+    return {
+      id: 'exp_fixture',
+      title: 'Coffee Beans',
+      description: null,
+      amount: 1280,
+      currency: 'TWD',
+      category: 'ingredients',
+      expenseDate: '2026-06-13',
+      paidBy: {
+        id: currentUser.id,
+        displayName: currentUser.displayName,
+      },
+      participants: [
+        {
+          userId: currentUser.id,
+          displayName: currentUser.displayName,
+          shareAmount: overrides.amount ?? 1280,
+        },
+      ],
+      ...overrides,
+    };
   }
 });

@@ -7,6 +7,7 @@ import {
   createExpense,
   ExpenseAccessDeniedError,
   ExpenseNotFoundError,
+  listExpenses,
   updateExpense,
 } from '../services/expense.service';
 import { calculateExpenseShares } from '../services/split.service';
@@ -17,8 +18,10 @@ export const expenseRoutes = new Hono<AppBindings>();
 
 expenseRoutes.use('*', requireAuth);
 
-expenseRoutes.get('/', (c) => {
-  return c.json({ expenses: [], nextCursor: null });
+expenseRoutes.get('/', async (c) => {
+  const expenses = await listExpenses(c.env.DB);
+
+  return c.json({ expenses, nextCursor: null });
 });
 
 expenseRoutes.post('/', async (c) => {

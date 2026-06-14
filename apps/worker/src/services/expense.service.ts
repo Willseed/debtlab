@@ -24,6 +24,44 @@ type ExpenseOwnerRow = {
   readonly amount: number;
 };
 
+type ExpenseListRow = {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly amount: number;
+  readonly currency: 'TWD';
+  readonly category: ExpenseCreateInput['category'];
+  readonly expense_date: string;
+  readonly paid_by_user_id: string;
+  readonly paid_by_display_name: string;
+};
+
+type ExpenseParticipantRow = {
+  readonly expense_id: string;
+  readonly user_id: string;
+  readonly display_name: string;
+  readonly share_amount: number;
+};
+
+export type ExpenseListItem = {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly amount: number;
+  readonly currency: 'TWD';
+  readonly category: ExpenseCreateInput['category'];
+  readonly expenseDate: string;
+  readonly paidBy: {
+    readonly id: string;
+    readonly displayName: string;
+  };
+  readonly participants: readonly {
+    readonly userId: string;
+    readonly displayName: string;
+    readonly shareAmount: number;
+  }[];
+};
+
 export async function createExpense(
   db: D1Database,
   user: SessionUser,
@@ -112,6 +150,51 @@ export async function createExpense(
   return expenseId;
 }
 
+export async function listExpenses(db: D1Database): Promise<readonly ExpenseListItem[]> {
+  const result = await db
+    .prepare(
+      `SELECT
+         e.id,
+         e.title,
+         e.description,
+         e.amount,
+         e.currency,
+         e.category,
+         e.expense_date,
+         e.paid_by_user_id,
+         COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name
+       FROM expenses e
+       INNER JOIN users payer ON payer.id = e.paid_by_user_id
+       WHERE e.group_id = ? AND e.deleted_at IS NULL
+       ORDER BY e.expense_date DESC, e.created_at DESC, e.id DESC
+       LIMIT 100`,
+    )
+    .bind(DEFAULT_GROUP_ID)
+    .all<ExpenseListRow>();
+  const rows = result.results ?? [];
+
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const participantsByExpenseId = await listParticipantsByExpenseId(db);
+
+  return rows.map((row) => ({
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    amount: row.amount,
+    currency: row.currency,
+    category: row.category,
+    expenseDate: row.expense_date,
+    paidBy: {
+      id: row.paid_by_user_id,
+      displayName: row.paid_by_display_name,
+    },
+    participants: participantsByExpenseId.get(row.id) ?? [],
+  }));
+}
+
 export async function updateExpense(
   db: D1Database,
   user: SessionUser,
@@ -181,4 +264,39 @@ export async function updateExpense(
   );
 
   await db.batch(statements);
+}
+
+async function listParticipantsByExpenseId(
+  db: D1Database,
+): Promise<ReadonlyMap<string, ExpenseListItem['participants']>> {
+  const result = await db
+    .prepare(
+      `SELECT
+         ep.expense_id,
+         ep.user_id,
+         COALESCE(u.display_name, u.email, ep.user_id) AS display_name,
+         ep.share_amount
+       FROM expense_participants ep
+       INNER JOIN users u ON u.id = ep.user_id
+       INNER JOIN expenses e ON e.id = ep.expense_id
+       WHERE e.group_id = ? AND e.deleted_at IS NULL
+       ORDER BY ep.expense_id ASC, ep.user_id ASC`,
+    )
+    .bind(DEFAULT_GROUP_ID)
+    .all<ExpenseParticipantRow>();
+  const participantsByExpenseId = new Map<string, ExpenseListItem['participants']>();
+
+  for (const row of result.results ?? []) {
+    const participants = participantsByExpenseId.get(row.expense_id) ?? [];
+    participantsByExpenseId.set(row.expense_id, [
+      ...participants,
+      {
+        userId: row.user_id,
+        displayName: row.display_name,
+        shareAmount: row.share_amount,
+      },
+    ]);
+  }
+
+  return participantsByExpenseId;
 }

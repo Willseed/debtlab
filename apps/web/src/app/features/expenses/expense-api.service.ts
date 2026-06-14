@@ -24,6 +24,30 @@ export type ExpenseCreateResponse = {
   };
 };
 
+export type ExpenseListResponse = {
+  readonly expenses: readonly ExpenseListItem[];
+  readonly nextCursor: string | null;
+};
+
+export type ExpenseListItem = {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly amount: number;
+  readonly currency: 'TWD';
+  readonly category: ExpenseCategory;
+  readonly expenseDate: string;
+  readonly paidBy: {
+    readonly id: string;
+    readonly displayName: string;
+  };
+  readonly participants: readonly {
+    readonly userId: string;
+    readonly displayName: string;
+    readonly shareAmount: number;
+  }[];
+};
+
 export type ExpenseUpdateRequest = {
   readonly title?: string;
   readonly description?: string | null;
@@ -36,6 +60,10 @@ export type ExpenseUpdateRequest = {
 export class ExpenseApiService {
   private readonly http = inject(HttpClient);
   private readonly apiBaseUrl = environment.apiBaseUrl;
+
+  listExpenses(): Observable<ExpenseListResponse> {
+    return this.http.get<ExpenseListResponse>(`${this.apiBaseUrl}/expenses`);
+  }
 
   createExpense(request: ExpenseCreateRequest): Observable<ExpenseCreateResponse> {
     return this.http.post<ExpenseCreateResponse>(`${this.apiBaseUrl}/expenses`, request);

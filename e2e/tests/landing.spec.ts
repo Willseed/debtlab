@@ -30,6 +30,32 @@ test('Google login button starts the backend OAuth flow', async ({ page }) => {
 test('authenticated member uses authenticated navigation without seeing login or admin entry points', async ({
   page,
 }) => {
+  type ExpenseListItem = {
+    readonly id: string;
+    readonly title: string;
+    readonly description: string | null;
+    readonly amount: number;
+    readonly currency: 'TWD';
+    readonly category: 'ingredients' | 'prize' | 'other';
+    readonly expenseDate: string;
+    readonly paidBy: {
+      readonly id: string;
+      readonly displayName: string;
+    };
+    readonly participants: readonly {
+      readonly userId: string;
+      readonly displayName: string;
+      readonly shareAmount: number;
+    }[];
+  };
+  type ExpenseCreateRequest = {
+    readonly title: string;
+    readonly amount: number;
+    readonly category: 'ingredients' | 'prize' | 'other';
+    readonly expenseDate: string;
+  };
+  let persistedExpenses: readonly ExpenseListItem[] = [];
+
   await page.route('**/api/auth/me', async (route) => {
     await route.fulfill({
       contentType: 'application/json',
@@ -45,6 +71,46 @@ test('authenticated member uses authenticated navigation without seeing login or
     });
   });
 
+  await page.route('**/api/expenses', async (route) => {
+    if (route.request().method() === 'POST') {
+      const body = route.request().postDataJSON() as ExpenseCreateRequest;
+      persistedExpenses = [
+        {
+          id: 'exp_e2e',
+          title: body.title,
+          description: null,
+          amount: body.amount,
+          currency: 'TWD',
+          category: body.category,
+          expenseDate: body.expenseDate,
+          paidBy: {
+            id: 'usr_member',
+            displayName: 'Member User',
+          },
+          participants: [
+            {
+              userId: 'usr_member',
+              displayName: 'Member User',
+              shareAmount: body.amount,
+            },
+          ],
+        },
+      ];
+      await route.fulfill({
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({ expense: { id: 'exp_e2e' } }),
+      });
+      return;
+    }
+
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ expenses: persistedExpenses, nextCursor: null }),
+    });
+  });
+
   await page.goto('/');
 
   await expect(page).toHaveURL(/\/dashboard$/u);
@@ -55,19 +121,6 @@ test('authenticated member uses authenticated navigation without seeing login or
   await page.getByRole('link', { name: '支出' }).click();
   await expect(page).toHaveURL(/\/expenses$/u);
   await expect(page.getByRole('heading', { name: '支出' })).toBeVisible();
-
-  await page.route('**/api/expenses', async (route) => {
-    if (route.request().method() === 'POST') {
-      await route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({ expense: { id: 'exp_e2e' } }),
-      });
-      return;
-    }
-
-    await route.fallback();
-  });
 
   await page.getByRole('button', { name: '新增支出' }).click();
   const dialog = page.getByRole('dialog', { name: '新增支出' });

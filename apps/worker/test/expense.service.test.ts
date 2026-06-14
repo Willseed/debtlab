@@ -5,6 +5,7 @@ import {
   createExpense,
   ExpenseAccessDeniedError,
   ExpenseNotFoundError,
+  listExpenses,
   updateExpense,
 } from '../src/services/expense.service';
 import { CalculatedShare } from '../src/services/split.service';
@@ -14,6 +15,23 @@ import type { SessionUser } from '../src/types';
 class FakeD1Database {
   readonly statements: unknown[][][] = [];
   expenseOwnerRow: { readonly created_by: string; readonly amount: number } | null = null;
+  expenseRows: readonly {
+    readonly id: string;
+    readonly title: string;
+    readonly description: string | null;
+    readonly amount: number;
+    readonly currency: 'TWD';
+    readonly category: 'ingredients' | 'prize' | 'other';
+    readonly expense_date: string;
+    readonly paid_by_user_id: string;
+    readonly paid_by_display_name: string;
+  }[] = [];
+  participantRows: readonly {
+    readonly expense_id: string;
+    readonly user_id: string;
+    readonly display_name: string;
+    readonly share_amount: number;
+  }[] = [];
 
   prepare(sql: string) {
     return new FakeD1PreparedStatement(this, sql);
@@ -45,6 +63,22 @@ class FakeD1PreparedStatement {
       return (this.db.expenseOwnerRow ?? null) as T | null;
     }
     return null;
+  }
+
+  async all<T>(): Promise<{ readonly results: readonly T[] }> {
+    if (!this.db) {
+      return { results: [] };
+    }
+
+    if (this.sql.includes('FROM expenses e')) {
+      return { results: this.db.expenseRows as readonly T[] };
+    }
+
+    if (this.sql.includes('FROM expense_participants ep')) {
+      return { results: this.db.participantRows as readonly T[] };
+    }
+
+    return { results: [] };
   }
 }
 
@@ -87,6 +121,56 @@ test('createExpense persists group, membership, expense, shares, and audit log',
   assert.match(String(db.statements[0]?.[4]?.[0]), /INSERT INTO audit_logs/u);
   assert.equal(db.statements[0]?.[2]?.[3], 'Lab ingredients');
   assert.equal(db.statements[0]?.[3]?.[3], 'usr_alice');
+});
+
+test('listExpenses reads persisted expenses with payer and participant data', async () => {
+  const db = new FakeD1Database();
+  db.expenseRows = [
+    {
+      id: 'exp_created',
+      title: 'Lab ingredients',
+      description: 'Beans',
+      amount: 1280,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-13',
+      paid_by_user_id: 'usr_alice',
+      paid_by_display_name: 'Alice',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_created',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 1280,
+    },
+  ];
+
+  const expenses = await listExpenses(db as unknown as D1Database);
+
+  assert.deepEqual(expenses, [
+    {
+      id: 'exp_created',
+      title: 'Lab ingredients',
+      description: 'Beans',
+      amount: 1280,
+      currency: 'TWD',
+      category: 'ingredients',
+      expenseDate: '2026-06-13',
+      paidBy: {
+        id: 'usr_alice',
+        displayName: 'Alice',
+      },
+      participants: [
+        {
+          userId: 'usr_alice',
+          displayName: 'Alice',
+          shareAmount: 1280,
+        },
+      ],
+    },
+  ]);
 });
 
 const sessionUser: SessionUser = {

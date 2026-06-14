@@ -4,6 +4,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  OnInit,
   ViewChild,
   computed,
   inject,
@@ -14,7 +15,12 @@ import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angula
 import { Observable } from 'rxjs';
 
 import { AuthService } from '../../core/auth/auth.service';
-import { ExpenseApiService, ExpenseCategory, ExpenseCreateResponse } from './expense-api.service';
+import {
+  ExpenseApiService,
+  ExpenseCategory,
+  ExpenseCreateResponse,
+  ExpenseListItem,
+} from './expense-api.service';
 
 declare const $localize: (
   messageParts: TemplateStringsArray,
@@ -28,6 +34,7 @@ type ExpenseRow = {
   readonly amount: number;
   readonly expenseDate: string;
   readonly paidBy: string;
+  readonly participantsLabel: string;
   readonly description: string;
 };
 
@@ -92,7 +99,7 @@ type ExpenseForm = {
                     <td>{{ expense.category }}</td>
                     <td>{{ expense.paidBy }}</td>
                     <td class="money">NT&#36;{{ expense.amount }}</td>
-                    <td i18n="Self participant label@@expensesSelfParticipant">本人</td>
+                    <td>{{ expense.participantsLabel }}</td>
                     <td>
                       <button
                         type="button"
@@ -241,7 +248,7 @@ type ExpenseForm = {
     }
   `,
 })
-export class ExpenseListPageComponent {
+export class ExpenseListPageComponent implements OnInit {
   @ViewChild('firstExpenseField') private readonly firstExpenseField?: ElementRef<HTMLInputElement>;
 
   private readonly authService = inject(AuthService);
@@ -289,6 +296,10 @@ export class ExpenseListPageComponent {
       validators: [Validators.maxLength(1000)],
     }),
   });
+
+  ngOnInit(): void {
+    this.loadExpensesFromDatabase();
+  }
 
   protected openCreateModal(): void {
     this.editingExpenseId.set(null);
@@ -376,23 +387,10 @@ export class ExpenseListPageComponent {
         });
 
     request$.subscribe({
-      next: (response) => {
-        const row: ExpenseRow = {
-          id: response.expense.id,
-          title: formValue.title.trim(),
-          category: formValue.category,
-          amount,
-          expenseDate: formValue.expenseDate,
-          paidBy: currentUser.displayName,
-          description: formValue.description.trim(),
-        };
-        this.expenses.update((expenses) =>
-          editingId
-            ? expenses.map((expense) => (expense.id === editingId ? row : expense))
-            : [row, ...expenses],
-        );
+      next: () => {
         this.isSubmitting.set(false);
         this.closeCreateModal();
+        this.loadExpensesFromDatabase();
       },
       error: (err: HttpErrorResponse) => {
         this.isSubmitting.set(false);
@@ -437,6 +435,32 @@ export class ExpenseListPageComponent {
     const fallback = $localize`:Expense create failed@@expenseCreateFailed:支出建立失敗，請稍後再試。`;
     const apiError = (error.error as { error?: { message?: string } } | null)?.error;
     return apiError?.message ?? fallback;
+  }
+
+  private loadExpensesFromDatabase(): void {
+    this.expenseApiService.listExpenses().subscribe({
+      next: (response) => {
+        this.expenses.set(response.expenses.map((expense) => this.mapExpenseRow(expense)));
+      },
+      error: () => {
+        this.expenses.set([]);
+      },
+    });
+  }
+
+  private mapExpenseRow(expense: ExpenseListItem): ExpenseRow {
+    return {
+      id: expense.id,
+      title: expense.title,
+      category: expense.category,
+      amount: expense.amount,
+      expenseDate: expense.expenseDate,
+      paidBy: expense.paidBy.displayName,
+      participantsLabel: expense.participants
+        .map((participant) => participant.displayName)
+        .join(', '),
+      description: expense.description ?? '',
+    };
   }
 
   protected titleInvalid(): boolean {
