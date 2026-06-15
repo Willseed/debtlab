@@ -10,6 +10,10 @@ type GarageCtfConfigRow = {
   readonly ec_public_jwk: string;
 };
 
+type EcdhDeriveBitsParams = SubtleCryptoDeriveKeyAlgorithm & {
+  readonly public: CryptoKey;
+};
+
 export class GarageCtfConfigNotFoundError extends Error {
   constructor() {
     super('Garage CTF password configuration is missing.');
@@ -79,11 +83,12 @@ async function deriveGarageCtfAesKey(config: GarageCtfConfigRow): Promise<Crypto
     false,
     [],
   );
-  const sharedSecret = await crypto.subtle.deriveBits(
-    { name: 'ECDH', public: publicKey } as unknown as Parameters<SubtleCrypto['deriveBits']>[0],
-    privateKey,
-    256,
-  );
+  const ecdhParams: EcdhDeriveBitsParams = {
+    name: 'ECDH',
+    $public: publicKey,
+    public: publicKey,
+  };
+  const sharedSecret = await crypto.subtle.deriveBits(ecdhParams, privateKey, 256);
   const hkdfKey = await crypto.subtle.importKey('raw', sharedSecret, 'HKDF', false, ['deriveKey']);
 
   return await crypto.subtle.deriveKey(
@@ -105,7 +110,7 @@ function base64ToBytes(value: string): Uint8Array {
   const bytes = new Uint8Array(binary.length);
 
   for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
+    bytes[index] = binary.codePointAt(index) ?? 0;
   }
 
   return bytes;

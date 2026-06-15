@@ -48,25 +48,27 @@ type PaymentRow = {
   readonly confirmed_at: string | null;
 };
 
+const DEFAULT_PENDING_PAYMENT: PaymentRow = {
+  id: 'pay_1',
+  group_id: 'grp_default',
+  from_user_id: alice.id,
+  to_user_id: bob.id,
+  amount: 300,
+  currency: 'TWD',
+  note: null,
+  status: 'pending',
+  created_by: alice.id,
+  created_at: '2026-06-15 10:00:00',
+  confirmed_at: null,
+};
+
 class FakePaymentD1 {
   readonly batchStatements: [string, ...unknown[]][][] = [];
   readonly pendingPayment: PaymentRow | null;
 
   constructor(
     readonly currentUser: SessionUser = alice,
-    pendingPayment: PaymentRow | null = {
-      id: 'pay_1',
-      group_id: 'grp_default',
-      from_user_id: alice.id,
-      to_user_id: bob.id,
-      amount: 300,
-      currency: 'TWD',
-      note: null,
-      status: 'pending',
-      created_by: alice.id,
-      created_at: '2026-06-15 10:00:00',
-      confirmed_at: null,
-    },
+    pendingPayment: PaymentRow | null = DEFAULT_PENDING_PAYMENT,
     private readonly opts: {
       forceZeroChanges?: boolean;
       throwOnBatch?: boolean;
@@ -180,9 +182,7 @@ test('POST /api/payments creates a pending payment and returns its id', async ()
   const body = (await response.json()) as { payment: { id: string } };
   assert.ok(typeof body.payment.id === 'string');
   assert.ok(
-    db.batchStatements.some((batch) =>
-      batch.some(([sql]) => (sql as string).includes('INSERT INTO payments')),
-    ),
+    db.batchStatements.some((batch) => batch.some(([sql]) => sql.includes('INSERT INTO payments'))),
   );
 });
 
@@ -451,9 +451,7 @@ test('PATCH /api/payments/:paymentId/confirm returns 409 when UPDATE returns zer
 
   assert.equal(response.status, 409);
   assert.equal(db.batchStatements.length, 1);
-  assert.ok(
-    db.batchStatements[0]?.every(([sql]) => !(sql as string).includes('payment_confirmed')),
-  );
+  assert.ok(db.batchStatements[0]?.every(([sql]) => !sql.includes('payment_confirmed')));
 });
 
 test('PATCH /api/payments/:paymentId/confirm returns 409 when D1 returns null meta changes', async () => {

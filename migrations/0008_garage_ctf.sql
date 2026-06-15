@@ -16,8 +16,7 @@ INSERT INTO garage_ctf_config (
   password_iv,
   password_salt,
   ec_private_jwk,
-  ec_public_jwk,
-  updated_at
+  ec_public_jwk
 )
 VALUES (
   'hidden_garage',
@@ -25,8 +24,7 @@ VALUES (
   'MhrxOR7KxjPubuMx',
   'E2vhKEiWw2pWjmzJlEri2g==',
   '{"key_ops":["deriveBits"],"ext":true,"kty":"EC","x":"djGsUm8g_i18RqPEoPsrsfiMR_ZMEsq5WnFhKP5ttEQ","y":"ltv5PJvsre-c09usFitNG5QtKk58IbhQqFFFB0t2q9o","crv":"P-256","d":"LiV8vdtWfMXlthS3h6afHsln6npr5KtnOoZWA-7ADDU"}',
-  '{"key_ops":[],"ext":true,"kty":"EC","x":"djGsUm8g_i18RqPEoPsrsfiMR_ZMEsq5WnFhKP5ttEQ","y":"ltv5PJvsre-c09usFitNG5QtKk58IbhQqFFFB0t2q9o","crv":"P-256"}',
-  datetime('now', '+8 hours')
+  '{"key_ops":[],"ext":true,"kty":"EC","x":"djGsUm8g_i18RqPEoPsrsfiMR_ZMEsq5WnFhKP5ttEQ","y":"ltv5PJvsre-c09usFitNG5QtKk58IbhQqFFFB0t2q9o","crv":"P-256"}'
 )
 ON CONFLICT(code) DO UPDATE SET
   password_ciphertext = excluded.password_ciphertext,
@@ -34,7 +32,7 @@ ON CONFLICT(code) DO UPDATE SET
   password_salt = excluded.password_salt,
   ec_private_jwk = excluded.ec_private_jwk,
   ec_public_jwk = excluded.ec_public_jwk,
-  updated_at = datetime('now', '+8 hours');
+  updated_at = datetime('now', '+480 minutes');
 
 -- Stores at most one row (the global first solver) via primary key = 1 constraint.
 CREATE TABLE IF NOT EXISTS garage_ctf_first_solve (
