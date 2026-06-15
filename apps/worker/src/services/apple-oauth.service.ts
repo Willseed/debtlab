@@ -217,5 +217,5 @@ function createRandomHexString(): string {
 }
 
 function normalizeApplePrivateKey(privateKey: string): string {
-  return privateKey.trim().replaceAll('\\n', '\n');
+  return privateKey.trim().replaceAll(String.raw`\n`, '\n');
 }
