@@ -2,7 +2,18 @@ name: Deploy Cloudflare Worker
 
 on:
   workflow_dispatch:
+    inputs:
+      run_sonar_gate:
+        description: Run the SonarCloud open-issues gate before deployment.
+        required: false
+        default: true
+        type: boolean
   workflow_call:
+    inputs:
+      run_sonar_gate:
+        required: false
+        default: false
+        type: boolean
     secrets:
       CLOUDFLARE_API_TOKEN:
         required: true
@@ -17,13 +28,56 @@ on:
       GOOGLE_CLIENT_SECRET:
         required: true
       SONAR_TOKEN:
-        required: true
+        required: false
 
 permissions:
   contents: read
 
 jobs:
+  sonar:
+    if: inputs.run_sonar_gate
+    runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      contents: read
+    env:
+      NODE_OPTIONS: --disable-warning=DEP0040
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - name: Configure Git defaults
+        run: git config --global init.defaultBranch main
+
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+
+      - name: Setup Node
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Enable pnpm
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.14.0 --activate
+
+      - name: Verify required Sonar secret
+        shell: bash
+        run: |
+          if [ -z "${SONAR_TOKEN}" ]; then
+            echo "SONAR_TOKEN is not configured"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Block on SonarCloud open issues
+        run: pnpm sonar:open-issues
+
   deploy:
+    needs: sonar
+    if: ${{ always() && (!inputs.run_sonar_gate || needs.sonar.result == 'success') }}
     runs-on: ubuntu-latest
     env:
       NODE_OPTIONS: --disable-warning=DEP0040
@@ -33,7 +87,6 @@ jobs:
       SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
-      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Configure Git defaults
         run: git config --global init.defaultBranch main
@@ -62,7 +115,6 @@ jobs:
             SESSION_SECRET
             GOOGLE_CLIENT_ID
             GOOGLE_CLIENT_SECRET
-            SONAR_TOKEN
           )
 
           for name in "${required[@]}"; do
@@ -77,9 +129,6 @@ jobs:
 
       - name: Build Worker
         run: pnpm --filter worker build
-
-      - name: Block deployment on SonarCloud open issues
-        run: pnpm sonar:open-issues
 
       - name: Configure production D1 binding
         shell: bash
