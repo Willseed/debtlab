@@ -606,9 +606,10 @@ function compareLeaderboardEntries(
   if (leftHasTimestamp) return -1;
   if (rightHasTimestamp) return 1;
   const completedAtOrder = left.completedAt.localeCompare(right.completedAt);
-  return completedAtOrder !== 0
-    ? completedAtOrder
-    : left.displayName.localeCompare(right.displayName);
+  if (completedAtOrder === 0) {
+    return left.displayName.localeCompare(right.displayName);
+  }
+  return completedAtOrder;
 }
 
 function completedAtTimestamp(value: string): number {
