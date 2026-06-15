@@ -1,8 +1,35 @@
 -- Allow lodging as a first-class expense category.
 --
 -- SQLite cannot alter a CHECK constraint in place, so rebuild expenses with
--- the expanded category constraint while preserving existing rows.
+-- the expanded category constraint while preserving existing rows. D1 enforces
+-- child foreign keys while dropping parent tables, so temporarily rebuild
+-- expense_participants too before swapping expenses.
 PRAGMA foreign_keys = OFF;
+
+DROP TABLE IF EXISTS expense_participants_new;
+DROP TABLE IF EXISTS expenses_new;
+
+CREATE TABLE expense_participants_new (
+  id TEXT PRIMARY KEY,
+  expense_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  share_amount INTEGER NOT NULL CHECK (share_amount >= 0),
+  share_ratio REAL CHECK (share_ratio IS NULL OR share_ratio > 0),
+  is_settled INTEGER NOT NULL DEFAULT 0 CHECK (is_settled IN (0, 1)),
+  settled_at TEXT,
+
+  FOREIGN KEY (expense_id) REFERENCES expenses(id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  UNIQUE (expense_id, user_id)
+);
+
+INSERT INTO expense_participants_new (
+  id, expense_id, user_id, share_amount, share_ratio, is_settled, settled_at
+)
+SELECT id, expense_id, user_id, share_amount, share_ratio, is_settled, settled_at
+FROM expense_participants;
+
+DROP TABLE expense_participants;
 
 CREATE TABLE expenses_new (
   id TEXT PRIMARY KEY,
@@ -45,10 +72,13 @@ FROM expenses;
 DROP TABLE expenses;
 
 ALTER TABLE expenses_new RENAME TO expenses;
+ALTER TABLE expense_participants_new RENAME TO expense_participants;
 
 CREATE INDEX idx_expenses_group_date ON expenses(group_id, expense_date);
 CREATE INDEX idx_expenses_paid_by ON expenses(paid_by_user_id);
 CREATE INDEX idx_expenses_created_by ON expenses(created_by);
 CREATE INDEX idx_expenses_deleted_at ON expenses(deleted_at);
+CREATE INDEX idx_expense_participants_expense ON expense_participants(expense_id);
+CREATE INDEX idx_expense_participants_user ON expense_participants(user_id);
 
 PRAGMA foreign_keys = ON;
