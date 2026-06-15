@@ -63,10 +63,16 @@
       <trans-unit id="expenseSave" datatype="html"><source>儲存</source><target>Save</target></trans-unit>
       <trans-unit id="expenseAuthRequired" datatype="html"><source>請先登入後再新增支出。</source><target>Sign in before adding an expense.</target></trans-unit>
       <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>Could not create the expense. Please try again later.</target></trans-unit>
+      <trans-unit id="expenseDeleteEyebrow" datatype="html"><source>LabSplit Delete</source><target>LabSplit Delete</target></trans-unit>
       <trans-unit id="expenseDeleteConfirm" datatype="html"><source>確定要刪除這筆支出嗎？</source><target>Delete this expense?</target></trans-unit>
+      <trans-unit id="expenseDeleteDescription" datatype="html"><source>刪除後會從目前清單移除，並重新載入支出資料。</source><target>After deletion, the expense will be removed from the current list and the expense data will be reloaded.</target></trans-unit>
+      <trans-unit id="expenseDeleteTarget" datatype="html"><source>將刪除</source><target>Deleting</target></trans-unit>
+      <trans-unit id="expenseDeleteAction" datatype="html"><source>刪除</source><target>Delete</target></trans-unit>
+      <trans-unit id="expenseDeleteInProgress" datatype="html"><source>刪除中…</source><target>Deleting…</target></trans-unit>
       <trans-unit id="expenseDeleteFailed" datatype="html"><source>支出刪除失敗，請稍後再試。</source><target>Could not delete the expense. Please try again later.</target></trans-unit>
       <trans-unit id="expenseCategoryIngredients" datatype="html"><source>食材</source><target>Ingredients</target></trans-unit>
       <trans-unit id="expenseCategoryPrize" datatype="html"><source>獎品</source><target>Prize</target></trans-unit>
+      <trans-unit id="expenseCategoryLodging" datatype="html"><source>住宿</source><target>Lodging</target></trans-unit>
       <trans-unit id="expenseCategoryOther" datatype="html"><source>其他</source><target>Other</target></trans-unit>
       <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
       <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>Balance Summary</target></trans-unit>

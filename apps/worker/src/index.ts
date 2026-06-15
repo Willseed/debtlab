@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { adminRoutes } from './routes/admin';
 import { authRoutes } from './routes/auth';
 import { expenseRoutes } from './routes/expenses';
+import { healthRoutes } from './routes/health';
 import { memberRoutes } from './routes/members';
 import { paymentRoutes } from './routes/payments';
 import { settlementRoutes } from './routes/settlements';
@@ -14,9 +15,7 @@ const app = new Hono<AppBindings>();
 
 app.use('/api/*', validateOrigin);
 
-app.get('/api/health', (c) => {
-  return c.json({ ok: true });
-});
+app.route('/api/health', healthRoutes);
 
 app.route('/api/auth', authRoutes);
 app.route('/api/members', memberRoutes);

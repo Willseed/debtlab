@@ -4,7 +4,7 @@ import { Observable } from 'rxjs';
 
 import { environment } from '../../../environments/environment';
 
-export type ExpenseCategory = 'ingredients' | 'prize' | 'other';
+export type ExpenseCategory = 'ingredients' | 'prize' | 'lodging' | 'other';
 
 export type ExpenseCreateRequest = {
   readonly title: string;

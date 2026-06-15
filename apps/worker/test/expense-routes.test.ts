@@ -201,14 +201,14 @@ test('GET /api/expenses returns persisted D1 expenses', async () => {
   });
 });
 
-test('POST /api/expenses writes a self-paid expense', async () => {
+test('POST /api/expenses writes a lodging self-paid expense', async () => {
   const db = new FakeExpenseRouteD1();
   const response = await requestExpenseRoute('/api/expenses', db, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify(createExpenseBody()),
+    body: JSON.stringify(createExpenseBody({ title: 'Conference Hotel', category: 'lodging' })),
   });
 
   assert.equal(response.status, 201);
@@ -217,6 +217,8 @@ test('POST /api/expenses writes a self-paid expense', async () => {
     /^[0-9a-f-]+$/u,
   );
   assert.equal(db.batchStatements.length, 1);
+  assert.equal(db.batchStatements[0]?.[2]?.[3], 'Conference Hotel');
+  assert.equal(db.batchStatements[0]?.[2]?.[8], 'lodging');
 });
 
 test('POST /api/expenses rejects invalid bodies before D1 writes', async () => {
@@ -284,12 +286,13 @@ test('PATCH /api/expenses/:expenseId persists member updates', async () => {
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({ title: 'Updated route coffee' }),
+    body: JSON.stringify({ title: 'Updated route coffee', category: 'lodging' }),
   });
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { expense: { id: 'exp_route' } });
   assert.equal(db.batchStatements.length, 1);
+  assert.equal(db.batchStatements[0]?.[0]?.[5], 'lodging');
 });
 
 test('PATCH /api/expenses/:expenseId requires authentication', async () => {
@@ -572,7 +575,7 @@ function createExpenseBody(
     readonly amount: number;
     readonly currency: 'TWD';
     readonly paidByUserId: string;
-    readonly category: 'ingredients' | 'prize' | 'other';
+    readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
     readonly expenseDate: string;
     readonly splitMethod: 'equal' | 'custom' | 'ratio';
     readonly participants: readonly {

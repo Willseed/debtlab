@@ -71,6 +71,19 @@ VALUES
     'usr_carol'
   ),
   (
+    'exp_conference_hotel', -- NOSONAR
+    'grp_default',
+    'Conference Hotel',
+    'Shared lodging for the conference trip',
+    9600,
+    'TWD',
+    'usr_dave',
+    'lodging',
+    '2026-06-13',
+    'equal',
+    'usr_dave'
+  ),
+  (
     'exp_reagent_shipping', -- NOSONAR
     'grp_default',
     'Reagent Shipping',
@@ -98,6 +111,10 @@ VALUES
   ('ep_dinner_bob', 'exp_lab_dinner', 'usr_bob', 900),
   ('ep_dinner_carol', 'exp_lab_dinner', 'usr_carol', 900),
   ('ep_dinner_dave', 'exp_lab_dinner', 'usr_dave', 900),
+  ('ep_hotel_alice', 'exp_conference_hotel', 'usr_alice', 2400),
+  ('ep_hotel_bob', 'exp_conference_hotel', 'usr_bob', 2400),
+  ('ep_hotel_carol', 'exp_conference_hotel', 'usr_carol', 2400),
+  ('ep_hotel_dave', 'exp_conference_hotel', 'usr_dave', 2400),
   ('ep_reagent_alice', 'exp_reagent_shipping', 'usr_alice', 625),
   ('ep_reagent_bob', 'exp_reagent_shipping', 'usr_bob', 625),
   ('ep_reagent_carol', 'exp_reagent_shipping', 'usr_carol', 625),

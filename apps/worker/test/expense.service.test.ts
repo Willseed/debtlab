@@ -43,7 +43,7 @@ class FakeD1Database {
     readonly description: string | null;
     readonly amount: number;
     readonly currency: 'TWD';
-    readonly category: 'ingredients' | 'prize' | 'other';
+    readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
     readonly expense_date: string;
     readonly paid_by_user_id: string;
     readonly paid_by_display_name: string;

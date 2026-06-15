@@ -31,6 +31,7 @@ type ExpenseRow = {
   readonly id: string;
   readonly title: string;
   readonly category: ExpenseCategory;
+  readonly categoryLabel: string;
   readonly amount: number;
   readonly expenseDate: string;
   readonly paidBy: string;
@@ -96,7 +97,7 @@ type ExpenseForm = {
                   <tr class="expense-row" (click)="openEditModal(expense)">
                     <td>{{ expense.expenseDate }}</td>
                     <td>{{ expense.title }}</td>
-                    <td>{{ expense.category }}</td>
+                    <td>{{ expense.categoryLabel }}</td>
                     <td>{{ expense.paidBy }}</td>
                     <td class="money">NT&#36;{{ expense.amount }}</td>
                     <td>{{ expense.participantsLabel }}</td>
@@ -106,7 +107,7 @@ type ExpenseForm = {
                           type="button"
                           class="button button--secondary button--icon"
                           (click)="openEditModal(expense); $event.stopPropagation()"
-                          [disabled]="deletingExpenseIds().has(expense.id)"
+                          [disabled]="isExpenseActionDisabled(expense.id)"
                           aria-label="編輯支出"
                           title="編輯支出"
                           i18n-aria-label="Edit expense action label@@expensesEditActionLabel"
@@ -139,8 +140,8 @@ type ExpenseForm = {
                         <button
                           type="button"
                           class="button button--secondary button--icon"
-                          (click)="confirmDeleteExpense(expense); $event.stopPropagation()"
-                          [disabled]="deletingExpenseIds().has(expense.id)"
+                          (click)="openDeleteModal(expense); $event.stopPropagation()"
+                          [disabled]="isExpenseActionDisabled(expense.id)"
                           aria-label="刪除支出"
                           title="刪除支出"
                           i18n-aria-label="Delete expense action label@@expensesDeleteActionLabel"
@@ -319,33 +320,109 @@ type ExpenseForm = {
         </form>
       </section>
     }
+
+    @if (pendingDeleteExpense(); as deleteExpense) {
+      <div class="modal-backdrop" (click)="closeDeleteModal()" aria-hidden="true"></div>
+      <section
+        class="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expense-delete-title"
+        aria-describedby="expense-delete-description expense-delete-target"
+        tabindex="-1"
+        [attr.aria-busy]="deletingExpenseIds().has(deleteExpense.id)"
+        (keydown)="handleDeleteModalKeydown($event)"
+      >
+        <div class="modal-panel__header">
+          <div>
+            <p class="eyebrow" i18n="Expense delete modal eyebrow@@expenseDeleteEyebrow">
+              LabSplit Delete
+            </p>
+            <h2
+              id="expense-delete-title"
+              class="heading-section"
+              i18n="Expense delete confirmation@@expenseDeleteConfirm"
+            >
+              確定要刪除這筆支出嗎？
+            </h2>
+          </div>
+        </div>
+
+        <p
+          id="expense-delete-description"
+          i18n="Expense delete description@@expenseDeleteDescription"
+        >
+          刪除後會從目前清單移除，並重新載入支出資料。
+        </p>
+
+        <div id="expense-delete-target" class="expense-modal__summary">
+          <span i18n="Expense delete target label@@expenseDeleteTarget">將刪除</span>
+          <strong>{{ deleteExpense.title }}</strong>
+        </div>
+
+        <div class="modal-panel__actions">
+          <button
+            #deleteCancelButton
+            class="button button--secondary"
+            type="button"
+            (click)="closeDeleteModal()"
+            [disabled]="deletingExpenseIds().has(deleteExpense.id)"
+            i18n="Cancel expense@@expenseCancel"
+          >
+            取消
+          </button>
+          <button
+            class="button button--primary"
+            type="button"
+            (click)="deletePendingExpense()"
+            [disabled]="deletingExpenseIds().has(deleteExpense.id)"
+          >
+            @if (deletingExpenseIds().has(deleteExpense.id)) {
+              <span i18n="Expense delete in progress@@expenseDeleteInProgress">刪除中…</span>
+            } @else {
+              <span i18n="Confirm expense delete@@expenseDeleteAction">刪除</span>
+            }
+          </button>
+        </div>
+      </section>
+    }
   `,
 })
 export class ExpenseListPageComponent implements OnInit {
   @ViewChild('firstExpenseField') private readonly firstExpenseField?: ElementRef<HTMLInputElement>;
+  @ViewChild('deleteCancelButton')
+  private readonly deleteCancelButton?: ElementRef<HTMLButtonElement>;
 
   private readonly authService = inject(AuthService);
   private readonly expenseApiService = inject(ExpenseApiService);
 
+  private readonly categoryLabels: Readonly<Record<ExpenseCategory, string>> = {
+    ingredients: $localize`:Expense category ingredients@@expenseCategoryIngredients:食材`,
+    prize: $localize`:Expense category prize@@expenseCategoryPrize:獎品`,
+    lodging: $localize`:Expense category lodging@@expenseCategoryLodging:住宿`,
+    other: $localize`:Expense category other@@expenseCategoryOther:其他`,
+  };
   protected readonly categories: readonly {
     readonly value: ExpenseCategory;
     readonly label: string;
   }[] = [
-    {
-      value: 'ingredients',
-      label: $localize`:Expense category ingredients@@expenseCategoryIngredients:食材`,
-    },
-    { value: 'prize', label: $localize`:Expense category prize@@expenseCategoryPrize:獎品` },
-    { value: 'other', label: $localize`:Expense category other@@expenseCategoryOther:其他` },
+    { value: 'ingredients', label: this.categoryLabels.ingredients },
+    { value: 'prize', label: this.categoryLabels.prize },
+    { value: 'lodging', label: this.categoryLabels.lodging },
+    { value: 'other', label: this.categoryLabels.other },
   ];
   protected readonly expenses = signal<readonly ExpenseRow[]>([]);
   protected readonly isCreateModalOpen = signal(false);
   protected readonly isSubmitting = signal(false);
   protected readonly deletingExpenseIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly pendingDeleteExpense = signal<ExpenseRow | null>(null);
   protected readonly listStatusMessage = signal('');
   protected readonly statusMessage = signal('');
   protected readonly editingExpenseId = signal<string | null>(null);
   protected readonly isEditing = computed(() => this.editingExpenseId() !== null);
+  protected readonly hasDeleteFlowPending = computed(
+    () => this.pendingDeleteExpense() !== null || this.deletingExpenseIds().size > 0,
+  );
   protected readonly currentUserName = computed(
     () =>
       this.authService.currentUser()?.displayName ??
@@ -391,7 +468,7 @@ export class ExpenseListPageComponent implements OnInit {
   }
 
   protected openEditModal(expense: ExpenseRow): void {
-    if (this.deletingExpenseIds().has(expense.id)) {
+    if (this.hasDeleteFlowPending()) {
       return;
     }
 
@@ -484,6 +561,72 @@ export class ExpenseListPageComponent implements OnInit {
       return;
     }
 
+    this.trapModalFocus(event);
+  }
+
+  protected openDeleteModal(expense: ExpenseRow): void {
+    if (this.isCreateModalOpen() || this.hasDeleteFlowPending()) {
+      return;
+    }
+
+    this.listStatusMessage.set('');
+    this.pendingDeleteExpense.set(expense);
+    queueMicrotask(() => this.deleteCancelButton?.nativeElement.focus());
+  }
+
+  protected closeDeleteModal(): void {
+    const expense = this.pendingDeleteExpense();
+    if (expense && this.deletingExpenseIds().has(expense.id)) {
+      return;
+    }
+
+    this.pendingDeleteExpense.set(null);
+  }
+
+  protected handleDeleteModalKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.closeDeleteModal();
+      return;
+    }
+
+    this.trapModalFocus(event);
+  }
+
+  protected deletePendingExpense(): void {
+    const expense = this.pendingDeleteExpense();
+    if (!expense || this.deletingExpenseIds().has(expense.id)) {
+      return;
+    }
+
+    this.trackDeletingExpense(expense.id);
+    this.listStatusMessage.set('');
+    this.expenseApiService.deleteExpense(expense.id).subscribe({
+      next: () => {
+        this.expenses.update((expenses) =>
+          expenses.filter((candidate) => candidate.id !== expense.id),
+        );
+        this.untrackDeletingExpense(expense.id);
+        this.pendingDeleteExpense.set(null);
+        if (this.deletingExpenseIds().size === 0) {
+          this.loadExpensesFromDatabase();
+        }
+      },
+      error: (err: HttpErrorResponse) => {
+        this.untrackDeletingExpense(expense.id);
+        this.pendingDeleteExpense.set(null);
+        this.listStatusMessage.set(this.formatDeleteError(err));
+        if (this.deletingExpenseIds().size === 0) {
+          this.loadExpensesFromDatabase();
+        }
+      },
+    });
+  }
+
+  protected isExpenseActionDisabled(expenseId: string): boolean {
+    return this.hasDeleteFlowPending() || this.deletingExpenseIds().has(expenseId);
+  }
+
+  private trapModalFocus(event: KeyboardEvent): void {
     if (event.key !== 'Tab') {
       return;
     }
@@ -508,37 +651,6 @@ export class ExpenseListPageComponent implements OnInit {
       event.preventDefault();
       first.focus();
     }
-  }
-
-  protected confirmDeleteExpense(expense: ExpenseRow): void {
-    const confirmed = globalThis.confirm(
-      $localize`:Expense delete confirmation@@expenseDeleteConfirm:確定要刪除這筆支出嗎？`,
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    this.trackDeletingExpense(expense.id);
-    this.listStatusMessage.set('');
-    this.expenseApiService.deleteExpense(expense.id).subscribe({
-      next: () => {
-        this.expenses.update((expenses) =>
-          expenses.filter((candidate) => candidate.id !== expense.id),
-        );
-        this.untrackDeletingExpense(expense.id);
-        if (this.deletingExpenseIds().size === 0) {
-          this.loadExpensesFromDatabase();
-        }
-      },
-      error: (err: HttpErrorResponse) => {
-        this.untrackDeletingExpense(expense.id);
-        this.listStatusMessage.set(this.formatDeleteError(err));
-        if (this.deletingExpenseIds().size === 0) {
-          this.loadExpensesFromDatabase();
-        }
-      },
-    });
   }
 
   private trackDeletingExpense(expenseId: string): void {
@@ -581,6 +693,7 @@ export class ExpenseListPageComponent implements OnInit {
       id: expense.id,
       title: expense.title,
       category: expense.category,
+      categoryLabel: this.categoryLabels[expense.category],
       amount: expense.amount,
       expenseDate: expense.expenseDate,
       paidBy: expense.paidBy.displayName,

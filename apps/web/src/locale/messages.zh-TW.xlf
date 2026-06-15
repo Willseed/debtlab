@@ -63,10 +63,16 @@
       <trans-unit id="expenseSave" datatype="html"><source>儲存</source><target>儲存</target></trans-unit>
       <trans-unit id="expenseAuthRequired" datatype="html"><source>請先登入後再新增支出。</source><target>請先登入後再新增支出。</target></trans-unit>
       <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>支出建立失敗，請稍後再試。</target></trans-unit>
+      <trans-unit id="expenseDeleteEyebrow" datatype="html"><source>LabSplit Delete</source><target>LabSplit Delete</target></trans-unit>
       <trans-unit id="expenseDeleteConfirm" datatype="html"><source>確定要刪除這筆支出嗎？</source><target>確定要刪除這筆支出嗎？</target></trans-unit>
+      <trans-unit id="expenseDeleteDescription" datatype="html"><source>刪除後會從目前清單移除，並重新載入支出資料。</source><target>刪除後會從目前清單移除，並重新載入支出資料。</target></trans-unit>
+      <trans-unit id="expenseDeleteTarget" datatype="html"><source>將刪除</source><target>將刪除</target></trans-unit>
+      <trans-unit id="expenseDeleteAction" datatype="html"><source>刪除</source><target>刪除</target></trans-unit>
+      <trans-unit id="expenseDeleteInProgress" datatype="html"><source>刪除中…</source><target>刪除中…</target></trans-unit>
       <trans-unit id="expenseDeleteFailed" datatype="html"><source>支出刪除失敗，請稍後再試。</source><target>支出刪除失敗，請稍後再試。</target></trans-unit>
       <trans-unit id="expenseCategoryIngredients" datatype="html"><source>食材</source><target>食材</target></trans-unit>
       <trans-unit id="expenseCategoryPrize" datatype="html"><source>獎品</source><target>獎品</target></trans-unit>
+      <trans-unit id="expenseCategoryLodging" datatype="html"><source>住宿</source><target>住宿</target></trans-unit>
       <trans-unit id="expenseCategoryOther" datatype="html"><source>其他</source><target>其他</target></trans-unit>
       <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>結算</target></trans-unit>
       <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>餘額總覽</target></trans-unit>

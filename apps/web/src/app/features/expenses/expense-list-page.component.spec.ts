@@ -77,21 +77,21 @@ describe('ExpenseListPageComponent', () => {
     clickButton('新增支出');
     fixture.detectChanges();
 
-    setInputValue('input[formcontrolname="title"]', 'Coffee Beans');
-    setInputValue('input[formcontrolname="amount"]', '1280');
+    setInputValue('input[formcontrolname="title"]', 'Conference Hotel');
+    setInputValue('input[formcontrolname="amount"]', '9600');
     setInputValue('input[formcontrolname="expenseDate"]', '2026-06-13');
-    setSelectValue('select[formcontrolname="category"]', 'ingredients');
+    setSelectValue('select[formcontrolname="category"]', 'lodging');
     clickButton('儲存');
 
     const request = http.expectOne('/api/expenses');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({
-      title: 'Coffee Beans',
+      title: 'Conference Hotel',
       description: undefined,
-      amount: 1280,
+      amount: 9600,
       currency: 'TWD',
       paidByUserId: 'usr_member',
-      category: 'ingredients',
+      category: 'lodging',
       expenseDate: '2026-06-13',
       splitMethod: 'equal',
       participants: [{ userId: 'usr_member' }],
@@ -101,16 +101,61 @@ describe('ExpenseListPageComponent', () => {
     flushExpenseList([
       createExpenseItem({
         id: 'exp_created',
-        title: 'Coffee Beans',
-        amount: 1280,
-        category: 'ingredients',
+        title: 'Conference Hotel',
+        amount: 9600,
+        category: 'lodging',
         expenseDate: '2026-06-13',
       }),
     ]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Coffee Beans');
-    expect(fixture.nativeElement.textContent).toContain('NT$1280');
+    expect(fixture.nativeElement.textContent).toContain('Conference Hotel');
+    expect(fixture.nativeElement.textContent).toContain('住宿');
+    expect(fixture.nativeElement.textContent).not.toContain('lodging');
+    expect(fixture.nativeElement.textContent).toContain('NT$9600');
+  });
+
+  it('renders localized category labels in the expense table', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_categories' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_ingredients',
+        title: 'Coffee Beans',
+        category: 'ingredients',
+      }),
+      createExpenseItem({
+        id: 'exp_prize',
+        title: 'Award Envelope',
+        category: 'prize',
+      }),
+      createExpenseItem({
+        id: 'exp_lodging',
+        title: 'Conference Hotel',
+        category: 'lodging',
+      }),
+      createExpenseItem({
+        id: 'exp_other',
+        title: 'Venue Fee',
+        category: 'other',
+      }),
+    ]);
+    fixture.detectChanges();
+
+    const categoryCells = Array.from(
+      fixture.nativeElement.querySelectorAll(
+        'tr.expense-row td:nth-child(3)',
+      ) as NodeListOf<HTMLTableCellElement>,
+    ).map((cell) => cell.textContent?.trim());
+
+    expect(categoryCells).toEqual(['食材', '獎品', '住宿', '其他']);
+    expect(categoryCells).not.toContain('ingredients');
+    expect(categoryCells).not.toContain('prize');
+    expect(categoryCells).not.toContain('other');
+    expect(categoryCells).not.toContain('lodging');
   });
 
   it('includes optional descriptions when submitting expenses', () => {
@@ -168,6 +213,7 @@ describe('ExpenseListPageComponent', () => {
 
     setInputValue('input[formcontrolname="title"]', 'Coffee Refill');
     setInputValue('input[formcontrolname="amount"]', '1500');
+    setSelectValue('select[formcontrolname="category"]', 'lodging');
     clickButton('儲存');
 
     const patch = http.expectOne('/api/expenses/exp_alice');
@@ -176,7 +222,7 @@ describe('ExpenseListPageComponent', () => {
       title: 'Coffee Refill',
       description: 'Initial note',
       amount: 1500,
-      category: 'ingredients',
+      category: 'lodging',
       expenseDate: '2026-06-13',
     });
     patch.flush({ expense: { id: 'exp_alice' } });
@@ -185,6 +231,7 @@ describe('ExpenseListPageComponent', () => {
         id: 'exp_alice',
         title: 'Coffee Refill',
         amount: 1500,
+        category: 'lodging',
         description: 'Initial note',
         paidBy: {
           id: 'usr_other',
@@ -195,6 +242,7 @@ describe('ExpenseListPageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Coffee Refill');
+    expect(fixture.nativeElement.textContent).toContain('住宿');
     expect(fixture.nativeElement.textContent).toContain('NT$1500');
     expect(fixture.nativeElement.textContent).not.toContain('Coffee Beans');
   });
@@ -258,8 +306,7 @@ describe('ExpenseListPageComponent', () => {
     expect(deleteButton?.querySelector('svg')).not.toBeNull();
   });
 
-  it('soft deletes an expense after regular member confirmation and reloads the list', () => {
-    spyOn(globalThis, 'confirm').and.returnValue(true);
+  it('opens a delete confirmation modal before soft deleting and reloading the list', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -276,9 +323,19 @@ describe('ExpenseListPageComponent', () => {
     ]);
     fixture.detectChanges();
 
-    (
-      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
-    ).click();
+    clickDeleteIcon();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('確定要刪除這筆支出嗎？');
+    expect(fixture.nativeElement.textContent).toContain('將刪除');
+    expect(fixture.nativeElement.textContent).toContain('Coffee Beans');
+    http.expectNone('/api/expenses/exp_delete');
+    expect(
+      (fixture.nativeElement.querySelector('button[aria-label="編輯支出"]') as HTMLButtonElement)
+        .disabled,
+    ).toBeTrue();
+
+    clickButton('刪除');
     fixture.detectChanges();
 
     const request = http.expectOne('/api/expenses/exp_delete');
@@ -287,16 +344,29 @@ describe('ExpenseListPageComponent', () => {
       (fixture.nativeElement.querySelector('button[aria-label="編輯支出"]') as HTMLButtonElement)
         .disabled,
     ).toBeTrue();
+    expect(fixture.nativeElement.textContent).toContain('刪除中…');
+
+    const deleteDialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    deleteDialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('刪除中…');
+    (
+      fixture.componentInstance as unknown as {
+        readonly deletePendingExpense: () => void;
+      }
+    ).deletePendingExpense();
+    http.expectNone('/api/expenses/exp_delete');
+
     request.flush({ ok: true });
     flushExpenseList();
     fixture.detectChanges();
 
-    expect(globalThis.confirm).toHaveBeenCalledWith('確定要刪除這筆支出嗎？');
     expect(fixture.nativeElement.textContent).toContain('目前沒有支出。');
+    expect(fixture.nativeElement.textContent).not.toContain('確定要刪除這筆支出嗎？');
   });
 
-  it('does not open edit mode from the row while deleting an expense', () => {
-    spyOn(globalThis, 'confirm').and.returnValue(true);
+  it('does not open edit mode from the row while the delete modal or request is pending', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -305,9 +375,15 @@ describe('ExpenseListPageComponent', () => {
     flushExpenseList([createExpenseItem({ id: 'exp_deleting' })]);
     fixture.detectChanges();
 
-    (
-      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
-    ).click();
+    clickDeleteIcon();
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('LabSplit Entry');
+
+    clickButton('刪除');
     fixture.detectChanges();
 
     (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
@@ -318,8 +394,7 @@ describe('ExpenseListPageComponent', () => {
     flushExpenseList();
   });
 
-  it('does not delete when regular member confirmation is cancelled', () => {
-    spyOn(globalThis, 'confirm').and.returnValue(false);
+  it('does not delete when the delete confirmation modal is cancelled', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -328,16 +403,74 @@ describe('ExpenseListPageComponent', () => {
     flushExpenseList([createExpenseItem({ id: 'exp_keep' })]);
     fixture.detectChanges();
 
-    (
-      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
-    ).click();
+    clickDeleteIcon();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('確定要刪除這筆支出嗎？');
+    clickButton('取消');
+    fixture.detectChanges();
 
     http.expectNone('/api/expenses/exp_keep');
-    expect(globalThis.confirm).toHaveBeenCalledWith('確定要刪除這筆支出嗎？');
+    expect(fixture.nativeElement.textContent).not.toContain('確定要刪除這筆支出嗎？');
+    expect(
+      (fixture.nativeElement.querySelector('button[aria-label="編輯支出"]') as HTMLButtonElement)
+        .disabled,
+    ).toBeFalse();
+  });
+
+  it('does not open delete confirmation while the expense form modal is open', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_create_modal_guard' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_create_modal_guard' })]);
+    fixture.detectChanges();
+
+    clickButton('新增支出');
+    fixture.detectChanges();
+    clickDeleteIcon();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('LabSplit Entry');
+    expect(fixture.nativeElement.textContent).not.toContain('確定要刪除這筆支出嗎？');
+    http.expectNone('/api/expenses/exp_create_modal_guard');
+  });
+
+  it('closes the delete confirmation with Escape and wraps focus within the dialog', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_keyboard_delete' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_keyboard_delete' })]);
+    fixture.detectChanges();
+
+    clickDeleteIcon();
+    fixture.detectChanges();
+
+    const dialog = fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement;
+    const cancelButton = findButton('取消');
+    const deleteButton = findButton('刪除');
+
+    cancelButton.focus();
+    dialog.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', shiftKey: true, bubbles: true }),
+    );
+    expect(globalThis.document.activeElement).toBe(deleteButton);
+
+    deleteButton.focus();
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+    expect(globalThis.document.activeElement).toBe(cancelButton);
+
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    fixture.detectChanges();
+
+    http.expectNone('/api/expenses/exp_keyboard_delete');
+    expect(fixture.nativeElement.textContent).not.toContain('確定要刪除這筆支出嗎？');
   });
 
   it('surfaces an API delete error and reloads the list', () => {
-    spyOn(globalThis, 'confirm').and.returnValue(true);
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -346,9 +479,9 @@ describe('ExpenseListPageComponent', () => {
     flushExpenseList([createExpenseItem({ id: 'exp_delete_error' })]);
     fixture.detectChanges();
 
-    (
-      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
-    ).click();
+    clickDeleteIcon();
+    fixture.detectChanges();
+    clickButton('刪除');
     http.expectOne('/api/expenses/exp_delete_error').flush(
       {
         error: {
@@ -363,6 +496,7 @@ describe('ExpenseListPageComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('Expense delete failed.');
+    expect(fixture.nativeElement.textContent).not.toContain('確定要刪除這筆支出嗎？');
     expect(
       (fixture.nativeElement.querySelector('button[aria-label="編輯支出"]') as HTMLButtonElement)
         .disabled,
@@ -370,7 +504,6 @@ describe('ExpenseListPageComponent', () => {
   });
 
   it('falls back to a generic message when deleting fails without an API message', () => {
-    spyOn(globalThis, 'confirm').and.returnValue(true);
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -379,9 +512,9 @@ describe('ExpenseListPageComponent', () => {
     flushExpenseList([createExpenseItem({ id: 'exp_delete_network' })]);
     fixture.detectChanges();
 
-    (
-      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
-    ).click();
+    clickDeleteIcon();
+    fixture.detectChanges();
+    clickButton('刪除');
     http.expectOne('/api/expenses/exp_delete_network').error(new ProgressEvent('error'), {
       status: 0,
       statusText: 'Network Error',
@@ -517,6 +650,10 @@ describe('ExpenseListPageComponent', () => {
   });
 
   function clickButton(name: string): void {
+    findButton(name).click();
+  }
+
+  function findButton(name: string): HTMLButtonElement {
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
     ).find((candidate) => candidate.textContent?.trim() === name);
@@ -525,7 +662,13 @@ describe('ExpenseListPageComponent', () => {
       throw new Error(`Button not found: ${name}`);
     }
 
-    button.click();
+    return button;
+  }
+
+  function clickDeleteIcon(): void {
+    (
+      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
+    ).click();
   }
 
   function setInputValue(selector: string, value: string): void {

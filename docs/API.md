@@ -124,6 +124,8 @@ limit
 cursor
 ```
 
+Accepted expense categories are `ingredients`, `prize`, `lodging`, and `other`.
+
 ### POST `/api/expenses`
 
 Any authenticated active member may create an expense and participant shares in

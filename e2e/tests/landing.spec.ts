@@ -36,7 +36,7 @@ test('authenticated member uses authenticated navigation without seeing login or
     readonly description: string | null;
     readonly amount: number;
     readonly currency: 'TWD';
-    readonly category: 'ingredients' | 'prize' | 'other';
+    readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
     readonly expenseDate: string;
     readonly paidBy: {
       readonly id: string;
@@ -51,7 +51,7 @@ test('authenticated member uses authenticated navigation without seeing login or
   type ExpenseCreateRequest = {
     readonly title: string;
     readonly amount: number;
-    readonly category: 'ingredients' | 'prize' | 'other';
+    readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
     readonly expenseDate: string;
   };
   let persistedExpenses: readonly ExpenseListItem[] = [];
@@ -125,9 +125,9 @@ test('authenticated member uses authenticated navigation without seeing login or
   await page.getByRole('button', { name: '新增支出' }).click();
   const dialog = page.getByRole('dialog', { name: '新增支出' });
   await expect(dialog).toBeVisible();
-  await dialog.getByLabel('標題').fill('E2E Coffee');
-  await dialog.getByLabel('金額').fill('1280');
-  await dialog.getByLabel('分類').selectOption('ingredients');
+  await dialog.getByLabel('標題').fill('E2E Hotel');
+  await dialog.getByLabel('金額').fill('9600');
+  await dialog.getByLabel('分類').selectOption('lodging');
   await dialog.getByLabel('日期').fill('2026-06-13');
 
   const createExpenseRequest = page.waitForRequest(
@@ -137,11 +137,12 @@ test('authenticated member uses authenticated navigation without seeing login or
 
   const request = await createExpenseRequest;
   expect(request.postDataJSON()).toMatchObject({
-    title: 'E2E Coffee',
-    amount: 1280,
-    category: 'ingredients',
+    title: 'E2E Hotel',
+    amount: 9600,
+    category: 'lodging',
     expenseDate: '2026-06-13',
     splitMethod: 'equal',
   });
-  await expect(page.getByText('E2E Coffee')).toBeVisible();
+  await expect(page.getByText('E2E Hotel')).toBeVisible();
+  await expect(page.getByText('住宿')).toBeVisible();
 });
