@@ -87,7 +87,7 @@ import { AuthService } from './core/auth/auth.service';
             aria-label="GitHub 程式碼庫"
             i18n-aria-label="Repository link label@@appRepositoryLinkLabel"
             i18n="Footer copyright@@appFooterCopyright"
-            >Copyright 2026</a
+            >© 2026 pony. All rights reserved.</a
           >
         </div>
       </footer>

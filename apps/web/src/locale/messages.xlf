@@ -91,7 +91,7 @@
         <note priority="1" from="description">Repository link label</note>
       </trans-unit>
       <trans-unit id="appFooterCopyright" datatype="html">
-        <source>Copyright 2026</source>
+        <source>© 2026 pony. All rights reserved.</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
           <context context-type="linenumber">90,98</context>

@@ -87,7 +87,9 @@ test('health returns HTML for browser navigation Accept headers', async () => {
   assert.match(body, /\[3320, 34048, 39660, 22\]/u);
   assert.match(body, /OpenAI 風格招募謎題/u);
   assert.doesNotMatch(body, /o200k/iu);
-  assert.match(body, /SystmeLab/u);
+  assert.doesNotMatch(body, /🏁 Hidden Garage CTF/u);
+  assert.doesNotMatch(body, /The key to the hidden garage/u);
+  assert.doesNotMatch(body, /SystmeLab/u);
 });
 
 test('health returns HTML when text/html is accepted without a quality value', async () => {
@@ -100,6 +102,26 @@ test('health returns HTML when text/html is accepted without a quality value', a
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'text/html; charset=utf-8');
   assert.match(await response.text(), /API Health/u);
+});
+
+test('health HTML does not require the hidden garage CTF config', async () => {
+  const response = await requestHealth(
+    {
+      headers: {
+        Accept: 'text/html',
+      },
+    },
+    {
+      ...createTestEnv(),
+      DB: createThrowingD1(),
+    },
+  );
+  const body = await response.text();
+
+  assert.equal(response.status, 200);
+  assert.match(body, /API Health/u);
+  assert.match(body, /編碼線索序列/u);
+  assert.doesNotMatch(body, /🏁 Hidden Garage CTF/u);
 });
 
 test('index mounts health under /api/health', async () => {
@@ -118,11 +140,14 @@ test('index mounts health under /api/health', async () => {
   assert.match(await response.text(), /LabSplit API health status/u);
 });
 
-async function requestHealth(init?: RequestInit): Promise<Response> {
+async function requestHealth(
+  init?: RequestInit,
+  env: AppBindings['Bindings'] = createTestEnv(),
+): Promise<Response> {
   const app = new Hono<AppBindings>();
   app.route('/api/health', healthRoutes);
 
-  return await app.request('/api/health', init, createTestEnv());
+  return await app.request('/api/health', init, env);
 }
 
 function createTestEnv(): AppBindings['Bindings'] {
@@ -139,5 +164,13 @@ function createGarageCtfConfigD1(): D1Database {
         first: async () => GARAGE_CTF_CONFIG_ROW,
       }),
     }),
+  } as unknown as D1Database;
+}
+
+function createThrowingD1(): D1Database {
+  return {
+    prepare: () => {
+      throw new Error('Hidden garage CTF config should not be read for HTML health responses.');
+    },
   } as unknown as D1Database;
 }

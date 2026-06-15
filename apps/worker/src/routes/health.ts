@@ -4,7 +4,7 @@ import { readGarageCtfPassword } from '../services/garage-ctf.service';
 import { readMysteryChallengeClues } from '../services/mystery-challenge.service';
 import { AppBindings } from '../types';
 
-function renderHealthPageHtml(ctfPassword: string): string {
+function renderHealthPageHtml(): string {
   const mysteryClueCards = renderMysteryClueCards();
 
   return `<!doctype html>
@@ -191,10 +191,6 @@ function renderHealthPageHtml(ctfPassword: string): string {
           <p>這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。</p>
         </aside>
       </section>
-      <details style="margin-top:1.5rem;text-align:left;border:1px solid rgba(248,216,137,.22);border-radius:.75rem;padding:.75rem 1rem;">
-        <summary style="cursor:pointer;color:#cfa74a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.8rem;">🏁 Hidden Garage CTF</summary>
-        <p style="margin:.75rem 0 0;font-size:.9rem;">The key to the hidden garage:<br><code style="font-size:1.1rem;color:#ffe39a;user-select:all;">${escapeHtml(ctfPassword)}</code></p>
-      </details>
     </main>
   </body>
 </html>`;
@@ -238,13 +234,13 @@ const HEALTH_JSON_HEADERS = {
 export const healthRoutes = new Hono<AppBindings>();
 
 healthRoutes.get('/', async (c) => {
-  const ctfPassword = await readGarageCtfPassword(c.env.DB);
-
   if (acceptsHtml(c.req.header('Accept'))) {
-    return new Response(renderHealthPageHtml(ctfPassword), {
+    return new Response(renderHealthPageHtml(), {
       headers: HEALTH_HTML_HEADERS,
     });
   }
+
+  const ctfPassword = await readGarageCtfPassword(c.env.DB);
 
   return new Response(JSON.stringify({ ok: true, ctf: ctfPassword }), {
     headers: HEALTH_JSON_HEADERS,

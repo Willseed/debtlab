@@ -79,7 +79,7 @@ describe('AppComponent', () => {
 
     expect(footer).not.toBeNull();
     expect(repositoryLink).not.toBeNull();
-    expect(repositoryLink?.textContent?.trim()).toBe('Copyright 2026');
+    expect(repositoryLink?.textContent?.trim()).toBe('© 2026 pony. All rights reserved.');
     expect(footer?.textContent).not.toContain('github.com');
     expect(repositoryLink?.getAttribute('href')).toBe('https://github.com/Willseed/debtlab');
     expect(repositoryLink?.getAttribute('aria-label')).toBe('GitHub 程式碼庫');
@@ -89,7 +89,9 @@ describe('AppComponent', () => {
     const fixture = await createComponent();
 
     expect((fixture.nativeElement as HTMLElement).querySelector('.app-shell__footer')).toBeNull();
-    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Copyright 2026');
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain(
+      '© 2026 pony. All rights reserved.',
+    );
   });
 
   it('shows admin navigation only to admins', async () => {
