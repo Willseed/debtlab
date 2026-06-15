@@ -1,9 +1,12 @@
 import { Hono } from 'hono';
 
 import { readGarageCtfPassword } from '../services/garage-ctf.service';
+import { readMysteryChallengeClues } from '../services/mystery-challenge.service';
 import { AppBindings } from '../types';
 
 function renderHealthPageHtml(ctfPassword: string): string {
+  const mysteryClueCards = renderMysteryClueCards();
+
   return `<!doctype html>
 <html lang="zh-Hant">
   <head>
@@ -23,18 +26,22 @@ function renderHealthPageHtml(ctfPassword: string): string {
         margin: 0;
         display: grid;
         place-items: center;
+        padding: 2rem 0;
         background:
           radial-gradient(circle at 50% 0%, rgba(220, 166, 58, 0.24), transparent 42%),
           linear-gradient(145deg, #090705 0%, #15100a 48%, #050403 100%);
       }
 
       main {
-        width: min(92vw, 34rem);
+        width: min(92vw, 74rem);
         padding: 2.5rem;
         border: 1px solid rgba(248, 216, 137, 0.32);
         border-radius: 1.5rem;
         box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 246, 215, 0.12);
         background: linear-gradient(180deg, rgba(30, 23, 14, 0.92), rgba(11, 8, 5, 0.96));
+      }
+
+      .health-summary {
         text-align: center;
       }
 
@@ -84,15 +91,106 @@ function renderHealthPageHtml(ctfPassword: string): string {
       code {
         color: #ffe39a;
       }
+
+      .mystery-clues {
+        margin-top: 2rem;
+        text-align: left;
+      }
+
+      .mystery-clues h2 {
+        margin: 0;
+        color: #ffe39a;
+        font-size: clamp(1.55rem, 4vw, 2rem);
+      }
+
+      .mystery-clues__intro {
+        margin-top: 0.85rem;
+      }
+
+      .mystery-clues__grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        margin-top: 1.35rem;
+      }
+
+      .mystery-clue-card {
+        border: 1px solid rgba(248, 216, 137, 0.2);
+        border-radius: 0.8rem;
+        padding: 1.25rem;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .mystery-clue-card__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .mystery-clue-card h3,
+      .mystery-clue-card__hint-title {
+        margin: 0;
+        color: #d7af48;
+      }
+
+      .mystery-clue-card code {
+        display: block;
+        margin-top: 1rem;
+        color: #f9f2de;
+        font-size: 1rem;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+      }
+
+      .mystery-clue-card__hint-title {
+        margin-top: 1rem;
+        font-weight: 800;
+      }
+
+      .mystery-clue-card__badge {
+        border: 1px solid #86f48b;
+        border-radius: 999px;
+        color: #98ff9d;
+        font-size: 0.86rem;
+        font-weight: 800;
+        padding: 0.35rem 0.65rem;
+        white-space: nowrap;
+      }
+
+      .mystery-clues__hint {
+        margin-top: 1.5rem;
+        border: 1px solid rgba(248, 216, 137, 0.2);
+        border-radius: 0.8rem;
+        padding: 1.25rem;
+        background: rgba(255, 255, 255, 0.035);
+      }
+
+      .mystery-clues__hint h3 {
+        margin: 0;
+        color: #ffe39a;
+        font-size: 1.25rem;
+      }
     </style>
   </head>
   <body>
     <main aria-label="LabSplit API health status">
-      <p class="eyebrow">LabSplit Black Gold</p>
-      <h1>API Health</h1>
-      <div class="status"><span class="dot" aria-hidden="true"></span>Operational</div>
-      <p>The health endpoint is responding normally.</p>
-      <p>API clients can request JSON from <code>/api/health</code>.</p>
+      <section class="health-summary" aria-labelledby="health-title">
+        <p class="eyebrow">LabSplit Black Gold</p>
+        <h1 id="health-title">API Health</h1>
+        <div class="status"><span class="dot" aria-hidden="true"></span>Operational</div>
+        <p>The health endpoint is responding normally.</p>
+        <p>API clients can request JSON from <code>/api/health</code>.</p>
+      </section>
+      <section class="mystery-clues" aria-labelledby="mystery-clues-title">
+        <h2 id="mystery-clues-title">編碼線索序列</h2>
+        <p class="mystery-clues__intro">以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。</p>
+        <div class="mystery-clues__grid">${mysteryClueCards}</div>
+        <aside class="mystery-clues__hint" aria-labelledby="mystery-clues-hint-title">
+          <h3 id="mystery-clues-hint-title">提示</h3>
+          <p>這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。</p>
+        </aside>
+      </section>
       <details style="margin-top:1.5rem;text-align:left;border:1px solid rgba(248,216,137,.22);border-radius:.75rem;padding:.75rem 1rem;">
         <summary style="cursor:pointer;color:#cfa74a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.8rem;">🏁 Hidden Garage CTF</summary>
         <p style="margin:.75rem 0 0;font-size:.9rem;">The key to the hidden garage:<br><code style="font-size:1.1rem;color:#ffe39a;user-select:all;">${escapeHtml(ctfPassword)}</code></p>
@@ -100,6 +198,26 @@ function renderHealthPageHtml(ctfPassword: string): string {
     </main>
   </body>
 </html>`;
+}
+
+function renderMysteryClueCards(): string {
+  return readMysteryChallengeClues()
+    .map(
+      (clue) => `<article class="mystery-clue-card">
+          <div class="mystery-clue-card__header">
+            <h3>編碼線索 ${clue.displayOrder}</h3>
+            <span class="mystery-clue-card__badge">可解碼</span>
+          </div>
+          <code>${escapeHtml(formatTokenSequence(clue.tokens))}</code>
+          <p class="mystery-clue-card__hint-title">${escapeHtml(clue.hint.title)}</p>
+          <p>${escapeHtml(clue.hint.body)}</p>
+        </article>`,
+    )
+    .join('');
+}
+
+function formatTokenSequence(tokens: readonly number[]): string {
+  return `[${tokens.join(', ')}]`;
 }
 
 const HEALTH_HTML_HEADERS = {

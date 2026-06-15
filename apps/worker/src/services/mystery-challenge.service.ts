@@ -14,6 +14,8 @@ type PromptDefinition = {
   };
 };
 
+export type MysteryChallengeClue = Omit<PromptDefinition, 'encoding'>;
+
 type MysteryChallengePasswordRow = {
   readonly id: string;
   readonly display_order: number;
@@ -114,6 +116,15 @@ const PROMPTS: readonly PromptDefinition[] = [
     },
   },
 ];
+
+export function readMysteryChallengeClues(): readonly MysteryChallengeClue[] {
+  return PROMPTS.map(({ id, displayOrder, tokens, hint }) => ({
+    id,
+    displayOrder,
+    tokens,
+    hint,
+  }));
+}
 
 export async function readMysteryChallengeState(
   db: D1Database,

@@ -23,7 +23,7 @@ describe('MysteryChallengePageComponent', () => {
 
   afterEach(() => http.verify());
 
-  it('renders encoded prompts, challenge status, hint, and ordered leaderboard without exposing the encoding name', () => {
+  it('renders challenge status, submission, and ordered leaderboard without exposing clues or hints', () => {
     fixture.detectChanges();
     http.expectOne('/api/mystery-challenge').flush(createChallengeState());
     http.expectOne('/api/mystery-challenge/leaderboard').flush({
@@ -35,15 +35,18 @@ describe('MysteryChallengePageComponent', () => {
     fixture.detectChanges();
 
     const text = content();
-    expect(text).toContain('[50, 783, 1047, 34048, 41957, 24]');
-    expect(text).toContain('[50, 783, 1047, 34048, 30652, 23]');
-    expect(text).toContain('[3320, 34048, 39660, 22]');
+    expect(text).toContain('神秘密碼挑戰');
     expect(text).toContain('挑戰狀態');
     expect(text).toContain('可提交');
-    expect(text).toContain('OpenAI');
-    expect(text).toContain('Token 不是亂碼');
-    expect(text).toContain('編碼線索');
+    expect(text).toContain('提交答案');
+    expect(text).toContain('原始密碼');
     expect(text).toContain('依完成名次排序');
+    expect(text).not.toContain('[50, 783, 1047, 34048, 41957, 24]');
+    expect(text).not.toContain('[50, 783, 1047, 34048, 30652, 23]');
+    expect(text).not.toContain('[3320, 34048, 39660, 22]');
+    expect(text).not.toContain('OpenAI');
+    expect(text).not.toContain('Token 不是亂碼');
+    expect(text).not.toContain('編碼線索');
     expect(text).not.toContain('o200k');
     expect(text.indexOf('Alice')).toBeLessThan(text.indexOf('Bob'));
     expect(text).toContain('2026/06/15 10:00');
@@ -138,7 +141,7 @@ describe('MysteryChallengePageComponent', () => {
     expect(content()).toContain('目前還沒有人完成挑戰');
   });
 
-  it('shows leaderboard loading failures without hiding the challenge clues', () => {
+  it('shows leaderboard loading failures without hiding the challenge submission area', () => {
     fixture.detectChanges();
     http.expectOne('/api/mystery-challenge').flush(createChallengeState());
     http
@@ -150,7 +153,9 @@ describe('MysteryChallengePageComponent', () => {
     fixture.detectChanges();
 
     expect(content()).toContain('無法載入排行榜');
-    expect(content()).toContain('[50, 783, 1047, 34048, 41957, 24]');
+    expect(content()).toContain('提交答案');
+    expect(content()).toContain('原始密碼');
+    expect(content()).not.toContain('[50, 783, 1047, 34048, 41957, 24]');
   });
 
   it('renders unparseable completion timestamps as provided by the API', () => {
@@ -261,7 +266,7 @@ describe('MysteryChallengePageComponent', () => {
     fixture.detectChanges();
 
     http.expectNone('/api/mystery-challenge/submissions');
-    expect(content()).toContain('請先輸入解碼後的密碼');
+    expect(content()).toContain('請先輸入原始密碼');
   });
 
   it('shows auth and generic submission failures', () => {

@@ -92,27 +92,20 @@
       <trans-unit id="garageAlreadySolvedError" datatype="html"><source>此關卡已被解鎖，無法再次提交。</source><target>此關卡已被解鎖，無法再次提交。</target></trans-unit>
       <trans-unit id="garageWrongPasswordError" datatype="html"><source>密碼錯誤，請再試一次。</source><target>密碼錯誤，請再試一次。</target></trans-unit>
       <trans-unit id="garageStatusLoadError" datatype="html"><source>無法讀取車庫狀態，請稍後再試。</source><target>無法讀取車庫狀態，請稍後再試。</target></trans-unit>
-      <trans-unit id="mysteryChallengeEyebrow" datatype="html"><source>編碼線索序列</source><target>編碼線索序列</target></trans-unit>
+      <trans-unit id="mysteryChallengeEyebrow" datatype="html"><source>神秘密碼挑戰</source><target>神秘密碼挑戰</target></trans-unit>
       <trans-unit id="mysteryChallengeTitle" datatype="html"><source>神秘挑戰</source><target>神秘挑戰</target></trans-unit>
-      <trans-unit id="mysteryChallengeIntro" datatype="html"><source>解碼三組編碼線索序列，提交其中一組原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。</source><target>解碼三組編碼線索序列，提交其中一組原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。</target></trans-unit>
+      <trans-unit id="mysteryChallengeIntro" datatype="html"><source>提交有效的原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。</source><target>提交有效的原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。</target></trans-unit>
       <trans-unit id="mysteryStatusTitle" datatype="html"><source>挑戰狀態</source><target>挑戰狀態</target></trans-unit>
       <trans-unit id="mysteryStatusLoading" datatype="html"><source>正在載入挑戰狀態…</source><target>正在載入挑戰狀態…</target></trans-unit>
       <trans-unit id="mysteryStatusListLabel" datatype="html"><source>挑戰狀態</source><target>挑戰狀態</target></trans-unit>
       <trans-unit id="mysteryAvailabilityLabel" datatype="html"><source>開放狀態</source><target>開放狀態</target></trans-unit>
       <trans-unit id="mysteryProgressLabel" datatype="html"><source>進度</source><target>進度</target></trans-unit>
       <trans-unit id="mysteryClaimedLabel" datatype="html"><source>已領取</source><target>已領取</target></trans-unit>
-      <trans-unit id="mysteryEncodedCluesTitle" datatype="html"><source>編碼線索序列</source><target>編碼線索序列</target></trans-unit>
-      <trans-unit id="mysteryEncodedCluesDescription" datatype="html"><source>以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。</source><target>以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。</target></trans-unit>
-      <trans-unit id="mysteryValuesLoading" datatype="html"><source>正在載入編碼線索…</source><target>正在載入編碼線索…</target></trans-unit>
-      <trans-unit id="mysteryValuesUnavailable" datatype="html"><source>無法載入編碼線索，請稍後再試。</source><target>無法載入編碼線索，請稍後再試。</target></trans-unit>
-      <trans-unit id="mysteryEncodedClueHeading" datatype="html"><source>編碼線索 <x id="INTERPOLATION" equiv-text="{{ prompt.displayOrder }}"/></source><target>編碼線索 <x id="INTERPOLATION" equiv-text="{{ prompt.displayOrder }}"/></target></trans-unit>
-      <trans-unit id="mysteryHintTitle" datatype="html"><source>提示</source><target>提示</target></trans-unit>
-      <trans-unit id="mysteryHintBody" datatype="html"><source>這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。</source><target>這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。</target></trans-unit>
       <trans-unit id="mysterySubmissionTitle" datatype="html"><source>提交答案</source><target>提交答案</target></trans-unit>
       <trans-unit id="mysterySubmissionPausedStateError" datatype="html"><source>挑戰狀態無法讀取，提交已暫停。</source><target>挑戰狀態無法讀取，提交已暫停。</target></trans-unit>
       <trans-unit id="mysterySubmissionWaitingStatus" datatype="html"><source>正在載入挑戰狀態…</source><target>正在載入挑戰狀態…</target></trans-unit>
       <trans-unit id="mysteryPasswordLabel" datatype="html"><source>原始密碼</source><target>原始密碼</target></trans-unit>
-      <trans-unit id="mysteryPasswordPlaceholder" datatype="html"><source>輸入解碼後的密碼</source><target>輸入解碼後的密碼</target></trans-unit>
+      <trans-unit id="mysteryPasswordPlaceholder" datatype="html"><source>輸入原始密碼</source><target>輸入原始密碼</target></trans-unit>
       <trans-unit id="mysterySubmittingButton" datatype="html"><source>提交中…</source><target>提交中…</target></trans-unit>
       <trans-unit id="mysterySubmitButton" datatype="html"><source>提交密碼</source><target>提交密碼</target></trans-unit>
       <trans-unit id="mysteryLeaderboardTitle" datatype="html"><source>排行榜</source><target>排行榜</target></trans-unit>
@@ -134,15 +127,12 @@
       <trans-unit id="mysteryAllClaimedClosedReason" datatype="html"><source>三組密碼皆已被領取，提交已關閉。</source><target>三組密碼皆已被領取，提交已關閉。</target></trans-unit>
       <trans-unit id="mysteryClosedReason" datatype="html"><source>挑戰已關閉，提交已暫停。</source><target>挑戰已關閉，提交已暫停。</target></trans-unit>
       <trans-unit id="mysteryUnavailableClosedReason" datatype="html"><source>挑戰目前不可用，提交已暫停。</source><target>挑戰目前不可用，提交已暫停。</target></trans-unit>
-      <trans-unit id="mysteryPromptClaimed" datatype="html"><source>已領取</source><target>已領取</target></trans-unit>
-      <trans-unit id="mysteryPromptAvailable" datatype="html"><source>可解碼</source><target>可解碼</target></trans-unit>
-      <trans-unit id="mysteryEncodedClueNeutralLabel" datatype="html"><source>編碼線索</source><target>編碼線索</target></trans-unit>
-      <trans-unit id="mysteryEmptyPasswordError" datatype="html"><source>請先輸入解碼後的密碼。</source><target>請先輸入解碼後的密碼。</target></trans-unit>
+      <trans-unit id="mysteryEmptyPasswordError" datatype="html"><source>請先輸入原始密碼。</source><target>請先輸入原始密碼。</target></trans-unit>
       <trans-unit id="mysterySubmitSuccess" datatype="html"><source>已完成挑戰，提交已關閉。排行榜已更新。</source><target>已完成挑戰，提交已關閉。排行榜已更新。</target></trans-unit>
       <trans-unit id="mysteryStateLoadError" datatype="html"><source>挑戰狀態無法讀取，請稍後再試。</source><target>挑戰狀態無法讀取，請稍後再試。</target></trans-unit>
       <trans-unit id="mysteryLeaderboardLoadError" datatype="html"><source>無法載入排行榜，請稍後再試。</source><target>無法載入排行榜，請稍後再試。</target></trans-unit>
       <trans-unit id="mysteryConflictGeneric" datatype="html"><source>你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。</source><target>你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。</target></trans-unit>
-      <trans-unit id="mysteryValidationError" datatype="html"><source>密碼錯誤或已被使用，請確認提示後再試。</source><target>密碼錯誤或已被使用，請確認提示後再試。</target></trans-unit>
+      <trans-unit id="mysteryValidationError" datatype="html"><source>密碼錯誤或已被使用，請確認後再試。</source><target>密碼錯誤或已被使用，請確認後再試。</target></trans-unit>
       <trans-unit id="mysteryUnauthorizedError" datatype="html"><source>登入狀態已失效，請重新登入後再試。</source><target>登入狀態已失效，請重新登入後再試。</target></trans-unit>
       <trans-unit id="mysteryWrongPasswordError" datatype="html"><source>無法提交密碼，請稍後再試。</source><target>無法提交密碼，請稍後再試。</target></trans-unit>
       <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>實驗室花費，精準拆帳</target></trans-unit>

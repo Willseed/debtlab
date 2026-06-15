@@ -13,11 +13,8 @@ import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
   MysteryChallengeApiService,
   MysteryChallengeLeaderboardEntry,
-  MysteryChallengePrompt,
   MysteryChallengeState,
 } from './mystery-challenge-api.service';
-
-type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
 
 @Component({
   selector: 'app-mystery-challenge-page',
@@ -29,7 +26,7 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
       <div class="page-section__inner">
         <header class="mystery-hero">
           <p class="eyebrow" i18n="Mystery challenge eyebrow@@mysteryChallengeEyebrow">
-            編碼線索序列
+            神秘密碼挑戰
           </p>
           <h1
             id="mystery-title"
@@ -39,7 +36,7 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
             神秘挑戰
           </h1>
           <p class="mystery-hero__intro" i18n="Mystery challenge intro@@mysteryChallengeIntro">
-            解碼三組編碼線索序列，提交其中一組原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。
+            提交有效的原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。
           </p>
         </header>
 
@@ -84,68 +81,6 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
           }
         </section>
 
-        <section aria-labelledby="mystery-values-title">
-          <h2
-            id="mystery-values-title"
-            class="mystery-subheading"
-            i18n="Mystery encoded clues title@@mysteryEncodedCluesTitle"
-          >
-            編碼線索序列
-          </h2>
-          <p class="muted" i18n="Mystery encoded clues description@@mysteryEncodedCluesDescription">
-            以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。
-          </p>
-
-          @if (stateLoading()) {
-            <p
-              class="muted"
-              role="status"
-              aria-live="polite"
-              i18n="Mystery values loading@@mysteryValuesLoading"
-            >
-              正在載入編碼線索…
-            </p>
-          } @else if (stateLoadError()) {
-            <p
-              class="field__error"
-              role="alert"
-              i18n="Mystery values unavailable@@mysteryValuesUnavailable"
-            >
-              無法載入編碼線索，請稍後再試。
-            </p>
-          } @else {
-            <ol class="mystery-code-list">
-              @for (prompt of prompts(); track prompt.id) {
-                <li class="panel mystery-code-list__item">
-                  <div class="mystery-code-list__header">
-                    <h3 i18n="Mystery encoded clue heading@@mysteryEncodedClueHeading">
-                      編碼線索 {{ prompt.displayOrder }}
-                    </h3>
-                    <span class="badge" [class.badge--claimed]="prompt.claimed">
-                      {{ promptClaimStatus(prompt) }}
-                    </span>
-                  </div>
-                  <code>{{ prompt.tokenText }}</code>
-                  <p class="mystery-code-list__hint-title">
-                    {{ visibleHintTitle(prompt) }}
-                  </p>
-                  <p class="mystery-code-list__hint-body">
-                    {{ visibleHintBody(prompt) }}
-                  </p>
-                </li>
-              }
-            </ol>
-          }
-        </section>
-
-        <aside class="panel mystery-panel" aria-labelledby="mystery-hint-title">
-          <h2 id="mystery-hint-title" i18n="Mystery hint title@@mysteryHintTitle">提示</h2>
-          <p id="mystery-password-hint" i18n="Mystery hint body@@mysteryHintBody">
-            這道題的靈感來自 OpenAI
-            風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。
-          </p>
-        </aside>
-
         <section class="panel mystery-panel" aria-labelledby="mystery-submit-title">
           <h2 id="mystery-submit-title" i18n="Mystery submission title@@mysterySubmissionTitle">
             提交答案
@@ -188,13 +123,9 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
                   [formControl]="passwordControl"
                   autocomplete="off"
                   aria-required="true"
-                  [attr.aria-describedby]="
-                    errorMessage()
-                      ? 'mystery-password-hint mystery-submit-error'
-                      : 'mystery-password-hint'
-                  "
+                  [attr.aria-describedby]="errorMessage() ? 'mystery-submit-error' : null"
                   i18n-placeholder="Mystery password placeholder@@mysteryPasswordPlaceholder"
-                  placeholder="輸入解碼後的密碼"
+                  placeholder="輸入原始密碼"
                 />
               </label>
               <button
@@ -296,15 +227,13 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
       }
 
       .mystery-hero__intro,
-      .mystery-code-list__hint-body,
       .mystery-panel p {
         color: var(--color-text-muted);
         line-height: 1.7;
         margin: 0;
       }
 
-      .mystery-panel h2,
-      .mystery-subheading {
+      .mystery-panel h2 {
         color: var(--color-gold-soft);
         margin: 0;
       }
@@ -334,55 +263,9 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
         margin: 0;
       }
 
-      .mystery-code-list {
-        display: grid;
-        gap: var(--space-4);
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
-        list-style: none;
-        margin: var(--space-4) 0 0;
-        padding: 0;
-      }
-
-      .mystery-code-list__item,
       .mystery-form {
         display: grid;
         gap: var(--space-3);
-      }
-
-      .mystery-code-list__header {
-        align-items: center;
-        display: flex;
-        flex-wrap: wrap;
-        gap: var(--space-3);
-        justify-content: space-between;
-      }
-
-      .mystery-code-list__item h3,
-      .mystery-code-list__hint-title {
-        color: var(--color-gold);
-        margin: 0;
-      }
-
-      .mystery-code-list__item code {
-        color: var(--color-text);
-        font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
-        overflow-wrap: anywhere;
-      }
-
-      .badge {
-        border: 1px solid var(--color-success);
-        border-radius: 999px;
-        color: var(--color-success);
-        font-size: 0.9rem;
-        padding: var(--space-1) var(--space-3);
-      }
-
-      .badge--claimed {
-        border-color: var(--color-warning);
-        color: var(--color-warning);
-      }
-
-      .mystery-form {
         max-width: 32rem;
       }
 
@@ -414,12 +297,6 @@ export class MysteryChallengePageComponent implements OnInit {
     nonNullable: true,
     validators: [Validators.required],
   });
-
-  protected readonly prompts = computed<readonly PromptView[]>(() =>
-    [...(this.challenge()?.encodedPasswords ?? [])]
-      .sort((left, right) => left.displayOrder - right.displayOrder)
-      .map((prompt) => ({ ...prompt, tokenText: `[${prompt.tokens.join(', ')}]` })),
-  );
 
   protected readonly leaderboardEntries = computed<readonly MysteryChallengeLeaderboardEntry[]>(
     () => [...this.leaderboard()].sort(compareLeaderboardEntries),
@@ -483,26 +360,12 @@ export class MysteryChallengePageComponent implements OnInit {
     this.loadLeaderboard();
   }
 
-  protected promptClaimStatus(prompt: MysteryChallengePrompt): string {
-    return prompt.claimed
-      ? $localize`:Mystery prompt claimed@@mysteryPromptClaimed:已領取`
-      : $localize`:Mystery prompt available@@mysteryPromptAvailable:可解碼`;
-  }
-
-  protected visibleHintTitle(prompt: MysteryChallengePrompt): string {
-    return neutralizeVisibleEncodingName(prompt.hint.title);
-  }
-
-  protected visibleHintBody(prompt: MysteryChallengePrompt): string {
-    return neutralizeVisibleEncodingName(prompt.hint.body);
-  }
-
   protected submitPassword(): void {
     if (!this.canSubmit()) return;
     const password = this.passwordControl.value.trim();
     if (!password) {
       this.errorMessage.set(
-        $localize`:Mystery empty password error@@mysteryEmptyPasswordError:請先輸入解碼後的密碼。`,
+        $localize`:Mystery empty password error@@mysteryEmptyPasswordError:請先輸入原始密碼。`,
       );
       return;
     }
@@ -579,7 +442,7 @@ function formatSubmitError(error: HttpErrorResponse): string {
     return $localize`:Mystery conflict generic@@mysteryConflictGeneric:你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。`;
   }
   if (code === 'VALIDATION_ERROR') {
-    return $localize`:Mystery validation error@@mysteryValidationError:密碼錯誤或已被使用，請確認提示後再試。`;
+    return $localize`:Mystery validation error@@mysteryValidationError:密碼錯誤或已被使用，請確認後再試。`;
   }
   if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') {
     return $localize`:Mystery unauthorized error@@mysteryUnauthorizedError:登入狀態已失效，請重新登入後再試。`;
@@ -634,9 +497,4 @@ function isConflictError(error: HttpErrorResponse): boolean {
     code === 'MYSTERY_CHALLENGE_COMPLETED' ||
     code === 'MYSTERY_CHALLENGE_CLAIMED'
   );
-}
-
-function neutralizeVisibleEncodingName(value: string): string {
-  const neutralLabel = $localize`:Mystery encoded clue neutral label@@mysteryEncodedClueNeutralLabel:編碼線索`;
-  return value.replace(/o200k(?:_base)?/giu, neutralLabel);
 }

@@ -24,7 +24,9 @@ test('health returns JSON when no Accept header is provided', async () => {
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'application/json; charset=utf-8');
   assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
-  assert.deepEqual(await response.json(), { ok: true, ctf: 'SystmeLab' });
+  const body = await response.text();
+  assert.deepEqual(JSON.parse(body), { ok: true, ctf: 'SystmeLab' });
+  assert.doesNotMatch(body, /編碼線索序列|OpenAI|34048/u);
 });
 
 test('health keeps JSON for curl-style wildcard Accept headers', async () => {
@@ -79,6 +81,12 @@ test('health returns HTML for browser navigation Accept headers', async () => {
   assert.match(body, /^<!doctype html>/u);
   assert.match(body, /LabSplit Black Gold/u);
   assert.match(body, /Operational/u);
+  assert.match(body, /編碼線索序列/u);
+  assert.match(body, /\[50, 783, 1047, 34048, 41957, 24\]/u);
+  assert.match(body, /\[50, 783, 1047, 34048, 30652, 23\]/u);
+  assert.match(body, /\[3320, 34048, 39660, 22\]/u);
+  assert.match(body, /OpenAI 風格招募謎題/u);
+  assert.doesNotMatch(body, /o200k/iu);
   assert.match(body, /SystmeLab/u);
 });
 
