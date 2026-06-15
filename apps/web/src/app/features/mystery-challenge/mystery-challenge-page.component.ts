@@ -596,13 +596,15 @@ function compareLeaderboardEntries(
 
   const leftTimestamp = completedAtTimestamp(left.completedAt);
   const rightTimestamp = completedAtTimestamp(right.completedAt);
-  if (!Number.isNaN(leftTimestamp) && !Number.isNaN(rightTimestamp)) {
+  const leftHasTimestamp = Number.isFinite(leftTimestamp);
+  const rightHasTimestamp = Number.isFinite(rightTimestamp);
+  if (leftHasTimestamp && rightHasTimestamp) {
     const timeOrder = leftTimestamp - rightTimestamp;
     if (timeOrder !== 0) return timeOrder;
     return left.displayName.localeCompare(right.displayName);
   }
-  if (!Number.isNaN(leftTimestamp)) return -1;
-  if (!Number.isNaN(rightTimestamp)) return 1;
+  if (leftHasTimestamp) return -1;
+  if (rightHasTimestamp) return 1;
   const completedAtOrder = left.completedAt.localeCompare(right.completedAt);
   return completedAtOrder !== 0
     ? completedAtOrder

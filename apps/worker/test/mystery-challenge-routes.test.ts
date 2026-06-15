@@ -705,7 +705,7 @@ class FakeMysteryStatement {
 
   async run() {
     if (this.sql.includes('INSERT OR IGNORE INTO mystery_challenge_completions')) {
-      const [id, passwordId, userId, displayName] = this.values.map((value) => String(value));
+      const [id, passwordId, userId, displayName] = this.values.map(String);
       return this.db.insertCompletion(id, passwordId, userId, displayName);
     }
 
