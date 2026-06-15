@@ -86,17 +86,7 @@ async function deriveAesKey(
 
 function base64ToBytes(value: string): Uint8Array {
   const binary = atob(value);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    const byte = binary.codePointAt(index);
-    if (byte === undefined) {
-      throw new RangeError('Invalid byte index while decoding base64 value.');
-    }
-    bytes[index] = byte;
-  }
-
-  return bytes;
+  return Uint8Array.from(binary, (character) => Number(character.codePointAt(0)));
 }
 
 function constantTimeEqual(left: string, right: string): boolean {
