@@ -429,13 +429,17 @@ function redirectGoogleCallbackError(
   c: Parameters<typeof setCookie>[0],
   errorCode: string,
 ): Response {
-  const redirectUrl = new URL('/', c.env.APP_BASE_URL ?? new URL(c.req.url).origin);
-  redirectUrl.searchParams.set('auth_error', errorCode);
-
-  return c.redirect(redirectUrl.toString(), 302);
+  return redirectAuthCallbackError(c, errorCode);
 }
 
 function redirectAppleCallbackError(
+  c: Parameters<typeof setCookie>[0],
+  errorCode: string,
+): Response {
+  return redirectAuthCallbackError(c, errorCode);
+}
+
+function redirectAuthCallbackError(
   c: Parameters<typeof setCookie>[0],
   errorCode: string,
 ): Response {

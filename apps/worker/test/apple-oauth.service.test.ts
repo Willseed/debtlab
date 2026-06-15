@@ -53,7 +53,7 @@ test('reads Apple OAuth config from Worker bindings and normalizes escaped priva
         APPLE_TEAM_ID: 'APPLETEAMID',
         APPLE_CLIENT_ID: 'cc.buy2330.lab.web',
         APPLE_KEY_ID: 'APPLEKEYID',
-        APPLE_PRIVATE_KEY: '-----BEGIN PRIVATE KEY-----\\nabc\\n-----END PRIVATE KEY-----',
+        APPLE_PRIVATE_KEY: String.raw`-----BEGIN PRIVATE KEY-----\nabc\n-----END PRIVATE KEY-----`,
       },
       'https://worker.example.test/api/auth/apple/start',
     ),
