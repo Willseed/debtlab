@@ -76,3 +76,9 @@ export const paymentCreateSchema = z.object({
 });
 
 export type PaymentCreateInput = z.infer<typeof paymentCreateSchema>;
+
+export const mysteryChallengeSubmissionSchema = z.object({
+  password: z.string().min(1).max(256),
+});
+
+export type MysteryChallengeSubmissionInput = z.infer<typeof mysteryChallengeSubmissionSchema>;

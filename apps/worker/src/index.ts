@@ -6,6 +6,7 @@ import { easterEggRoutes } from './routes/easter-eggs';
 import { expenseRoutes } from './routes/expenses';
 import { healthRoutes } from './routes/health';
 import { memberRoutes } from './routes/members';
+import { mysteryChallengeRoutes } from './routes/mystery-challenge';
 import { paymentRoutes } from './routes/payments';
 import { settlementRoutes } from './routes/settlements';
 import { errorResponse } from './http/error-response';
@@ -20,6 +21,7 @@ app.route('/api/health', healthRoutes);
 
 app.route('/api/auth', authRoutes);
 app.route('/api/easter-eggs', easterEggRoutes);
+app.route('/api/mystery-challenge', mysteryChallengeRoutes);
 app.route('/api/members', memberRoutes);
 app.route('/api/expenses', expenseRoutes);
 app.route('/api/settlements', settlementRoutes);
