@@ -1,16 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { Hono } from 'hono';
-
-import { validateOrigin } from '../src/middleware/validate-origin';
 import { authRoutes, createAuthRoutes } from '../src/routes/auth';
 import { createSessionToken, SESSION_COOKIE_NAME } from '../src/services/auth.service';
 import {
   getGoogleOAuthStateCookieName,
   GoogleOAuthVerificationError,
 } from '../src/services/google-oauth.service';
-import { AppBindings, ApiErrorCode, SessionUser } from '../src/types';
+import { AppBindings, SessionUser } from '../src/types';
+import {
+  assertApiError,
+  assertOAuthRedirect,
+  createOriginProtectedAuthApp,
+  readSetCookie,
+  requestAuthRoute,
+} from './auth-test-helpers';
 
 const TEST_ENV: AppBindings['Bindings'] = {
   DB: {} as D1Database,
@@ -337,7 +341,7 @@ test('Google one-tap endpoint refuses disabled identities without issuing a new 
 });
 
 test('auth routes validate Origin before Google one-tap mutations', async () => {
-  const routeApp = createOriginProtectedAuthApp();
+  const routeApp = createOriginProtectedAuthApp(authRoutes);
   const startResponse = await routeApp.request('/api/auth/google/start', undefined, TEST_ENV);
   assert.equal(startResponse.status, 302);
 
@@ -432,54 +436,13 @@ function requestAuth(
   path: string,
   init?: RequestInit,
   envOverrides: Partial<AppBindings['Bindings']> = {},
-  routes: Hono<AppBindings> = authRoutes,
+  routes = authRoutes,
 ): Promise<Response> {
-  const routeApp = new Hono<AppBindings>();
-  routeApp.route('/api/auth', routes);
-
-  return Promise.resolve(
-    routeApp.request(path, init, {
-      ...TEST_ENV,
-      ...envOverrides,
-    }),
-  );
-}
-
-function createOriginProtectedAuthApp(): Hono<AppBindings> {
-  const routeApp = new Hono<AppBindings>();
-  routeApp.use('/api/*', validateOrigin);
-  routeApp.route('/api/auth', authRoutes);
-
-  return routeApp;
-}
-
-async function assertApiError(
-  response: Response,
-  status: number,
-  code: ApiErrorCode,
-  message: string,
-): Promise<unknown> {
-  assert.equal(response.status, status);
-  const body = (await response.json()) as {
-    readonly error: {
-      readonly code: ApiErrorCode;
-      readonly message: string;
-      readonly details: unknown;
-    };
-  };
-
-  assert.equal(body.error.code, code);
-  assert.equal(body.error.message, message);
-
-  return body.error.details;
+  return requestAuthRoute(path, init, TEST_ENV, envOverrides, routes);
 }
 
 function assertAuthRedirect(response: Response, errorCode: string): void {
-  const redirectUrl = new URL('/', TEST_ENV.APP_BASE_URL);
-  redirectUrl.searchParams.set('auth_error', errorCode);
-
-  assert.equal(response.status, 302);
-  assert.equal(response.headers.get('Location'), redirectUrl.toString());
+  assertOAuthRedirect(response, TEST_ENV.APP_BASE_URL, errorCode);
 }
 
 function createCurrentUserD1(user: SessionUser): D1Database {
@@ -554,22 +517,4 @@ function createGoogleDependencies(
     },
     ...overrides,
   };
-}
-
-function readSetCookie(response: Response): string {
-  if (hasGetSetCookie(response.headers)) {
-    return response.headers.getSetCookie().join('\n');
-  }
-
-  return response.headers.get('Set-Cookie') ?? '';
-}
-
-function hasGetSetCookie(headers: Headers): headers is Headers & {
-  readonly getSetCookie: () => string[];
-} {
-  const maybeHeaders = headers as Headers & {
-    readonly getSetCookie?: unknown;
-  };
-
-  return typeof maybeHeaders.getSetCookie === 'function';
 }

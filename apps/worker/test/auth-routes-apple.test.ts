@@ -1,16 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { Hono } from 'hono';
-
-import { validateOrigin } from '../src/middleware/validate-origin';
 import { createAuthRoutes } from '../src/routes/auth';
 import { SESSION_COOKIE_NAME } from '../src/services/auth.service';
 import {
   AppleOAuthVerificationError,
   getAppleOAuthStateCookieName,
 } from '../src/services/apple-oauth.service';
-import { ApiErrorCode, AppBindings, SessionUser } from '../src/types';
+import { AppBindings, SessionUser } from '../src/types';
+import {
+  assertApiError,
+  assertOAuthRedirect,
+  createOriginProtectedAuthApp,
+  readSetCookie,
+  requestAuthRoute,
+} from './auth-test-helpers';
 
 const TEST_ENV: AppBindings['Bindings'] = {
   DB: {} as D1Database,
@@ -319,7 +323,7 @@ test('Apple identity-token endpoint reports missing Worker secrets before verifi
 });
 
 test('Origin middleware allows only the Apple form_post callback bypass', async () => {
-  const routeApp = createOriginProtectedAuthApp();
+  const routeApp = createOriginProtectedAuthApp(createAuthRoutes());
   const callbackResponse = await routeApp.request(
     '/api/auth/apple/callback',
     createAppleCallbackInit({
@@ -425,25 +429,9 @@ function requestAuth(
   path: string,
   init?: RequestInit,
   envOverrides: Partial<AppBindings['Bindings']> = {},
-  routes: Hono<AppBindings> = createAuthRoutes(),
+  routes = createAuthRoutes(),
 ): Promise<Response> {
-  const routeApp = new Hono<AppBindings>();
-  routeApp.route('/api/auth', routes);
-
-  return Promise.resolve(
-    routeApp.request(path, init, {
-      ...TEST_ENV,
-      ...envOverrides,
-    }),
-  );
-}
-
-function createOriginProtectedAuthApp(): Hono<AppBindings> {
-  const routeApp = new Hono<AppBindings>();
-  routeApp.use('/api/*', validateOrigin);
-  routeApp.route('/api/auth', createAuthRoutes());
-
-  return routeApp;
+  return requestAuthRoute(path, init, TEST_ENV, envOverrides, routes);
 }
 
 function createAppleCallbackInit(
@@ -465,33 +453,8 @@ function createAppleCallbackInit(
   };
 }
 
-async function assertApiError(
-  response: Response,
-  status: number,
-  code: ApiErrorCode,
-  message: string,
-): Promise<unknown> {
-  assert.equal(response.status, status);
-  const body = (await response.json()) as {
-    readonly error: {
-      readonly code: ApiErrorCode;
-      readonly message: string;
-      readonly details: unknown;
-    };
-  };
-
-  assert.equal(body.error.code, code);
-  assert.equal(body.error.message, message);
-
-  return body.error.details;
-}
-
 function assertAuthRedirect(response: Response, errorCode: string): void {
-  const redirectUrl = new URL('/', TEST_ENV.APP_BASE_URL);
-  redirectUrl.searchParams.set('auth_error', errorCode);
-
-  assert.equal(response.status, 302);
-  assert.equal(response.headers.get('Location'), redirectUrl.toString());
+  assertOAuthRedirect(response, TEST_ENV.APP_BASE_URL, errorCode);
 }
 
 function createSessionUser(overrides: Partial<SessionUser> = {}): SessionUser {
@@ -553,22 +516,4 @@ function createAppleDependencies(
     },
     ...overrides,
   };
-}
-
-function readSetCookie(response: Response): string {
-  if (hasGetSetCookie(response.headers)) {
-    return response.headers.getSetCookie().join('\n');
-  }
-
-  return response.headers.get('Set-Cookie') ?? '';
-}
-
-function hasGetSetCookie(headers: Headers): headers is Headers & {
-  readonly getSetCookie: () => string[];
-} {
-  const maybeHeaders = headers as Headers & {
-    readonly getSetCookie?: unknown;
-  };
-
-  return typeof maybeHeaders.getSetCookie === 'function';
 }
