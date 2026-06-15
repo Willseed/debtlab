@@ -150,7 +150,10 @@ test('GET /api/mystery-challenge returns active state with encoded clue sequence
       [3320, 34048, 39660, 22],
     ],
   );
-  assert.equal(body.encodedPasswords.every((prompt) => prompt.hint.locale === 'zh-TW'), true);
+  assert.equal(
+    body.encodedPasswords.every((prompt) => prompt.hint.locale === 'zh-TW'),
+    true,
+  );
   assert.doesNotMatch(JSON.stringify(body), /o200k/iu);
 });
 
@@ -195,7 +198,10 @@ test('GET /api/mystery-challenge returns completed state after every password is
   assert.equal(body.completedAt, '2026-06-15 12:00:00.000');
   assert.equal(body.claimedCount, 3);
   assert.equal(body.availableCount, 0);
-  assert.equal(body.encodedPasswords.every((prompt) => prompt.claimed), true);
+  assert.equal(
+    body.encodedPasswords.every((prompt) => prompt.claimed),
+    true,
+  );
 });
 
 test('GET /api/mystery-challenge handles null D1 claimed rows as empty state', async () => {

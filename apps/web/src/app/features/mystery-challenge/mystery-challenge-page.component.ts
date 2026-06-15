@@ -75,7 +75,9 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
               <div>
                 <dt i18n="Mystery claimed label@@mysteryClaimedLabel">已領取</dt>
                 <dd>
-                  {{ challenge()?.claimedCount ?? 0 }}/{{ challenge()?.encodedPasswords?.length ?? 0 }}
+                  {{ challenge()?.claimedCount ?? 0 }}/{{
+                    challenge()?.encodedPasswords?.length ?? 0
+                  }}
                 </dd>
               </div>
             </dl>
@@ -90,10 +92,7 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
           >
             編碼線索序列
           </h2>
-          <p
-            class="muted"
-            i18n="Mystery encoded clues description@@mysteryEncodedCluesDescription"
-          >
+          <p class="muted" i18n="Mystery encoded clues description@@mysteryEncodedCluesDescription">
             以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。
           </p>
 
@@ -142,7 +141,8 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
         <aside class="panel mystery-panel" aria-labelledby="mystery-hint-title">
           <h2 id="mystery-hint-title" i18n="Mystery hint title@@mysteryHintTitle">提示</h2>
           <p id="mystery-password-hint" i18n="Mystery hint body@@mysteryHintBody">
-            這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。
+            這道題的靈感來自 OpenAI
+            風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。
           </p>
         </aside>
 
@@ -151,12 +151,7 @@ type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
             提交答案
           </h2>
           @if (errorMessage()) {
-            <p
-              id="mystery-submit-error"
-              class="field__error"
-              role="alert"
-              aria-live="assertive"
-            >
+            <p id="mystery-submit-error" class="field__error" role="alert" aria-live="assertive">
               {{ errorMessage() }}
             </p>
           }
@@ -426,8 +421,8 @@ export class MysteryChallengePageComponent implements OnInit {
       .map((prompt) => ({ ...prompt, tokenText: `[${prompt.tokens.join(', ')}]` })),
   );
 
-  protected readonly leaderboardEntries = computed<readonly MysteryChallengeLeaderboardEntry[]>(() =>
-    [...this.leaderboard()].sort(compareLeaderboardEntries),
+  protected readonly leaderboardEntries = computed<readonly MysteryChallengeLeaderboardEntry[]>(
+    () => [...this.leaderboard()].sort(compareLeaderboardEntries),
   );
 
   protected readonly availabilityStatus = computed(() => {
@@ -453,7 +448,8 @@ export class MysteryChallengePageComponent implements OnInit {
 
   protected readonly progressStatus = computed(() => {
     const challenge = this.challenge();
-    if (!challenge) return $localize`:Mystery progress unavailable@@mysteryProgressUnavailable:不可用`;
+    if (!challenge)
+      return $localize`:Mystery progress unavailable@@mysteryProgressUnavailable:不可用`;
     return challenge.completed
       ? $localize`:Mystery progress completed@@mysteryProgressCompleted:已完成`
       : $localize`:Mystery progress open@@mysteryProgressOpen:進行中`;
@@ -608,7 +604,9 @@ function compareLeaderboardEntries(
   if (!Number.isNaN(leftTimestamp)) return -1;
   if (!Number.isNaN(rightTimestamp)) return 1;
   const completedAtOrder = left.completedAt.localeCompare(right.completedAt);
-  return completedAtOrder !== 0 ? completedAtOrder : left.displayName.localeCompare(right.displayName);
+  return completedAtOrder !== 0
+    ? completedAtOrder
+    : left.displayName.localeCompare(right.displayName);
 }
 
 function completedAtTimestamp(value: string): number {

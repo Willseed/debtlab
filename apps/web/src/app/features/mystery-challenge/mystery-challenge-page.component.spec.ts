@@ -66,9 +66,9 @@ describe('MysteryChallengePageComponent', () => {
     });
     fixture.detectChanges();
     expect(content()).toContain('已完成挑戰');
-    http.expectOne('/api/mystery-challenge').flush(
-      createChallengeState({ status: 'completed', completed: true, claimedCount: 1 }),
-    );
+    http
+      .expectOne('/api/mystery-challenge')
+      .flush(createChallengeState({ status: 'completed', completed: true, claimedCount: 1 }));
     fixture.detectChanges();
 
     expect(content()).toContain('已完成挑戰');
@@ -78,9 +78,9 @@ describe('MysteryChallengePageComponent', () => {
 
   it('hides input when completed or all passwords are claimed', () => {
     fixture.detectChanges();
-    http.expectOne('/api/mystery-challenge').flush(
-      createChallengeState({ status: 'completed', completed: true }),
-    );
+    http
+      .expectOne('/api/mystery-challenge')
+      .flush(createChallengeState({ status: 'completed', completed: true }));
     http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
     fixture.detectChanges();
     expect(content()).toContain('你已完成挑戰');
@@ -89,9 +89,9 @@ describe('MysteryChallengePageComponent', () => {
 
   it('hides input when the challenge is unavailable', () => {
     fixture.detectChanges();
-    http.expectOne('/api/mystery-challenge').flush(
-      createChallengeState({ status: 'unavailable', availableCount: 0, claimedCount: 2 }),
-    );
+    http
+      .expectOne('/api/mystery-challenge')
+      .flush(createChallengeState({ status: 'unavailable', availableCount: 0, claimedCount: 2 }));
     http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
     fixture.detectChanges();
 
@@ -101,9 +101,9 @@ describe('MysteryChallengePageComponent', () => {
 
   it('hides input when the challenge is closed', () => {
     fixture.detectChanges();
-    http.expectOne('/api/mystery-challenge').flush(
-      createChallengeState({ status: 'closed', availableCount: 1, claimedCount: 2 }),
-    );
+    http
+      .expectOne('/api/mystery-challenge')
+      .flush(createChallengeState({ status: 'closed', availableCount: 1, claimedCount: 2 }));
     http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
     fixture.detectChanges();
 
@@ -113,9 +113,9 @@ describe('MysteryChallengePageComponent', () => {
 
   it('hides input when every password is claimed', () => {
     fixture.detectChanges();
-    http.expectOne('/api/mystery-challenge').flush(
-      createChallengeState({ status: 'completed', availableCount: 0, claimedCount: 3 }),
-    );
+    http
+      .expectOne('/api/mystery-challenge')
+      .flush(createChallengeState({ status: 'completed', availableCount: 0, claimedCount: 3 }));
     http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
     fixture.detectChanges();
 
@@ -221,12 +221,12 @@ describe('MysteryChallengePageComponent', () => {
 
     setPassword('wrong');
     clickSubmit();
-    http
-      .expectOne('/api/mystery-challenge/submissions')
-      .flush(
-        { error: { code: 'VALIDATION_ERROR', message: 'Submission was not accepted.', details: {} } },
-        { status: 422, statusText: 'Unprocessable Entity' },
-      );
+    http.expectOne('/api/mystery-challenge/submissions').flush(
+      {
+        error: { code: 'VALIDATION_ERROR', message: 'Submission was not accepted.', details: {} },
+      },
+      { status: 422, statusText: 'Unprocessable Entity' },
+    );
     fixture.detectChanges();
     expect(content()).toContain('密碼錯誤或已被使用');
 
@@ -240,9 +240,9 @@ describe('MysteryChallengePageComponent', () => {
       );
     fixture.detectChanges();
     expect(content()).toContain('你已完成挑戰，或這組密碼已被領取');
-    http.expectOne('/api/mystery-challenge').flush(
-      createChallengeState({ status: 'completed', completed: true, claimedCount: 1 }),
-    );
+    http
+      .expectOne('/api/mystery-challenge')
+      .flush(createChallengeState({ status: 'completed', completed: true, claimedCount: 1 }));
     http.expectOne('/api/mystery-challenge/leaderboard').flush({
       leaderboard: [createEntry({ displayName: 'Alice' })],
     });
@@ -301,7 +301,9 @@ describe('MysteryChallengePageComponent', () => {
   }
 
   function clickSubmit(): void {
-    const button = fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
+    const button = fixture.nativeElement.querySelector(
+      'button[type="submit"]',
+    ) as HTMLButtonElement;
     expect(button.disabled).toBeFalse();
     button.click();
   }
@@ -311,7 +313,9 @@ describe('MysteryChallengePageComponent', () => {
   }
 });
 
-function createChallengeState(overrides: Partial<MysteryChallengeState> = {}): MysteryChallengeState {
+function createChallengeState(
+  overrides: Partial<MysteryChallengeState> = {},
+): MysteryChallengeState {
   return {
     status: 'active',
     completed: false,
