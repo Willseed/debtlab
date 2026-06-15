@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { findOrCreateGoogleUser, findCurrentUserById } from '../src/services/user.service';
+import {
+  findOrCreateAppleUser,
+  findOrCreateGoogleUser,
+  findCurrentUserById,
+} from '../src/services/user.service';
 import type { SessionUser } from '../src/types';
 
 type UserRow = {
@@ -15,12 +19,18 @@ type UserRow = {
 
 type UserRowSeed = Partial<UserRow> & Pick<UserRow, 'id'>;
 type GoogleProfile = Parameters<typeof findOrCreateGoogleUser>[1];
+type AppleProfile = Parameters<typeof findOrCreateAppleUser>[1];
 
 const GOOGLE_SUBJECT = 'google-subject';
+const APPLE_SUBJECT = 'apple-subject';
 const NEW_GOOGLE_PROFILE: GoogleProfile = {
   subject: GOOGLE_SUBJECT,
   email: 'new-user@example.com',
   displayName: 'New User',
+};
+const NEW_APPLE_PROFILE: AppleProfile = {
+  subject: APPLE_SUBJECT,
+  email: 'apple-user@example.com',
 };
 const DEFAULT_EXISTING_USER_SEED: UserRowSeed = { id: 'usr_existing' };
 
@@ -56,8 +66,9 @@ class FakeD1PreparedStatement {
     }
 
     if (this.sql.includes('FROM user_identities')) {
-      const subject = String(this.values[0]);
-      const userId = this.db.identities.get(subject);
+      const provider = String(this.values[0]);
+      const subject = String(this.values[1]);
+      const userId = this.db.identities.get(identityKey(provider, subject));
       return (userId ? this.db.users.get(userId) : null) as T | null;
     }
 
@@ -82,8 +93,8 @@ class FakeD1PreparedStatement {
     }
 
     if (this.sql.includes('INSERT INTO user_identities')) {
-      const [, userId, subject] = this.values;
-      this.db.identities.set(String(subject), String(userId));
+      const [, userId, provider, subject] = this.values;
+      this.db.identities.set(identityKey(String(provider), String(subject)), String(userId));
     }
 
     if (this.sql.includes('UPDATE users')) {
@@ -221,6 +232,38 @@ test('new Google users fall back to email or subject for display name', async ()
   assert.equal(subjectUser.avatarUrl, undefined);
 });
 
+test('new Apple users reuse OAuth user creation patterns', async () => {
+  const user = await createAppleUser(createDbWithExistingUser(), NEW_APPLE_PROFILE);
+
+  assert.equal(user.status, 'active');
+  assert.equal(user.role, 'member');
+  assert.equal(user.email, 'apple-user@example.com');
+  assert.equal(user.displayName, 'apple-user@example.com');
+});
+
+test('new Apple users fall back to provider subject when Apple omits email', async () => {
+  const user = await createAppleUser(createDbWithExistingUser(), {
+    subject: 'apple-subject-only',
+  });
+
+  assert.equal(user.displayName, 'Apple user apple-subject-only');
+  assert.equal(user.email, undefined);
+});
+
+test('existing disabled Apple users stay disabled on verified login', async () => {
+  const db = new FakeD1Database();
+  const existing = seedUser(db, {
+    id: 'usr_existing',
+    status: 'disabled',
+  });
+  seedAppleIdentity(db, existing.id);
+
+  const user = await createAppleUser(db, NEW_APPLE_PROFILE);
+
+  assert.equal(user.status, 'disabled');
+  assert.equal(db.users.get(existing.id)?.status, 'disabled');
+});
+
 test('current user lookup falls back to email or ID for display name', async () => {
   const db = new FakeD1Database();
   const emailFallback = seedUser(db, {
@@ -248,6 +291,10 @@ function asD1(db: FakeD1Database): D1Database {
 
 function createGoogleUser(db: FakeD1Database, profile: GoogleProfile): Promise<SessionUser> {
   return findOrCreateGoogleUser(asD1(db), profile);
+}
+
+function createAppleUser(db: FakeD1Database, profile: AppleProfile): Promise<SessionUser> {
+  return findOrCreateAppleUser(asD1(db), profile);
 }
 
 function findCurrentUser(db: FakeD1Database, userId: string): Promise<SessionUser | null> {
@@ -278,7 +325,11 @@ function makeUserRow(seed: UserRowSeed): UserRow {
 }
 
 function seedGoogleIdentity(db: FakeD1Database, userId: string, subject = GOOGLE_SUBJECT): void {
-  db.identities.set(subject, userId);
+  db.identities.set(identityKey('google', subject), userId);
+}
+
+function seedAppleIdentity(db: FakeD1Database, userId: string, subject = APPLE_SUBJECT): void {
+  db.identities.set(identityKey('apple', subject), userId);
 }
 
 function sessionFromRow(row: UserRow, overrides: Partial<SessionUser> = {}): SessionUser {
@@ -303,4 +354,8 @@ function readUserStatus(value: unknown): UserRow['status'] {
   }
 
   return 'pending';
+}
+
+function identityKey(provider: string, subject: string): string {
+  return `${provider}:${subject}`;
 }

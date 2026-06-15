@@ -59,19 +59,9 @@ The Worker must verify the token with Google before creating a local session. Un
 
 ### POST `/api/auth/apple`
 
-Temporarily disabled while Apple review is pending. The login screen still displays the Apple control, but it is disabled. API calls to this route return:
-
-```json
-{
-  "error": {
-    "code": "FORBIDDEN",
-    "message": "Sign in with Apple is temporarily disabled.",
-    "details": {}
-  }
-}
-```
-
-The request shape below applies after Sign in with Apple is enabled.
+Sign in with Apple is enabled. The Worker must read `APPLE_TEAM_ID`,
+`APPLE_CLIENT_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` from GitHub Secrets /
+Worker secrets and must never expose those values to the client.
 
 Request:
 
@@ -89,7 +79,12 @@ Request:
 }
 ```
 
-When enabled, the Worker must verify the Apple identity token and must key identity by provider subject, not email.
+The Worker must verify the Apple identity token before creating a local session.
+Apple identities are keyed by provider subject, not email. Unknown Apple
+identities follow the same activation behavior as Google identities: the first
+user in an empty reset database bootstraps as active admin, later users are
+active members, existing pending users are activated on their next verified
+login, and disabled users must not receive a new session.
 
 ### GET `/api/auth/me`
 

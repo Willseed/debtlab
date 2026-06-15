@@ -27,6 +27,14 @@ on:
         required: true
       GOOGLE_CLIENT_SECRET:
         required: true
+      APPLE_TEAM_ID:
+        required: true
+      APPLE_CLIENT_ID:
+        required: true
+      APPLE_KEY_ID:
+        required: true
+      APPLE_PRIVATE_KEY:
+        required: true
       SONAR_TOKEN:
         required: false
 
@@ -44,6 +52,10 @@ jobs:
       SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
       GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      APPLE_CLIENT_ID: ${{ secrets.APPLE_CLIENT_ID }}
+      APPLE_KEY_ID: ${{ secrets.APPLE_KEY_ID }}
+      APPLE_PRIVATE_KEY: ${{ secrets.APPLE_PRIVATE_KEY }}
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Configure Git defaults
@@ -73,6 +85,10 @@ jobs:
             SESSION_SECRET
             GOOGLE_CLIENT_ID
             GOOGLE_CLIENT_SECRET
+            APPLE_TEAM_ID
+            APPLE_CLIENT_ID
+            APPLE_KEY_ID
+            APPLE_PRIVATE_KEY
           )
 
           for name in "${required[@]}"; do
@@ -136,6 +152,6 @@ jobs:
       - name: Sync Worker secrets
         shell: bash
         run: |
-          for name in SESSION_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET; do
+          for name in SESSION_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET APPLE_TEAM_ID APPLE_CLIENT_ID APPLE_KEY_ID APPLE_PRIVATE_KEY; do
             printf '%s' "${!name}" | pnpm --filter worker exec wrangler secret put "$name" --env production
           done

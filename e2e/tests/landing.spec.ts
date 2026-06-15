@@ -10,8 +10,13 @@ test('guest can view the zh-TW landing page login options', async ({ page }) => 
   ).toBeVisible();
   await expect(page.getByText('給任何人使用的共同支出拆帳儀表板。')).toBeVisible();
   await expect(page.getByRole('button', { name: '使用 Google 繼續' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '使用 Apple 繼續' })).toBeDisabled();
-  await expect(page.getByText('Apple 登入審核中，暫不開放。')).toBeVisible();
+  await expect(page.getByRole('button', { name: '使用 Apple 繼續' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: '使用 Google 繼續' })).toHaveClass(
+    /oauth-button--google/u,
+  );
+  await expect(page.getByRole('button', { name: '使用 Apple 繼續' })).toHaveClass(
+    /oauth-button--apple/u,
+  );
 });
 
 test('Google login button starts the backend OAuth flow', async ({ page }) => {
@@ -25,6 +30,19 @@ test('Google login button starts the backend OAuth flow', async ({ page }) => {
   await page.getByRole('button', { name: '使用 Google 繼續' }).click();
 
   expect((await googleStartRequest).method()).toBe('GET');
+});
+
+test('Apple login button starts the backend OAuth flow', async ({ page }) => {
+  await page.route('**/api/auth/apple/start', async (route) => {
+    await route.fulfill({ status: 204 });
+  });
+
+  await page.goto('/');
+
+  const appleStartRequest = page.waitForRequest('**/api/auth/apple/start');
+  await page.getByRole('button', { name: '使用 Apple 繼續' }).click();
+
+  expect((await appleStartRequest).method()).toBe('GET');
 });
 
 test('authenticated member uses authenticated navigation without seeing login or admin entry points', async ({

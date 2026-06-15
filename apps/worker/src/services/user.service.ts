@@ -1,3 +1,4 @@
+import { AppleUserProfile } from './apple-oauth.service';
 import { GoogleUserProfile } from './google-oauth.service';
 import { SessionUser, UserRole, UserStatus } from '../types';
 
@@ -10,14 +11,38 @@ type UserRow = {
   readonly status: UserStatus;
 };
 
+type AuthProvider = 'google' | 'apple';
+type OAuthUserProfile = {
+  readonly subject: string;
+  readonly email?: string;
+  readonly displayName?: string;
+  readonly avatarUrl?: string;
+};
+
 export async function findOrCreateGoogleUser(
   db: D1Database,
   profile: GoogleUserProfile,
 ): Promise<SessionUser> {
-  const existingUser = await findUserByGoogleSubject(db, profile.subject);
+  return findOrCreateOAuthUser(db, 'google', profile, 'Google');
+}
+
+export async function findOrCreateAppleUser(
+  db: D1Database,
+  profile: AppleUserProfile,
+): Promise<SessionUser> {
+  return findOrCreateOAuthUser(db, 'apple', profile, 'Apple');
+}
+
+async function findOrCreateOAuthUser(
+  db: D1Database,
+  provider: AuthProvider,
+  profile: OAuthUserProfile,
+  providerDisplayName: string,
+): Promise<SessionUser> {
+  const existingUser = await findUserByProviderSubject(db, provider, profile.subject);
 
   if (existingUser) {
-    await updateGoogleUserProfile(db, existingUser.id, profile);
+    await updateOAuthUserProfile(db, provider, existingUser.id, profile);
     const status: UserStatus = existingUser.status === 'pending' ? 'active' : existingUser.status;
 
     return {
@@ -31,7 +56,8 @@ export async function findOrCreateGoogleUser(
 
   const userId = crypto.randomUUID();
   const identityId = crypto.randomUUID();
-  const displayName = profile.displayName ?? profile.email ?? `Google user ${profile.subject}`;
+  const displayName =
+    profile.displayName ?? profile.email ?? `${providerDisplayName} user ${profile.subject}`;
   const shouldBootstrapFirstUser = (await countUsers(db)) === 0;
   const role: UserRole = shouldBootstrapFirstUser ? 'admin' : 'member';
   const status: UserStatus = 'active';
@@ -46,9 +72,9 @@ export async function findOrCreateGoogleUser(
     db
       .prepare(
         `INSERT INTO user_identities (id, user_id, provider, provider_subject, provider_email)
-         VALUES (?, ?, 'google', ?, ?)`,
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .bind(identityId, userId, profile.subject, profile.email ?? null),
+      .bind(identityId, userId, provider, profile.subject, profile.email ?? null),
   ]);
 
   return {
@@ -85,8 +111,9 @@ export async function findCurrentUserById(
   return row ? mapUserRow(row) : null;
 }
 
-async function findUserByGoogleSubject(
+async function findUserByProviderSubject(
   db: D1Database,
+  provider: AuthProvider,
   providerSubject: string,
 ): Promise<SessionUser | null> {
   const row = await db
@@ -94,18 +121,19 @@ async function findUserByGoogleSubject(
       `SELECT u.id, u.email, u.display_name, u.avatar_url, u.role, u.status
        FROM user_identities ui
        INNER JOIN users u ON u.id = ui.user_id
-       WHERE ui.provider = 'google' AND ui.provider_subject = ?`,
+       WHERE ui.provider = ? AND ui.provider_subject = ?`,
     )
-    .bind(providerSubject)
+    .bind(provider, providerSubject)
     .first<UserRow>();
 
   return row ? mapUserRow(row) : null;
 }
 
-async function updateGoogleUserProfile(
+async function updateOAuthUserProfile(
   db: D1Database,
+  provider: AuthProvider,
   userId: string,
-  profile: GoogleUserProfile,
+  profile: OAuthUserProfile,
 ): Promise<void> {
   await db.batch([
     db
@@ -123,9 +151,9 @@ async function updateGoogleUserProfile(
       .prepare(
         `UPDATE user_identities
          SET provider_email = COALESCE(?, provider_email)
-         WHERE provider = 'google' AND user_id = ?`,
+         WHERE provider = ? AND user_id = ?`,
       )
-      .bind(profile.email ?? null, userId),
+      .bind(profile.email ?? null, provider, userId),
   ]);
 }
 

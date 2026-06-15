@@ -369,19 +369,28 @@ test('auth routes validate Origin before Google one-tap mutations', async () => 
   await assertApiError(allowedResponse, 422, 'VALIDATION_ERROR', 'Google credential is invalid.');
 });
 
-test('Apple auth route stays disabled without requiring Apple OAuth secrets', async () => {
+test('Apple auth route no longer returns the disabled placeholder', async () => {
   const response = await requestAuth('/api/auth/apple', {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ identityToken: '' }),
   });
 
   const details = await assertApiError(
     response,
-    403,
-    'FORBIDDEN',
-    'Sign in with Apple is temporarily disabled.',
+    422,
+    'VALIDATION_ERROR',
+    'Apple credential is invalid.',
   );
 
-  assert.deepEqual(details, {});
+  assert.deepEqual(details, {
+    fieldErrors: {
+      identityToken: ['String must contain at least 1 character(s)'],
+    },
+    formErrors: [],
+  });
 });
 
 test('current user route returns the D1-backed authenticated session user', async () => {

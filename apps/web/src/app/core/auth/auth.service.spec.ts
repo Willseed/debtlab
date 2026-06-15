@@ -85,6 +85,12 @@ describe('AuthService', () => {
     expect(locationAssign).toHaveBeenCalledOnceWith('/api/auth/google/start');
   });
 
+  it('starts the Apple backend OAuth flow', () => {
+    authService.startAppleSignIn();
+
+    expect(locationAssign).toHaveBeenCalledOnceWith('/api/auth/apple/start');
+  });
+
   it('clears the current user after successful sign out', () => {
     authService.refresh().subscribe();
     http.expectOne('/api/auth/me').flush({ user: adminUser });

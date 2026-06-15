@@ -4,6 +4,17 @@ import { Hono } from 'hono';
 import { errorResponse } from '../http/error-response';
 import { requireAuth } from '../middleware/require-auth';
 import {
+  AppleOAuthConfigurationError,
+  AppleOAuthVerificationError,
+  buildAppleAuthorizationUrl,
+  createAppleOAuthNonce,
+  createAppleOAuthState,
+  exchangeAppleAuthorizationCode,
+  getAppleOAuthStateCookieName,
+  readAppleOAuthConfig,
+  verifyAppleIdToken,
+} from '../services/apple-oauth.service';
+import {
   createSessionToken,
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
@@ -18,28 +29,35 @@ import {
   readGoogleOAuthConfig,
   verifyGoogleIdToken,
 } from '../services/google-oauth.service';
-import { findOrCreateGoogleUser } from '../services/user.service';
+import { findOrCreateAppleUser, findOrCreateGoogleUser } from '../services/user.service';
 import { AppBindings, SessionUser } from '../types';
-import { googleAuthSchema } from '../validation/schemas';
+import { appleAuthSchema, googleAuthSchema } from '../validation/schemas';
 
 const OAUTH_STATE_TTL_SECONDS = 600;
-const GOOGLE_OAUTH_STATE_PATTERN = /^[0-9a-f]{64}$/u;
+const OAUTH_RANDOM_PATTERN = /^[0-9a-f]{64}$/u;
 
-type GoogleAuthDependencies = {
+type AuthDependencies = {
   readonly exchangeGoogleAuthorizationCode: typeof exchangeGoogleAuthorizationCode;
+  readonly exchangeAppleAuthorizationCode: typeof exchangeAppleAuthorizationCode;
+  readonly findOrCreateAppleUser: typeof findOrCreateAppleUser;
   readonly findOrCreateGoogleUser: typeof findOrCreateGoogleUser;
+  readonly verifyAppleIdToken: typeof verifyAppleIdToken;
   readonly verifyGoogleIdToken: typeof verifyGoogleIdToken;
 };
 
-const defaultGoogleAuthDependencies: GoogleAuthDependencies = {
+const defaultAuthDependencies: AuthDependencies = {
   exchangeGoogleAuthorizationCode,
+  exchangeAppleAuthorizationCode,
+  findOrCreateAppleUser,
   findOrCreateGoogleUser,
+  verifyAppleIdToken,
   verifyGoogleIdToken,
 };
 
 export function createAuthRoutes(
-  dependencies: GoogleAuthDependencies = defaultGoogleAuthDependencies,
+  dependencyOverrides: Partial<AuthDependencies> = {},
 ): Hono<AppBindings> {
+  const dependencies = { ...defaultAuthDependencies, ...dependencyOverrides };
   const routes = new Hono<AppBindings>();
 
   routes.get('/google/start', (c) => {
@@ -59,7 +77,7 @@ export function createAuthRoutes(
     const returnedState = c.req.query('state');
     const code = c.req.query('code');
 
-    if (!isValidGoogleOAuthState(returnedState)) {
+    if (!isValidOAuthRandom(returnedState)) {
       return redirectGoogleCallbackError(c, 'google_state_invalid');
     }
 
@@ -133,8 +151,106 @@ export function createAuthRoutes(
     }
   });
 
-  routes.post('/apple', (c) => {
-    return errorResponse(c, 403, 'FORBIDDEN', 'Sign in with Apple is temporarily disabled.');
+  routes.get('/apple/start', (c) => {
+    try {
+      const config = readAppleOAuthConfig(c.env, c.req.url);
+      const state = createAppleOAuthState();
+      const nonce = createAppleOAuthNonce();
+
+      setAppleStateCookie(c, state, nonce);
+
+      return c.redirect(buildAppleAuthorizationUrl(config, state, nonce), 302);
+    } catch (error) {
+      return handleAppleOAuthError(c, error);
+    }
+  });
+
+  routes.post('/apple/callback', async (c) => {
+    const body = await c.req.parseBody();
+    const returnedState = readStringFormField(body['state']);
+    const code = readStringFormField(body['code']);
+    const displayName = readAppleCallbackDisplayName(readStringFormField(body['user']));
+
+    if (!isValidOAuthRandom(returnedState)) {
+      return redirectAppleCallbackError(c, 'apple_state_invalid');
+    }
+
+    const stateCookieName = getAppleOAuthStateCookieName(returnedState);
+    const expectedNonce = getCookie(c, stateCookieName);
+
+    deleteCookie(c, stateCookieName, {
+      path: '/api/auth/apple',
+      secure: true,
+      sameSite: 'None',
+    });
+
+    if (!isValidOAuthRandom(expectedNonce)) {
+      return redirectAppleCallbackError(c, 'apple_state_invalid');
+    }
+
+    if (!code) {
+      return redirectAppleCallbackError(c, 'apple_code_missing');
+    }
+
+    try {
+      const config = readAppleOAuthConfig(c.env, c.req.url);
+      const idToken = await dependencies.exchangeAppleAuthorizationCode(code, config);
+      const verifiedProfile = await dependencies.verifyAppleIdToken(
+        idToken,
+        config.clientId,
+        expectedNonce,
+      );
+      const profile = {
+        ...verifiedProfile,
+        displayName: displayName ?? verifiedProfile.displayName,
+      };
+      const user = await dependencies.findOrCreateAppleUser(c.env.DB, profile);
+      const sessionResult = await issueSession(c, user);
+
+      if (sessionResult) {
+        return redirectAppleCallbackError(
+          c,
+          user.status === 'active' ? 'session_unavailable' : 'user_not_active',
+        );
+      }
+
+      return c.redirect(new URL('/dashboard', config.appBaseUrl).toString(), 302);
+    } catch (error) {
+      return handleAppleOAuthCallbackError(c, error);
+    }
+  });
+
+  routes.post('/apple', async (c) => {
+    const body: unknown = await c.req.json().catch(() => null);
+    const parsed = appleAuthSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return errorResponse(
+        c,
+        422,
+        'VALIDATION_ERROR',
+        'Apple credential is invalid.',
+        parsed.error.flatten(),
+      );
+    }
+
+    try {
+      const config = readAppleOAuthConfig(c.env, c.req.url);
+      const profile = await dependencies.verifyAppleIdToken(
+        parsed.data.identityToken,
+        config.clientId,
+      );
+      const user = await dependencies.findOrCreateAppleUser(c.env.DB, profile);
+      const sessionResult = await issueSession(c, user);
+
+      if (sessionResult) {
+        return sessionResult;
+      }
+
+      return c.json({ user });
+    } catch (error) {
+      return handleAppleOAuthError(c, error);
+    }
   });
 
   routes.get('/me', requireAuth, (c) => {
@@ -170,8 +286,62 @@ function setGoogleStateCookie(c: Parameters<typeof setCookie>[0], state: string)
   });
 }
 
-function isValidGoogleOAuthState(state: string | undefined): state is string {
-  return typeof state === 'string' && GOOGLE_OAUTH_STATE_PATTERN.test(state);
+function setAppleStateCookie(
+  c: Parameters<typeof setCookie>[0],
+  state: string,
+  nonce: string,
+): void {
+  setCookie(c, getAppleOAuthStateCookieName(state), nonce, {
+    httpOnly: true,
+    maxAge: OAUTH_STATE_TTL_SECONDS,
+    path: '/api/auth/apple',
+    secure: true,
+    sameSite: 'None',
+  });
+}
+
+function isValidOAuthRandom(value: string | undefined): value is string {
+  return typeof value === 'string' && OAUTH_RANDOM_PATTERN.test(value);
+}
+
+function readStringFormField(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined;
+}
+
+function readAppleCallbackDisplayName(userPayload: string | undefined): string | undefined {
+  if (!userPayload) {
+    return undefined;
+  }
+
+  try {
+    const value: unknown = JSON.parse(userPayload);
+
+    if (!isRecord(value)) {
+      return undefined;
+    }
+
+    const name = value['name'];
+
+    if (!isRecord(name)) {
+      return undefined;
+    }
+
+    const firstName = readTrimmedString(name['firstName']);
+    const lastName = readTrimmedString(name['lastName']);
+    const displayName = [firstName, lastName].filter(Boolean).join(' ');
+
+    return displayName || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function readTrimmedString(value: unknown): string {
+  return typeof value === 'string' ? value.trim() : '';
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null;
 }
 
 async function issueSession(
@@ -227,7 +397,45 @@ function handleGoogleOAuthCallbackError(
   return redirectGoogleCallbackError(c, 'google_callback_failed');
 }
 
+function handleAppleOAuthError(c: Parameters<typeof setCookie>[0], error: unknown): Response {
+  if (error instanceof AppleOAuthConfigurationError) {
+    return errorResponse(c, 500, 'INTERNAL_ERROR', error.message);
+  }
+
+  if (error instanceof AppleOAuthVerificationError) {
+    return errorResponse(c, 401, 'OAUTH_VERIFICATION_FAILED', error.message);
+  }
+
+  throw error;
+}
+
+function handleAppleOAuthCallbackError(
+  c: Parameters<typeof setCookie>[0],
+  error: unknown,
+): Response {
+  if (error instanceof AppleOAuthConfigurationError) {
+    return redirectAppleCallbackError(c, 'apple_oauth_not_configured');
+  }
+
+  if (error instanceof AppleOAuthVerificationError) {
+    return redirectAppleCallbackError(c, 'apple_verification_failed');
+  }
+
+  console.error('Apple OAuth callback failed', error);
+  return redirectAppleCallbackError(c, 'apple_callback_failed');
+}
+
 function redirectGoogleCallbackError(
+  c: Parameters<typeof setCookie>[0],
+  errorCode: string,
+): Response {
+  const redirectUrl = new URL('/', c.env.APP_BASE_URL ?? new URL(c.req.url).origin);
+  redirectUrl.searchParams.set('auth_error', errorCode);
+
+  return c.redirect(redirectUrl.toString(), 302);
+}
+
+function redirectAppleCallbackError(
   c: Parameters<typeof setCookie>[0],
   errorCode: string,
 ): Response {

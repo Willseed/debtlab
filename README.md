@@ -47,6 +47,10 @@ pnpm lhci
 
 Copy `.env.example` for local development only. Do not commit `.env`, `.env.local`, `.dev.vars`, private keys, credential JSON files, or production tokens.
 
-Production secrets must be stored in GitHub Secrets.
+Production secrets must be stored in GitHub Secrets and synced to Worker
+secrets when required by the backend.
 
-Sign in with Apple is currently visible in the login screen but disabled while Apple review is pending. Apple secrets are optional until that feature is enabled.
+Sign in with Apple is enabled. Configure `APPLE_TEAM_ID`,
+`APPLE_CLIENT_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` as GitHub Secrets and
+Cloudflare Worker secrets; documentation and examples must use placeholders
+only.

@@ -57,8 +57,9 @@ handling.
   Mutation APIs must validate `Origin` because sessions are cookie-based.
 - Do not expose stack traces, unsafe debug endpoints, private user data to
   guests, or client-side role claims as authority.
-- Apple login remains visible but disabled until approved; backend Apple auth
-  returns a disabled error without requiring Apple secrets while disabled.
+- Sign in with Apple is enabled; backend Apple auth must verify Apple identity
+  tokens and requires `APPLE_TEAM_ID`, `APPLE_CLIENT_ID`, `APPLE_KEY_ID`, and
+  `APPLE_PRIVATE_KEY` in GitHub Secrets / Worker secrets.
 
 ## Money, API, D1, and audit invariants
 

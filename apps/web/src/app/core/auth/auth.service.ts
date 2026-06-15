@@ -45,6 +45,10 @@ export class AuthService {
     this.browserWindow.location.assign(`${this.apiBaseUrl}/auth/google/start`);
   }
 
+  startAppleSignIn(): void {
+    this.browserWindow.location.assign(`${this.apiBaseUrl}/auth/apple/start`);
+  }
+
   signOut(): Observable<boolean> {
     return this.http.post<LogoutResponse>(`${this.apiBaseUrl}/auth/logout`, {}).pipe(
       map((response) => response.ok),

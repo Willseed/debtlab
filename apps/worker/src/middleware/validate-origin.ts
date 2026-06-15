@@ -15,6 +15,12 @@ export const validateOrigin: MiddlewareHandler<AppBindings> = async (c, next) =>
     return next();
   }
 
+  // Sign in with Apple uses a cross-site form_post callback; the OAuth state cookie
+  // on that route is the CSRF protection instead of the browser Origin header.
+  if (c.req.method === 'POST' && new URL(c.req.url).pathname === '/api/auth/apple/callback') {
+    return next();
+  }
+
   const origin = c.req.header('Origin');
   const allowedOrigins = new Set([...DEFAULT_ALLOWED_ORIGINS, c.env.APP_BASE_URL].filter(Boolean));
 

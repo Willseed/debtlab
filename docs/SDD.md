@@ -95,9 +95,8 @@ Supported roles:
 MVP features:
 
 - Google OAuth works for active public users.
-- Sign in with Apple stays visible but disabled until approved; backend Apple
-  auth returns a disabled error and does not require Apple secrets while
-  disabled.
+- Sign in with Apple works for active public users; backend Apple auth verifies
+  Apple identity tokens and requires Apple OAuth secrets.
 - Expense CRUD, equal/custom/ratio splits, settlement summaries, payment
   recording/confirmation, admin member and audit tools, CSV export, and three
   Easter eggs: Konami Code, Midnight Lab Mode, hidden `/garage`.
@@ -170,8 +169,8 @@ Required production secrets:
 - `SESSION_SECRET`
 - `GOOGLE_CLIENT_ID`
 - `GOOGLE_CLIENT_SECRET`
-- `APPLE_CLIENT_ID`
 - `APPLE_TEAM_ID`
+- `APPLE_CLIENT_ID`
 - `APPLE_KEY_ID`
 - `APPLE_PRIVATE_KEY`
 - `APP_BASE_URL`
@@ -180,7 +179,8 @@ Required production secrets:
 - `CLOUDFLARE_D1_DATABASE_ID`
 - `LHCI_GITHUB_APP_TOKEN`
 
-Apple secrets are required only after Sign in with Apple is enabled.
+Apple secrets are required because Sign in with Apple is enabled and must be
+available as GitHub Secrets and Cloudflare Worker secrets.
 Production `APP_BASE_URL` is `https://lab.buy2330.cc`.
 
 ## 8. Money, splits, settlements, and payments
@@ -225,8 +225,7 @@ Standard error shape:
 
 Core API areas:
 
-- Auth: Google start/callback, disabled Apple endpoint until approved, logout,
-  current user.
+- Auth: Google start/callback, Apple auth, logout, current user.
 - Members: list and admin status/role management.
 - Expenses: list/detail/create/update/soft-delete for authenticated active
   members.

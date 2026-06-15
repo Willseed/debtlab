@@ -140,9 +140,8 @@
       <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
       <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>Continue with Google</target></trans-unit>
       <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>Continue with Apple</target></trans-unit>
-      <trans-unit id="landingAppleLoginDisabledNote" datatype="html"><source>Apple 登入審核中，暫不開放。</source><target>Sign in with Apple is under review and temporarily unavailable.</target></trans-unit>
-      <trans-unit id="landingGoogleLoginInactiveError" datatype="html"><source>Google 登入未完成：你的帳號已停用，請聯絡管理員。</source><target>Google sign-in did not complete: your account has been disabled. Contact an administrator.</target></trans-unit>
-      <trans-unit id="landingGoogleLoginGenericError" datatype="html"><source>Google 登入未完成，請稍後再試或聯絡管理員。</source><target>Google sign-in did not complete. Try again later or contact an administrator.</target></trans-unit>
+      <trans-unit id="landingLoginInactiveError" datatype="html"><source>登入未完成：你的帳號已停用，請聯絡管理員。</source><target>Sign-in did not complete: your account has been disabled. Contact an administrator.</target></trans-unit>
+      <trans-unit id="landingLoginGenericError" datatype="html"><source>登入未完成，請稍後再試或聯絡管理員。</source><target>Sign-in did not complete. Try again later or contact an administrator.</target></trans-unit>
       <trans-unit id="landingDashboardCta" datatype="html"><source>前往儀表板</source><target>Go to dashboard</target></trans-unit>
       <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
       <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>Balance Summary</target></trans-unit>
