@@ -131,7 +131,7 @@ describe('ExpenseListPageComponent', () => {
     ]);
   });
 
-  it('opens edit mode when a row is clicked and PATCHes the changes', () => {
+  it('opens edit mode for regular members when a row is clicked and PATCHes the changes', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -142,6 +142,10 @@ describe('ExpenseListPageComponent', () => {
       createExpenseItem({
         id: 'exp_alice',
         description: 'Initial note',
+        paidBy: {
+          id: 'usr_other',
+          displayName: 'Other Member',
+        },
       }),
     ]);
     fixture.detectChanges();
@@ -182,6 +186,10 @@ describe('ExpenseListPageComponent', () => {
         title: 'Coffee Refill',
         amount: 1500,
         description: 'Initial note',
+        paidBy: {
+          id: 'usr_other',
+          displayName: 'Other Member',
+        },
       }),
     ]);
     fixture.detectChanges();
@@ -222,14 +230,21 @@ describe('ExpenseListPageComponent', () => {
     ]);
   });
 
-  it('renders pencil edit and trash delete icon actions for admins', () => {
-    currentUserState.set({ ...currentUser, role: 'admin' });
+  it('renders pencil edit and trash delete icon actions for regular members', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
     clickButton('儲存');
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_icons' } });
-    flushExpenseList([createExpenseItem({ id: 'exp_icons' })]);
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_icons',
+        paidBy: {
+          id: 'usr_other',
+          displayName: 'Other Member',
+        },
+      }),
+    ]);
     fixture.detectChanges();
 
     const editButton = fixture.nativeElement.querySelector(
@@ -243,15 +258,22 @@ describe('ExpenseListPageComponent', () => {
     expect(deleteButton?.querySelector('svg')).not.toBeNull();
   });
 
-  it('soft deletes an expense after admin confirmation and reloads the list', () => {
-    currentUserState.set({ ...currentUser, role: 'admin' });
+  it('soft deletes an expense after regular member confirmation and reloads the list', () => {
     spyOn(globalThis, 'confirm').and.returnValue(true);
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
     clickButton('儲存');
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_delete' } });
-    flushExpenseList([createExpenseItem({ id: 'exp_delete' })]);
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_delete',
+        paidBy: {
+          id: 'usr_other',
+          displayName: 'Other Member',
+        },
+      }),
+    ]);
     fixture.detectChanges();
 
     (
@@ -273,8 +295,30 @@ describe('ExpenseListPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('目前沒有支出。');
   });
 
-  it('does not delete when admin confirmation is cancelled', () => {
-    currentUserState.set({ ...currentUser, role: 'admin' });
+  it('does not open edit mode from the row while deleting an expense', () => {
+    spyOn(globalThis, 'confirm').and.returnValue(true);
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_deleting' } });
+    flushExpenseList([createExpenseItem({ id: 'exp_deleting' })]);
+    fixture.detectChanges();
+
+    (
+      fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
+    ).click();
+    fixture.detectChanges();
+
+    (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).not.toContain('LabSplit Entry');
+    http.expectOne('/api/expenses/exp_deleting').flush({ ok: true });
+    flushExpenseList();
+  });
+
+  it('does not delete when regular member confirmation is cancelled', () => {
     spyOn(globalThis, 'confirm').and.returnValue(false);
     clickButton('新增支出');
     fixture.detectChanges();
@@ -293,7 +337,6 @@ describe('ExpenseListPageComponent', () => {
   });
 
   it('surfaces an API delete error and reloads the list', () => {
-    currentUserState.set({ ...currentUser, role: 'admin' });
     spyOn(globalThis, 'confirm').and.returnValue(true);
     clickButton('新增支出');
     fixture.detectChanges();
@@ -309,17 +352,17 @@ describe('ExpenseListPageComponent', () => {
     http.expectOne('/api/expenses/exp_delete_error').flush(
       {
         error: {
-          code: 'FORBIDDEN',
-          message: 'Only admins can delete expenses.',
+          code: 'DELETE_FAILED',
+          message: 'Expense delete failed.',
           details: {},
         },
       },
-      { status: 403, statusText: 'Forbidden' },
+      { status: 500, statusText: 'Internal Server Error' },
     );
     flushExpenseList([createExpenseItem({ id: 'exp_delete_error' })]);
     fixture.detectChanges();
 
-    expect(fixture.nativeElement.textContent).toContain('Only admins can delete expenses.');
+    expect(fixture.nativeElement.textContent).toContain('Expense delete failed.');
     expect(
       (fixture.nativeElement.querySelector('button[aria-label="編輯支出"]') as HTMLButtonElement)
         .disabled,
@@ -327,7 +370,6 @@ describe('ExpenseListPageComponent', () => {
   });
 
   it('falls back to a generic message when deleting fails without an API message', () => {
-    currentUserState.set({ ...currentUser, role: 'admin' });
     spyOn(globalThis, 'confirm').and.returnValue(true);
     clickButton('新增支出');
     fixture.detectChanges();

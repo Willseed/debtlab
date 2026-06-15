@@ -3,9 +3,10 @@ import test from 'node:test';
 
 import { Hono } from 'hono';
 
+import { validateOrigin } from '../src/middleware/validate-origin';
 import { expenseRoutes } from '../src/routes/expenses';
 import { createSessionToken, SESSION_COOKIE_NAME } from '../src/services/auth.service';
-import { AppBindings, SessionUser } from '../src/types';
+import { AppBindings, ApiErrorCode, SessionUser } from '../src/types';
 
 const SESSION_SECRET = 'test-session-secret-at-least-long-enough';
 const currentUser: SessionUser = {
@@ -16,18 +17,44 @@ const currentUser: SessionUser = {
   status: 'active',
 };
 
+type FakeExpenseUpdateRow = {
+  readonly group_id?: string;
+  readonly created_by: string;
+  readonly amount: number;
+};
+
+type FakeExpenseDeleteRow = {
+  readonly group_id: string;
+  readonly created_by: string;
+  readonly title: string;
+  readonly amount: number;
+  readonly currency: 'TWD';
+};
+
 class FakeExpenseRouteD1 {
   readonly batchStatements: [string, ...unknown[]][][] = [];
   readonly expenseRows: readonly unknown[];
   readonly participantRows: readonly unknown[];
+  readonly expenseDeleteRow: FakeExpenseDeleteRow | null;
 
   constructor(
     readonly user: SessionUser = currentUser,
-    readonly expenseOwnerRow: { readonly created_by: string; readonly amount: number } | null = {
+    readonly expenseOwnerRow: FakeExpenseUpdateRow | null = {
+      group_id: 'grp_default',
       created_by: currentUser.id,
       amount: 420,
     },
+    expenseDeleteRow: FakeExpenseDeleteRow | null = expenseOwnerRow
+      ? {
+          group_id: expenseOwnerRow.group_id ?? 'grp_default',
+          created_by: expenseOwnerRow.created_by,
+          title: 'Route coffee',
+          amount: expenseOwnerRow.amount,
+          currency: 'TWD',
+        }
+      : null,
   ) {
+    this.expenseDeleteRow = expenseDeleteRow;
     this.expenseRows = [
       {
         id: 'exp_route',
@@ -62,9 +89,21 @@ class FakeExpenseRouteD1 {
     return statements.map((statement) => ({
       success: true,
       meta: {
-        changes: statement.sql.includes('UPDATE expenses') && this.expenseOwnerRow === null ? 0 : 1,
+        changes: this.readChangeCount(statement.sql),
       },
     }));
+  }
+
+  private readChangeCount(sql: string): number {
+    if (sql.includes('SET deleted_at')) {
+      return this.expenseDeleteRow === null ? 0 : 1;
+    }
+
+    if (sql.includes('UPDATE expenses') && this.expenseOwnerRow === null) {
+      return 0;
+    }
+
+    return 1;
   }
 }
 
@@ -92,8 +131,23 @@ class FakeExpenseRouteStatement {
       } as T;
     }
 
-    if (this.sql.includes('SELECT created_by, amount')) {
-      return (this.db.expenseOwnerRow ?? null) as T | null;
+    if (this.sql.includes('SELECT group_id') && this.sql.includes('FROM expenses')) {
+      if (!this.db.expenseDeleteRow || this.db.expenseDeleteRow.group_id !== this.values[1]) {
+        return null;
+      }
+
+      return this.db.expenseDeleteRow as T;
+    }
+
+    if (this.sql.includes('SELECT amount') && this.sql.includes('FROM expenses')) {
+      if (
+        !this.db.expenseOwnerRow ||
+        (this.db.expenseOwnerRow.group_id ?? 'grp_default') !== this.values[1]
+      ) {
+        return null;
+      }
+
+      return this.db.expenseOwnerRow as T;
     }
 
     if (this.sql.includes('SELECT id') && this.sql.includes('FROM expenses')) {
@@ -223,7 +277,7 @@ test('GET /api/expenses/:expenseId returns the current placeholder detail respon
   assert.equal(response.status, 501);
 });
 
-test('PATCH /api/expenses/:expenseId persists creator updates', async () => {
+test('PATCH /api/expenses/:expenseId persists member updates', async () => {
   const db = new FakeExpenseRouteD1();
   const response = await requestExpenseRoute('/api/expenses/exp_route', db, {
     method: 'PATCH',
@@ -236,6 +290,25 @@ test('PATCH /api/expenses/:expenseId persists creator updates', async () => {
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { expense: { id: 'exp_route' } });
   assert.equal(db.batchStatements.length, 1);
+});
+
+test('PATCH /api/expenses/:expenseId requires authentication', async () => {
+  const db = new FakeExpenseRouteD1();
+  const response = await requestExpenseRoute(
+    '/api/expenses/exp_route',
+    db,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ title: 'Updated route coffee' }),
+    },
+    null,
+  );
+
+  await assertApiError(response, 401, 'UNAUTHORIZED', 'Authentication is required.');
+  assert.equal(db.batchStatements.length, 0);
 });
 
 test('PATCH /api/expenses/:expenseId validates update bodies', async () => {
@@ -266,33 +339,92 @@ test('PATCH /api/expenses/:expenseId maps missing expenses to not found', async 
   assert.equal(response.status, 404);
 });
 
-test('PATCH /api/expenses/:expenseId forbids non-creators', async () => {
-  const response = await requestExpenseRoute(
-    '/api/expenses/exp_other',
-    new FakeExpenseRouteD1(currentUser, { created_by: 'usr_other', amount: 420 }),
+test('PATCH /api/expenses/:expenseId maps already deleted expenses to not found', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, null);
+  const response = await requestExpenseRoute('/api/expenses/exp_deleted', db, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title: 'Deleted expense' }),
+  });
+
+  await assertApiError(response, 404, 'NOT_FOUND', 'Expense not found.');
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('PATCH /api/expenses/:expenseId allows regular members to update non-creator expenses', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, {
+    group_id: 'grp_default',
+    created_by: 'usr_other',
+    amount: 420,
+  });
+  const response = await requestExpenseRoute('/api/expenses/exp_other', db, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title: 'Other user expense' }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { expense: { id: 'exp_other' } });
+  assert.equal(db.batchStatements.length, 1);
+});
+
+test('PATCH /api/expenses/:expenseId validates Origin when the app middleware is mounted', async () => {
+  const db = new FakeExpenseRouteD1(currentUser);
+  const token = await createSessionToken(currentUser, SESSION_SECRET);
+  const app = createOriginProtectedExpenseApp();
+  const blockedResponse = await app.request(
+    '/api/expenses/exp_route',
     {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
+        Cookie: `${SESSION_COOKIE_NAME}=${token}`,
       },
-      body: JSON.stringify({ title: 'Other user expense' }),
+      body: JSON.stringify({ title: 'Blocked update' }),
+    },
+    {
+      DB: db as unknown as D1Database,
+      SESSION_SECRET,
     },
   );
 
-  assert.equal(response.status, 403);
+  await assertApiError(blockedResponse, 403, 'FORBIDDEN', 'Mutation origin is not allowed.');
+  assert.equal(db.batchStatements.length, 0);
+
+  const allowedResponse = await app.request(
+    '/api/expenses/exp_route',
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ title: 'Allowed update' }),
+    },
+    {
+      DB: db as unknown as D1Database,
+      SESSION_SECRET,
+    },
+  );
+
+  assert.equal(allowedResponse.status, 200);
+  assert.equal(db.batchStatements.length, 1);
 });
 
-test('DELETE /api/expenses/:expenseId soft deletes an expense for admins', async () => {
-  const adminUser: SessionUser = { ...currentUser, role: 'admin' };
-  const db = new FakeExpenseRouteD1(adminUser);
-  const response = await requestExpenseRoute(
-    '/api/expenses/exp_route',
-    db,
-    {
-      method: 'DELETE',
-    },
-    adminUser,
-  );
+test('DELETE /api/expenses/:expenseId soft deletes non-creator expenses for regular members', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, {
+    group_id: 'grp_default',
+    created_by: 'usr_other',
+    amount: 420,
+  });
+  const response = await requestExpenseRoute('/api/expenses/exp_route', db, {
+    method: 'DELETE',
+  });
 
   assert.equal(response.status, 200);
   assert.deepEqual(await response.json(), { ok: true });
@@ -301,19 +433,80 @@ test('DELETE /api/expenses/:expenseId soft deletes an expense for admins', async
   assert.match(db.batchStatements[0]?.[1]?.[0] ?? '', /expense_deleted/u);
 });
 
-test('DELETE /api/expenses/:expenseId maps missing expenses to not found', async () => {
-  const adminUser: SessionUser = { ...currentUser, role: 'admin' };
-  const db = new FakeExpenseRouteD1(adminUser, null);
+test('DELETE /api/expenses/:expenseId requires authentication', async () => {
   const response = await requestExpenseRoute(
-    '/api/expenses/exp_missing',
-    db,
+    '/api/expenses/exp_route',
+    new FakeExpenseRouteD1(),
     {
       method: 'DELETE',
     },
-    adminUser,
+    null,
   );
 
-  assert.equal(response.status, 404);
+  await assertApiError(response, 401, 'UNAUTHORIZED', 'Authentication is required.');
+});
+
+test('DELETE /api/expenses/:expenseId maps missing expenses to not found', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, null);
+  const response = await requestExpenseRoute('/api/expenses/exp_missing', db, {
+    method: 'DELETE',
+  });
+
+  await assertApiError(response, 404, 'NOT_FOUND', 'Expense not found.');
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('DELETE /api/expenses/:expenseId maps already deleted expenses to not found', async () => {
+  const db = new FakeExpenseRouteD1(
+    currentUser,
+    { group_id: 'grp_default', created_by: currentUser.id, amount: 420 },
+    null,
+  );
+  const response = await requestExpenseRoute('/api/expenses/exp_deleted', db, {
+    method: 'DELETE',
+  });
+
+  await assertApiError(response, 404, 'NOT_FOUND', 'Expense not found.');
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('DELETE /api/expenses/:expenseId validates Origin when the app middleware is mounted', async () => {
+  const db = new FakeExpenseRouteD1(currentUser);
+  const token = await createSessionToken(currentUser, SESSION_SECRET);
+  const app = createOriginProtectedExpenseApp();
+  const blockedResponse = await app.request(
+    '/api/expenses/exp_route',
+    {
+      method: 'DELETE',
+      headers: {
+        Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+      },
+    },
+    {
+      DB: db as unknown as D1Database,
+      SESSION_SECRET,
+    },
+  );
+
+  await assertApiError(blockedResponse, 403, 'FORBIDDEN', 'Mutation origin is not allowed.');
+  assert.equal(db.batchStatements.length, 0);
+
+  const allowedResponse = await app.request(
+    '/api/expenses/exp_route',
+    {
+      method: 'DELETE',
+      headers: {
+        Cookie: `${SESSION_COOKIE_NAME}=${token}`,
+        Origin: 'https://lab.buy2330.cc',
+      },
+    },
+    {
+      DB: db as unknown as D1Database,
+      SESSION_SECRET,
+    },
+  );
+
+  assert.equal(allowedResponse.status, 200);
   assert.equal(db.batchStatements.length, 1);
 });
 
@@ -321,13 +514,16 @@ async function requestExpenseRoute(
   path: string,
   db: FakeExpenseRouteD1 = new FakeExpenseRouteD1(),
   init: RequestInit = {},
-  sessionUser: SessionUser = currentUser,
+  sessionUser: SessionUser | null = currentUser,
 ): Promise<Response> {
-  const token = await createSessionToken(sessionUser, SESSION_SECRET);
   const app = new Hono<AppBindings>();
   app.route('/api/expenses', expenseRoutes);
   const headers = new Headers(init.headers);
-  headers.set('Cookie', `${SESSION_COOKIE_NAME}=${token}`);
+
+  if (sessionUser) {
+    const token = await createSessionToken(sessionUser, SESSION_SECRET);
+    headers.set('Cookie', `${SESSION_COOKIE_NAME}=${token}`);
+  }
 
   return app.request(
     path,
@@ -340,6 +536,33 @@ async function requestExpenseRoute(
       SESSION_SECRET,
     },
   );
+}
+
+function createOriginProtectedExpenseApp(): Hono<AppBindings> {
+  const app = new Hono<AppBindings>();
+  app.use('/api/*', validateOrigin);
+  app.route('/api/expenses', expenseRoutes);
+
+  return app;
+}
+
+async function assertApiError(
+  response: Response,
+  status: number,
+  code: ApiErrorCode,
+  message: string,
+): Promise<void> {
+  assert.equal(response.status, status);
+  const body = (await response.json()) as {
+    readonly error: {
+      readonly code: ApiErrorCode;
+      readonly message: string;
+      readonly details: unknown;
+    };
+  };
+  assert.equal(body.error.code, code);
+  assert.equal(body.error.message, message);
+  assert.deepEqual(body.error.details, {});
 }
 
 function createExpenseBody(

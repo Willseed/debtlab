@@ -12,16 +12,16 @@ export class ExpenseNotFoundError extends Error {
   }
 }
 
-export class ExpenseAccessDeniedError extends Error {
-  constructor() {
-    super('Expense is not editable by the current user.');
-    this.name = 'ExpenseAccessDeniedError';
-  }
-}
-
-type ExpenseOwnerRow = {
-  readonly created_by: string;
+type ExpenseUpdateRow = {
   readonly amount: number;
+};
+
+type ExpenseDeleteRow = {
+  readonly group_id: string;
+  readonly created_by: string;
+  readonly title: string;
+  readonly amount: number;
+  readonly currency: 'TWD';
 };
 
 type ExpenseListRow = {
@@ -201,21 +201,17 @@ export async function updateExpense(
   expenseId: string,
   input: ExpenseUpdateInput,
 ): Promise<void> {
-  const owner = await db
+  const expense = await db
     .prepare(
-      `SELECT created_by, amount
+      `SELECT amount
        FROM expenses
-       WHERE id = ? AND deleted_at IS NULL`,
+       WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
     )
-    .bind(expenseId)
-    .first<ExpenseOwnerRow>();
+    .bind(expenseId, DEFAULT_GROUP_ID)
+    .first<ExpenseUpdateRow>();
 
-  if (!owner) {
+  if (!expense) {
     throw new ExpenseNotFoundError();
-  }
-
-  if (owner.created_by !== user.id) {
-    throw new ExpenseAccessDeniedError();
   }
 
   const descriptionProvided = input.description === undefined ? 0 : 1;
@@ -229,7 +225,7 @@ export async function updateExpense(
              category = COALESCE(?, category),
              expense_date = COALESCE(?, expense_date),
              updated_at = datetime('now', '+8 hours')
-         WHERE id = ?`,
+         WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
       )
       .bind(
         input.title ?? null,
@@ -239,10 +235,11 @@ export async function updateExpense(
         input.category ?? null,
         input.expenseDate ?? null,
         expenseId,
+        DEFAULT_GROUP_ID,
       ),
   ];
 
-  if (input.amount !== undefined && input.amount !== owner.amount) {
+  if (input.amount !== undefined && input.amount !== expense.amount) {
     statements.push(
       db
         .prepare(
@@ -271,22 +268,43 @@ export async function deleteExpense(
   user: SessionUser,
   expenseId: string,
 ): Promise<void> {
+  const expense = await db
+    .prepare(
+      `SELECT group_id, created_by, title, amount, currency
+       FROM expenses
+       WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
+    )
+    .bind(expenseId, DEFAULT_GROUP_ID)
+    .first<ExpenseDeleteRow>();
+
+  if (!expense || expense.group_id !== DEFAULT_GROUP_ID) {
+    throw new ExpenseNotFoundError();
+  }
+
+  const beforeJson = JSON.stringify({
+    groupId: expense.group_id,
+    title: expense.title,
+    amount: expense.amount,
+    currency: expense.currency,
+    createdBy: expense.created_by,
+  });
+
   const [deleteResult] = await db.batch([
     db
       .prepare(
         `UPDATE expenses
          SET deleted_at = datetime('now', '+8 hours'),
-             updated_at = datetime('now', '+8 hours')
-         WHERE id = ? AND deleted_at IS NULL`,
+            updated_at = datetime('now', '+8 hours')
+         WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
       )
-      .bind(expenseId),
+      .bind(expenseId, DEFAULT_GROUP_ID),
     db
       .prepare(
-        `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id)
-         SELECT ?, ?, 'expense_deleted', 'expense', ?
+        `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, before_json)
+         SELECT ?, ?, 'expense_deleted', 'expense', ?, ?
          WHERE changes() = 1`,
       )
-      .bind(crypto.randomUUID(), user.id, expenseId),
+      .bind(crypto.randomUUID(), user.id, expenseId, beforeJson),
   ]);
 
   if ((deleteResult?.meta?.changes ?? 0) === 0) {

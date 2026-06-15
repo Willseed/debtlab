@@ -1,12 +1,10 @@
 import { Hono } from 'hono';
 
 import { errorResponse, notImplemented } from '../http/error-response';
-import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
 import {
   createExpense,
   deleteExpense,
-  ExpenseAccessDeniedError,
   ExpenseNotFoundError,
   listExpenses,
   updateExpense,
@@ -97,16 +95,13 @@ expenseRoutes.patch('/:expenseId', async (c) => {
     if (error instanceof ExpenseNotFoundError) {
       return errorResponse(c, 404, 'NOT_FOUND', error.message);
     }
-    if (error instanceof ExpenseAccessDeniedError) {
-      return errorResponse(c, 403, 'FORBIDDEN', error.message);
-    }
     throw error;
   }
 
   return c.json({ expense: { id: expenseId } });
 });
 
-expenseRoutes.delete('/:expenseId', requireAdmin, async (c) => {
+expenseRoutes.delete('/:expenseId', async (c) => {
   const currentUser = c.get('currentUser');
   const expenseId = c.req.param('expenseId');
 

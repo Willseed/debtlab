@@ -126,7 +126,10 @@ cursor
 
 ### POST `/api/expenses`
 
-Authenticated active member route. Creates an expense and participant shares in D1. The sum of shares must equal `amount`. The MVP UI creates a self-paid/self-participated expense for the authenticated user; direct API calls cannot create expenses on behalf of other users.
+Any authenticated active member may create an expense and participant shares in
+D1. The sum of shares must equal `amount`. The MVP UI creates a
+self-paid/self-participated expense for the authenticated user; direct API calls
+cannot create expenses on behalf of other users.
 
 Required split methods:
 
@@ -142,11 +145,13 @@ Authenticated. Returns the expense detail with participant shares.
 
 ### PATCH `/api/expenses/:expenseId`
 
-Creator or admin only. Deleted expenses cannot be edited.
+Any authenticated active member may edit default-group expenses. Deleted
+expenses cannot be edited.
 
 ### DELETE `/api/expenses/:expenseId`
 
-Admin only for MVP. Soft-deletes by setting `deleted_at`.
+Any authenticated active member may soft-delete default-group expenses by
+setting `deleted_at`.
 
 ## Settlements
 

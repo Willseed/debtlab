@@ -4,7 +4,6 @@ import test from 'node:test';
 import {
   createExpense,
   deleteExpense,
-  ExpenseAccessDeniedError,
   ExpenseNotFoundError,
   listExpenses,
   updateExpense,
@@ -13,9 +12,31 @@ import { CalculatedShare } from '../src/services/split.service';
 import { ExpenseCreateInput, ExpenseUpdateInput } from '../src/validation/schemas';
 import type { SessionUser } from '../src/types';
 
+type FakeExpenseDeleteRow = {
+  readonly group_id: string;
+  readonly created_by: string;
+  readonly title: string;
+  readonly amount: number;
+  readonly currency: 'TWD';
+};
+
+type FakeExpenseUpdateRow = {
+  readonly group_id: string;
+  readonly created_by: string;
+  readonly amount: number;
+};
+
 class FakeD1Database {
   readonly statements: unknown[][][] = [];
-  expenseOwnerRow: { readonly created_by: string; readonly amount: number } | null = null;
+  expenseOwnerRow: FakeExpenseUpdateRow | null = null;
+  expenseDeleteRow: FakeExpenseDeleteRow | null = {
+    group_id: 'grp_default',
+    created_by: 'usr_alice',
+    title: 'Lab ingredients',
+    amount: 1280,
+    currency: 'TWD',
+  };
+  deleteChanges = 1;
   expenseRows: readonly {
     readonly id: string;
     readonly title: string;
@@ -40,7 +61,12 @@ class FakeD1Database {
 
   async batch(statements: FakeD1PreparedStatement[]) {
     this.statements.push(statements.map((statement) => [statement.sql, ...statement.values]));
-    return statements.map(() => ({ success: true }));
+    return statements.map((statement) => ({
+      success: true,
+      meta: {
+        changes: statement.sql.includes('SET deleted_at') ? this.deleteChanges : 1,
+      },
+    }));
   }
 }
 
@@ -60,8 +86,19 @@ class FakeD1PreparedStatement {
     if (!this.db) {
       return null;
     }
-    if (this.sql.includes('FROM expenses')) {
-      return (this.db.expenseOwnerRow ?? null) as T | null;
+    if (this.sql.includes('SELECT group_id') && this.sql.includes('FROM expenses')) {
+      if (!this.db.expenseDeleteRow || this.db.expenseDeleteRow.group_id !== this.values[1]) {
+        return null;
+      }
+
+      return this.db.expenseDeleteRow as T;
+    }
+    if (this.sql.includes('SELECT amount') && this.sql.includes('FROM expenses')) {
+      if (!this.db.expenseOwnerRow || this.db.expenseOwnerRow.group_id !== this.values[1]) {
+        return null;
+      }
+
+      return this.db.expenseOwnerRow as T;
     }
     return null;
   }
@@ -207,7 +244,7 @@ const sessionUser: SessionUser = {
   id: 'usr_alice',
   email: 'alice@example.test',
   displayName: 'Alice',
-  role: 'admin',
+  role: 'member',
   status: 'active',
 };
 
@@ -224,22 +261,35 @@ test('updateExpense rejects unknown expenses', async () => {
   );
 });
 
-test('updateExpense forbids editing expenses created by other users', async () => {
+test('updateExpense allows regular members to edit expenses created by other users', async () => {
   const db = new FakeD1Database();
-  db.expenseOwnerRow = { created_by: 'usr_bob', amount: 500 };
+  db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_bob', amount: 500 };
+
+  await updateExpense(db as unknown as D1Database, sessionUser, 'exp_other', {
+    title: 'New',
+  } satisfies ExpenseUpdateInput);
+
+  assert.equal(db.statements.length, 1);
+  assert.match(String(db.statements[0]?.[0]?.[0]), /UPDATE expenses/u);
+});
+
+test('updateExpense ignores expenses outside the default group', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = { group_id: 'grp_other', created_by: 'usr_bob', amount: 500 };
 
   await assert.rejects(
     () =>
-      updateExpense(db as unknown as D1Database, sessionUser, 'exp_other', {
+      updateExpense(db as unknown as D1Database, sessionUser, 'exp_other_group', {
         title: 'New',
       } satisfies ExpenseUpdateInput),
-    ExpenseAccessDeniedError,
+    ExpenseNotFoundError,
   );
+  assert.equal(db.statements.length, 0);
 });
 
 test('updateExpense persists field updates and audit log without touching shares when amount is unchanged', async () => {
   const db = new FakeD1Database();
-  db.expenseOwnerRow = { created_by: 'usr_alice', amount: 1280 };
+  db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_alice', amount: 1280 };
 
   await updateExpense(db as unknown as D1Database, sessionUser, 'exp_alice', {
     title: 'Renamed expense',
@@ -255,11 +305,13 @@ test('updateExpense persists field updates and audit log without touching shares
   assert.equal(batch?.[0]?.[1], 'Renamed expense');
   assert.equal(batch?.[0]?.[2], 1);
   assert.equal(batch?.[0]?.[3], 'Updated note');
+  assert.equal(batch?.[0]?.[7], 'exp_alice');
+  assert.equal(batch?.[0]?.[8], 'grp_default');
 });
 
 test('updateExpense rewrites participant shares when the amount changes', async () => {
   const db = new FakeD1Database();
-  db.expenseOwnerRow = { created_by: 'usr_alice', amount: 1000 };
+  db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_alice', amount: 1000 };
 
   await updateExpense(db as unknown as D1Database, sessionUser, 'exp_alice', {
     amount: 2500,
@@ -275,7 +327,7 @@ test('updateExpense rewrites participant shares when the amount changes', async 
 
 test('updateExpense passes through a null description so it clears the stored value', async () => {
   const db = new FakeD1Database();
-  db.expenseOwnerRow = { created_by: 'usr_alice', amount: 1280 };
+  db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_alice', amount: 1280 };
 
   await updateExpense(db as unknown as D1Database, sessionUser, 'exp_alice', {
     description: null,
@@ -288,9 +340,71 @@ test('updateExpense passes through a null description so it clears the stored va
 
 test('deleteExpense rejects deletes when D1 reports no changed rows', async () => {
   const db = new FakeD1Database();
+  db.deleteChanges = 0;
 
   await assert.rejects(
     () => deleteExpense(db as unknown as D1Database, sessionUser, 'exp_missing'),
     ExpenseNotFoundError,
   );
+});
+
+test('deleteExpense rejects missing or already deleted expenses before D1 writes', async () => {
+  const db = new FakeD1Database();
+  db.expenseDeleteRow = null;
+
+  await assert.rejects(
+    () => deleteExpense(db as unknown as D1Database, sessionUser, 'exp_deleted'),
+    ExpenseNotFoundError,
+  );
+  assert.equal(db.statements.length, 0);
+});
+
+test('deleteExpense lets regular members soft delete non-creator default-group expenses', async () => {
+  const db = new FakeD1Database();
+  db.expenseDeleteRow = {
+    group_id: 'grp_default',
+    created_by: 'usr_bob',
+    title: 'Lab ingredients',
+    amount: 1280,
+    currency: 'TWD',
+  };
+
+  await deleteExpense(db as unknown as D1Database, sessionUser, 'exp_alice');
+
+  assert.equal(db.statements.length, 1);
+  const batch = db.statements[0];
+  assert.equal(batch?.length, 2);
+  assert.match(String(batch?.[0]?.[0]), /SET deleted_at = datetime/u);
+  assert.match(String(batch?.[0]?.[0]), /group_id = \?/u);
+  assert.equal(batch?.[0]?.[1], 'exp_alice');
+  assert.equal(batch?.[0]?.[2], 'grp_default');
+  assert.match(String(batch?.[1]?.[0]), /expense_deleted/u);
+  assert.match(String(batch?.[1]?.[0]), /before_json/u);
+  assert.equal(
+    batch?.[1]?.[4],
+    JSON.stringify({
+      groupId: 'grp_default',
+      title: 'Lab ingredients',
+      amount: 1280,
+      currency: 'TWD',
+      createdBy: 'usr_bob',
+    }),
+  );
+});
+
+test('deleteExpense ignores expenses outside the default group', async () => {
+  const db = new FakeD1Database();
+  db.expenseDeleteRow = {
+    group_id: 'grp_other',
+    created_by: 'usr_alice',
+    title: 'Lab ingredients',
+    amount: 1280,
+    currency: 'TWD',
+  };
+
+  await assert.rejects(
+    () => deleteExpense(db as unknown as D1Database, sessionUser, 'exp_other_group'),
+    ExpenseNotFoundError,
+  );
+  assert.equal(db.statements.length, 0);
 });

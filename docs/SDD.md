@@ -86,12 +86,11 @@ Supported roles:
 
 - Guest: can view the landing page and start OAuth login; cannot access
   authenticated data.
-- Member: can view dashboard, expenses, settlements, balances, create/edit own
-  expenses, record payments, confirm received payments, and unlock enabled
-  Easter eggs.
-- Admin: can perform member actions plus edit any expense, soft-delete
-  expenses, manage roles/status, view audit logs, export CSV, and configure
-  Easter eggs.
+- Active authenticated member: can view dashboard, expenses, settlements,
+  balances, create, edit, and soft-delete expenses, record payments, confirm
+  received payments, and unlock enabled Easter eggs.
+- Admin: can perform active member actions plus manage roles/status, view audit
+  logs, export CSV, and configure Easter eggs.
 
 MVP features:
 
@@ -229,7 +228,8 @@ Core API areas:
 - Auth: Google start/callback, disabled Apple endpoint until approved, logout,
   current user.
 - Members: list and admin status/role management.
-- Expenses: list/detail/create/update/admin soft-delete.
+- Expenses: list/detail/create/update/soft-delete for authenticated active
+  members.
 - Settlements/payments: summary, payment create, receiver/admin confirmation.
 - Admin: audit log view, member administration, CSV export, Easter egg
   configuration.

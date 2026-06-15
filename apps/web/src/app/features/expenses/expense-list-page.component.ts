@@ -136,50 +136,48 @@ type ExpenseForm = {
                             />
                           </svg>
                         </button>
-                        @if (canDeleteExpenses()) {
-                          <button
-                            type="button"
-                            class="button button--secondary button--icon"
-                            (click)="confirmDeleteExpense(expense); $event.stopPropagation()"
-                            [disabled]="deletingExpenseIds().has(expense.id)"
-                            aria-label="刪除支出"
-                            title="刪除支出"
-                            i18n-aria-label="Delete expense action label@@expensesDeleteActionLabel"
-                            i18n-title="Delete expense action title@@expensesDeleteActionTitle"
+                        <button
+                          type="button"
+                          class="button button--secondary button--icon"
+                          (click)="confirmDeleteExpense(expense); $event.stopPropagation()"
+                          [disabled]="deletingExpenseIds().has(expense.id)"
+                          aria-label="刪除支出"
+                          title="刪除支出"
+                          i18n-aria-label="Delete expense action label@@expensesDeleteActionLabel"
+                          i18n-title="Delete expense action title@@expensesDeleteActionTitle"
+                        >
+                          <svg
+                            aria-hidden="true"
+                            focusable="false"
+                            viewBox="0 0 24 24"
+                            width="20"
+                            height="20"
                           >
-                            <svg
-                              aria-hidden="true"
-                              focusable="false"
-                              viewBox="0 0 24 24"
-                              width="20"
-                              height="20"
-                            >
-                              <path
-                                d="M5 7h14"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-width="1.8"
-                              />
-                              <path
-                                d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="1.8"
-                              />
-                              <path
-                                d="m8 10 .6 8.2A2 2 0 0 0 10.6 20h2.8a2 2 0 0 0 2-1.8L16 10"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="1.8"
-                              />
-                            </svg>
-                          </button>
-                        }
+                            <path
+                              d="M5 7h14"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-width="1.8"
+                            />
+                            <path
+                              d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="1.8"
+                            />
+                            <path
+                              d="m8 10 .6 8.2A2 2 0 0 0 10.6 20h2.8a2 2 0 0 0 2-1.8L16 10"
+                              fill="none"
+                              stroke="currentColor"
+                              stroke-linecap="round"
+                              stroke-linejoin="round"
+                              stroke-width="1.8"
+                            />
+                          </svg>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -348,9 +346,6 @@ export class ExpenseListPageComponent implements OnInit {
   protected readonly statusMessage = signal('');
   protected readonly editingExpenseId = signal<string | null>(null);
   protected readonly isEditing = computed(() => this.editingExpenseId() !== null);
-  protected readonly canDeleteExpenses = computed(
-    () => this.authService.currentUser()?.role === 'admin',
-  );
   protected readonly currentUserName = computed(
     () =>
       this.authService.currentUser()?.displayName ??
@@ -396,6 +391,10 @@ export class ExpenseListPageComponent implements OnInit {
   }
 
   protected openEditModal(expense: ExpenseRow): void {
+    if (this.deletingExpenseIds().has(expense.id)) {
+      return;
+    }
+
     this.editingExpenseId.set(expense.id);
     this.statusMessage.set('');
     this.form.reset({
