@@ -67,6 +67,30 @@ describe('AppComponent', () => {
     expect(text).toContain('登出');
   });
 
+  it('shows the disguised repository footer only to authenticated members', async () => {
+    isAuthenticated.set(true);
+
+    const fixture = await createComponent();
+    const footer = (fixture.nativeElement as HTMLElement).querySelector<HTMLElement>(
+      '.app-shell__footer',
+    );
+    const repositoryLink = footer?.querySelector<HTMLAnchorElement>('.app-shell__repository-link');
+
+    expect(footer).not.toBeNull();
+    expect(repositoryLink).not.toBeNull();
+    expect(repositoryLink?.textContent?.trim()).toBe('Copyright 2026');
+    expect(footer?.textContent).not.toContain('github.com');
+    expect(repositoryLink?.getAttribute('href')).toBe('https://github.com/Willseed/debtlab');
+    expect(repositoryLink?.getAttribute('aria-label')).toBe('GitHub 程式碼庫');
+  });
+
+  it('does not show the repository footer to guests', async () => {
+    const fixture = await createComponent();
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('.app-shell__footer')).toBeNull();
+    expect((fixture.nativeElement as HTMLElement).textContent).not.toContain('Copyright 2026');
+  });
+
   it('shows admin navigation only to admins', async () => {
     isAuthenticated.set(true);
     isAdmin.set(true);

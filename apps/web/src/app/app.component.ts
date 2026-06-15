@@ -70,6 +70,21 @@ import { AuthService } from './core/auth/auth.service';
     <main id="main" class="app-shell__main" tabindex="-1">
       <router-outlet />
     </main>
+
+    @if (isAuthenticated()) {
+      <footer class="app-shell__footer">
+        <div class="app-shell__footer-inner">
+          <a
+            class="app-shell__repository-link"
+            href="https://github.com/Willseed/debtlab"
+            aria-label="GitHub 程式碼庫"
+            i18n-aria-label="Repository link label@@appRepositoryLinkLabel"
+            i18n="Footer copyright@@appFooterCopyright"
+            >Copyright 2026</a
+          >
+        </div>
+      </footer>
+    }
   `,
 })
 export class AppComponent {

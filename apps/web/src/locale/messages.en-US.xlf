@@ -11,6 +11,8 @@
       <trans-unit id="appNavSettlements" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
       <trans-unit id="appNavAdmin" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
       <trans-unit id="appNavSignOut" datatype="html"><source>登出</source><target>Sign out</target></trans-unit>
+      <trans-unit id="appRepositoryLinkLabel" datatype="html"><source>GitHub 程式碼庫</source><target>GitHub repository</target></trans-unit>
+      <trans-unit id="appFooterCopyright" datatype="html"><source>Copyright 2026</source><target>Copyright 2026</target></trans-unit>
       <trans-unit id="adminTitle" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
       <trans-unit id="adminUserManagement" datatype="html"><source>使用者管理</source><target>User Management</target></trans-unit>
       <trans-unit id="adminSystemStats" datatype="html"><source>系統統計</source><target>System Statistics</target></trans-unit>
