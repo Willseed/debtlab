@@ -110,6 +110,18 @@ test('authenticated member uses authenticated navigation without seeing login or
       body: JSON.stringify({ expenses: persistedExpenses, nextCursor: null }),
     });
   });
+  await page.route('**/api/settlements/summary', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        currency: 'TWD',
+        balances: [{ userId: 'usr_member', displayName: 'Member User', net: 0 }],
+        suggestedTransfers: [],
+        pendingPayments: [],
+      }),
+    });
+  });
 
   await page.goto('/');
 

@@ -54,9 +54,6 @@ import { AuthService } from './core/auth/auth.service';
                 管理
               </a>
             }
-            <a routerLink="/garage" routerLinkActive="is-active" i18n="Garage nav@@appNavGarage">
-              車庫
-            </a>
             <button
               type="button"
               class="app-shell__signout"

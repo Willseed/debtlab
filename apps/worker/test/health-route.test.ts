@@ -7,13 +7,24 @@ import app from '../src/index';
 import { healthRoutes } from '../src/routes/health';
 import { AppBindings } from '../src/types';
 
+const GARAGE_CTF_CONFIG_ROW = {
+  code: 'hidden_garage',
+  password_ciphertext: 'x2VGtRvJNtzm3B1oc+zoEl/mNF+KLy9zlw==',
+  password_iv: 'MhrxOR7KxjPubuMx',
+  password_salt: 'E2vhKEiWw2pWjmzJlEri2g==',
+  ec_private_jwk:
+    '{"key_ops":["deriveBits"],"ext":true,"kty":"EC","x":"djGsUm8g_i18RqPEoPsrsfiMR_ZMEsq5WnFhKP5ttEQ","y":"ltv5PJvsre-c09usFitNG5QtKk58IbhQqFFFB0t2q9o","crv":"P-256","d":"LiV8vdtWfMXlthS3h6afHsln6npr5KtnOoZWA-7ADDU"}',
+  ec_public_jwk:
+    '{"key_ops":[],"ext":true,"kty":"EC","x":"djGsUm8g_i18RqPEoPsrsfiMR_ZMEsq5WnFhKP5ttEQ","y":"ltv5PJvsre-c09usFitNG5QtKk58IbhQqFFFB0t2q9o","crv":"P-256"}',
+};
+
 test('health returns JSON when no Accept header is provided', async () => {
   const response = await requestHealth();
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'application/json; charset=utf-8');
   assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
-  assert.deepEqual(await response.json(), { ok: true });
+  assert.deepEqual(await response.json(), { ok: true, ctf: 'SystmeLab' });
 });
 
 test('health keeps JSON for curl-style wildcard Accept headers', async () => {
@@ -25,7 +36,7 @@ test('health keeps JSON for curl-style wildcard Accept headers', async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'application/json; charset=utf-8');
-  assert.deepEqual(await response.json(), { ok: true });
+  assert.deepEqual(await response.json(), { ok: true, ctf: 'SystmeLab' });
 });
 
 test('health keeps JSON for explicit API client Accept headers', async () => {
@@ -37,7 +48,7 @@ test('health keeps JSON for explicit API client Accept headers', async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'application/json; charset=utf-8');
-  assert.deepEqual(await response.json(), { ok: true });
+  assert.deepEqual(await response.json(), { ok: true, ctf: 'SystmeLab' });
 });
 
 test('health keeps JSON when HTML is explicitly unacceptable', async () => {
@@ -49,7 +60,7 @@ test('health keeps JSON when HTML is explicitly unacceptable', async () => {
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'application/json; charset=utf-8');
-  assert.deepEqual(await response.json(), { ok: true });
+  assert.deepEqual(await response.json(), { ok: true, ctf: 'SystmeLab' });
 });
 
 test('health returns HTML for browser navigation Accept headers', async () => {
@@ -68,6 +79,7 @@ test('health returns HTML for browser navigation Accept headers', async () => {
   assert.match(body, /^<!doctype html>/u);
   assert.match(body, /LabSplit Black Gold/u);
   assert.match(body, /Operational/u);
+  assert.match(body, /SystmeLab/u);
 });
 
 test('health returns HTML when text/html is accepted without a quality value', async () => {
@@ -83,11 +95,15 @@ test('health returns HTML when text/html is accepted without a quality value', a
 });
 
 test('index mounts health under /api/health', async () => {
-  const response = await app.request('/api/health', {
-    headers: {
-      Accept: 'text/html',
+  const response = await app.request(
+    '/api/health',
+    {
+      headers: {
+        Accept: 'text/html',
+      },
     },
-  });
+    createTestEnv(),
+  );
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'text/html; charset=utf-8');
@@ -98,5 +114,22 @@ async function requestHealth(init?: RequestInit): Promise<Response> {
   const app = new Hono<AppBindings>();
   app.route('/api/health', healthRoutes);
 
-  return await app.request('/api/health', init);
+  return await app.request('/api/health', init, createTestEnv());
+}
+
+function createTestEnv(): AppBindings['Bindings'] {
+  return {
+    DB: createGarageCtfConfigD1(),
+    SESSION_SECRET: 'test-session-secret-at-least-long-enough',
+  };
+}
+
+function createGarageCtfConfigD1(): D1Database {
+  return {
+    prepare: () => ({
+      bind: () => ({
+        first: async () => GARAGE_CTF_CONFIG_ROW,
+      }),
+    }),
+  } as unknown as D1Database;
 }

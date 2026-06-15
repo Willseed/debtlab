@@ -159,17 +159,70 @@ setting `deleted_at`.
 
 ### GET `/api/settlements/summary`
 
-Authenticated. Returns balances and simplified suggested transfers.
+Authenticated. Returns balances, simplified suggested transfers, and pending
+payments:
+
+```json
+{
+  "currency": "TWD",
+  "balances": [{ "userId": "usr_alice", "displayName": "Alice", "net": 300 }],
+  "suggestedTransfers": [
+    {
+      "fromUserId": "usr_bob",
+      "fromDisplayName": "Bob",
+      "toUserId": "usr_alice",
+      "toDisplayName": "Alice",
+      "amount": 300
+    }
+  ],
+  "pendingPayments": [
+    {
+      "id": "pay_1",
+      "fromUserId": "usr_bob",
+      "fromDisplayName": "Bob",
+      "toUserId": "usr_alice",
+      "toDisplayName": "Alice",
+      "amount": 300,
+      "currency": "TWD",
+      "note": null,
+      "createdAt": "2026-06-15 10:00:00"
+    }
+  ]
+}
+```
 
 Soft-deleted expenses are ignored. Pending payments do not reduce balances. Confirmed payments reduce outstanding balances.
 
 ### POST `/api/payments`
 
-Authenticated. Records a pending payment.
+Authenticated sender only. Records a pending payment and writes an audit log.
+The sender and receiver must be different users.
 
 ### PATCH `/api/payments/:paymentId/confirm`
 
 Receiver or admin only. Confirms a pending payment and writes an audit log.
+
+## Easter eggs
+
+### GET `/api/health`
+
+Public health endpoint. JSON clients receive `{"ok": true}` plus the harmless
+hidden garage CTF password in the `ctf` field; browser HTML responses expose the
+same password in a small details panel. The password is loaded from D1
+`garage_ctf_config`, where it is stored as a P-256 ECDH/HKDF/AES-GCM ciphertext
+rather than plaintext. The response must remain `no-store`.
+
+### GET `/api/easter-eggs/garage-ctf`
+
+Authenticated. Returns whether the hidden garage CTF has already been solved and
+the first solver display name when present.
+
+### POST `/api/easter-eggs/garage-ctf/solve`
+
+Authenticated. Accepts `{ "password": "..." }`. The first correct submission
+writes the global first-solver row and the user's hidden garage unlock. After the
+first solve exists, all submissions return `409 CONFLICT`; the garage UI must not
+allow further password entry.
 
 ## Admin
 

@@ -1,9 +1,10 @@
 import { Hono } from 'hono';
 
+import { readGarageCtfPassword } from '../services/garage-ctf.service';
 import { AppBindings } from '../types';
 
-const HEALTH_JSON = JSON.stringify({ ok: true });
-const HEALTH_PAGE_HTML = `<!doctype html>
+function renderHealthPageHtml(ctfPassword: string): string {
+  return `<!doctype html>
 <html lang="zh-Hant">
   <head>
     <meta charset="utf-8">
@@ -92,9 +93,14 @@ const HEALTH_PAGE_HTML = `<!doctype html>
       <div class="status"><span class="dot" aria-hidden="true"></span>Operational</div>
       <p>The health endpoint is responding normally.</p>
       <p>API clients can request JSON from <code>/api/health</code>.</p>
+      <details style="margin-top:1.5rem;text-align:left;border:1px solid rgba(248,216,137,.22);border-radius:.75rem;padding:.75rem 1rem;">
+        <summary style="cursor:pointer;color:#cfa74a;font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:.8rem;">🏁 Hidden Garage CTF</summary>
+        <p style="margin:.75rem 0 0;font-size:.9rem;">The key to the hidden garage:<br><code style="font-size:1.1rem;color:#ffe39a;user-select:all;">${escapeHtml(ctfPassword)}</code></p>
+      </details>
     </main>
   </body>
 </html>`;
+}
 
 const HEALTH_HTML_HEADERS = {
   'Cache-Control': 'no-store',
@@ -113,14 +119,16 @@ const HEALTH_JSON_HEADERS = {
 
 export const healthRoutes = new Hono<AppBindings>();
 
-healthRoutes.get('/', (c) => {
+healthRoutes.get('/', async (c) => {
+  const ctfPassword = await readGarageCtfPassword(c.env.DB);
+
   if (acceptsHtml(c.req.header('Accept'))) {
-    return new Response(HEALTH_PAGE_HTML, {
+    return new Response(renderHealthPageHtml(ctfPassword), {
       headers: HEALTH_HTML_HEADERS,
     });
   }
 
-  return new Response(HEALTH_JSON, {
+  return new Response(JSON.stringify({ ok: true, ctf: ctfPassword }), {
     headers: HEALTH_JSON_HEADERS,
   });
 });
@@ -146,4 +154,13 @@ function acceptsHtml(acceptHeader: string | undefined): boolean {
     const qualityValue = Number.parseFloat(quality.trim().slice(2));
     return Number.isFinite(qualityValue) && qualityValue > 0;
   });
+}
+
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
 }

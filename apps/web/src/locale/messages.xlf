@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <xliff version="1.2" xmlns="urn:oasis:names:tc:xliff:document:1.2">
-  <file source-language="zh-TW" datatype="plaintext" original="ng2.template">
+  <file source-language="zh-Hant" datatype="plaintext" original="ng2.template">
     <body>
       <trans-unit id="appSkipLink" datatype="html">
         <source>跳到主要內容</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">10,14</context>
+          <context context-type="linenumber">12,16</context>
         </context-group>
         <note priority="1" from="description">Skip link</note>
       </trans-unit>
@@ -14,7 +14,7 @@
         <source> LabSplit Black Gold </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">15,18</context>
+          <context context-type="linenumber">17,20</context>
         </context-group>
         <note priority="1" from="description">App brand</note>
       </trans-unit>
@@ -22,7 +22,7 @@
         <source>主要導覽</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">18,21</context>
+          <context context-type="linenumber">20,23</context>
         </context-group>
         <note priority="1" from="description">Nav label</note>
       </trans-unit>
@@ -30,7 +30,7 @@
         <source> 首頁 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">25,29</context>
+          <context context-type="linenumber">28,32</context>
         </context-group>
         <note priority="1" from="description">Home nav</note>
       </trans-unit>
@@ -38,7 +38,7 @@
         <source> 儀表板 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">32,36</context>
+          <context context-type="linenumber">36,40</context>
         </context-group>
         <note priority="1" from="description">Dashboard nav</note>
       </trans-unit>
@@ -46,7 +46,7 @@
         <source> 支出 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">39,43</context>
+          <context context-type="linenumber">43,47</context>
         </context-group>
         <note priority="1" from="description">Expenses nav</note>
       </trans-unit>
@@ -54,7 +54,7 @@
         <source> 結算 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">46,48</context>
+          <context context-type="linenumber">50,53</context>
         </context-group>
         <note priority="1" from="description">Settlements nav</note>
       </trans-unit>
@@ -62,23 +62,15 @@
         <source> 管理 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">49,51</context>
+          <context context-type="linenumber">54,58</context>
         </context-group>
         <note priority="1" from="description">Admin nav</note>
-      </trans-unit>
-      <trans-unit id="appNavGarage" datatype="html">
-        <source> 車庫 </source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">52,58</context>
-        </context-group>
-        <note priority="1" from="description">Garage nav</note>
       </trans-unit>
       <trans-unit id="appNavSignOut" datatype="html">
         <source> 登出 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">61,67</context>
+          <context context-type="linenumber">63,70</context>
         </context-group>
         <note priority="1" from="description">Sign out nav</note>
       </trans-unit>
@@ -134,7 +126,7 @@
         <source> 儀表板 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">11,17</context>
+          <context context-type="linenumber">26,32</context>
         </context-group>
         <note priority="1" from="description">Dashboard title</note>
       </trans-unit>
@@ -142,7 +134,7 @@
         <source>儀表板指標</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">17,19</context>
+          <context context-type="linenumber">32,34</context>
         </context-group>
         <note priority="1" from="description">Dashboard metrics group</note>
       </trans-unit>
@@ -150,7 +142,7 @@
         <source>本月支出</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">21,23</context>
+          <context context-type="linenumber">36,38</context>
         </context-group>
         <note priority="1" from="description">This month card</note>
       </trans-unit>
@@ -158,7 +150,7 @@
         <source>你的餘額</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">25,27</context>
+          <context context-type="linenumber">40,42</context>
         </context-group>
         <note priority="1" from="description">Balance card</note>
       </trans-unit>
@@ -166,7 +158,7 @@
         <source>待處理</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">29,31</context>
+          <context context-type="linenumber">44,45</context>
         </context-group>
         <note priority="1" from="description">Action card</note>
       </trans-unit>
@@ -174,7 +166,7 @@
         <source>最近活動</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">33,37</context>
+          <context context-type="linenumber">48,50</context>
         </context-group>
         <note priority="1" from="description">Activity card</note>
       </trans-unit>
@@ -182,7 +174,7 @@
         <source> 結算建議 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">42,46</context>
+          <context context-type="linenumber">61,64</context>
         </context-group>
         <note priority="1" from="description">Dashboard settlement suggestions</note>
       </trans-unit>
@@ -190,15 +182,39 @@
         <source> 目前沒有需要結算的支出。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">45,53</context>
+          <context context-type="linenumber">65,69</context>
         </context-group>
         <note priority="1" from="description">Dashboard empty state</note>
+      </trans-unit>
+      <trans-unit id="dashboardTransferArrow" datatype="html">
+        <source> → </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">72,74</context>
+        </context-group>
+        <note priority="1" from="description">Transfer arrow</note>
+      </trans-unit>
+      <trans-unit id="dashboardSettlementLoadError" datatype="html">
+        <source>無法載入結算資料，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">147</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard settlement load error</note>
+      </trans-unit>
+      <trans-unit id="dashboardExpensesLoadError" datatype="html">
+        <source>無法載入支出資料，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">156</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard expenses load error</note>
       </trans-unit>
       <trans-unit id="expensesTitle" datatype="html">
         <source> 支出 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">14,16</context>
+          <context context-type="linenumber">60,64</context>
         </context-group>
         <note priority="1" from="description">Expenses title</note>
       </trans-unit>
@@ -206,7 +222,7 @@
         <source> 新增支出 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">17,22</context>
+          <context context-type="linenumber">68,73</context>
         </context-group>
         <note priority="1" from="description">Add expense</note>
       </trans-unit>
@@ -214,7 +230,7 @@
         <source>搜尋標題</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">22,27</context>
+          <context context-type="linenumber">73,78</context>
         </context-group>
         <note priority="1" from="description">Expense search label</note>
       </trans-unit>
@@ -222,7 +238,7 @@
         <source>日期</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">31,32</context>
+          <context context-type="linenumber">82,83</context>
         </context-group>
         <note priority="1" from="description">Expense date column</note>
       </trans-unit>
@@ -230,7 +246,7 @@
         <source>標題</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">32,33</context>
+          <context context-type="linenumber">83,84</context>
         </context-group>
         <note priority="1" from="description">Expense title column</note>
       </trans-unit>
@@ -238,7 +254,7 @@
         <source>分類</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">33,34</context>
+          <context context-type="linenumber">84,85</context>
         </context-group>
         <note priority="1" from="description">Expense category column</note>
       </trans-unit>
@@ -246,7 +262,7 @@
         <source>付款人</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">34,35</context>
+          <context context-type="linenumber">85,86</context>
         </context-group>
         <note priority="1" from="description">Expense payer column</note>
       </trans-unit>
@@ -254,7 +270,7 @@
         <source>金額</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">35,36</context>
+          <context context-type="linenumber">86,87</context>
         </context-group>
         <note priority="1" from="description">Expense amount column</note>
       </trans-unit>
@@ -262,7 +278,7 @@
         <source>參與者</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">36,38</context>
+          <context context-type="linenumber">87,89</context>
         </context-group>
         <note priority="1" from="description">Expense participants column</note>
       </trans-unit>
@@ -270,7 +286,7 @@
         <source>操作</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">37,41</context>
+          <context context-type="linenumber">88,92</context>
         </context-group>
         <note priority="1" from="description">Expense actions column</note>
       </trans-unit>
@@ -278,7 +294,7 @@
         <source>目前沒有支出。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-          <context context-type="linenumber">41,48</context>
+          <context context-type="linenumber">93,96</context>
         </context-group>
         <note priority="1" from="description">Expenses empty state</note>
       </trans-unit>
@@ -286,6 +302,7 @@
         <source>編輯支出</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">112,113</context>
         </context-group>
         <note priority="1" from="description">Edit expense action label</note>
       </trans-unit>
@@ -293,6 +310,7 @@
         <source>編輯支出</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">113,114</context>
         </context-group>
         <note priority="1" from="description">Edit expense action title</note>
       </trans-unit>
@@ -300,6 +318,7 @@
         <source>刪除支出</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">146,147</context>
         </context-group>
         <note priority="1" from="description">Delete expense action label</note>
       </trans-unit>
@@ -307,27 +326,155 @@
         <source>刪除支出</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">147,148</context>
         </context-group>
         <note priority="1" from="description">Delete expense action title</note>
       </trans-unit>
-      <trans-unit id="expenseDeleteConfirm" datatype="html">
-        <source>確定要刪除這筆支出嗎？</source>
+      <trans-unit id="expenseModalEyebrow" datatype="html">
+        <source> LabSplit Entry </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">210,214</context>
         </context-group>
-        <note priority="1" from="description">Expense delete confirmation</note>
+        <note priority="1" from="description">Expense modal eyebrow</note>
+      </trans-unit>
+      <trans-unit id="expenseEditTitle" datatype="html">
+        <source> 編輯支出 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">218,222</context>
+        </context-group>
+        <note priority="1" from="description">Expense edit modal title</note>
+      </trans-unit>
+      <trans-unit id="expenseCreateTitle" datatype="html">
+        <source> 新增支出 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">226,231</context>
+        </context-group>
+        <note priority="1" from="description">Expense modal title</note>
+      </trans-unit>
+      <trans-unit id="expenseModalCloseLabel" datatype="html">
+        <source>關閉新增支出視窗</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">234,238</context>
+        </context-group>
+        <note priority="1" from="description">Close expense modal label</note>
+      </trans-unit>
+      <trans-unit id="expenseFieldTitle" datatype="html">
+        <source>標題</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">243,245</context>
+        </context-group>
+        <note priority="1" from="description">Expense title field</note>
+      </trans-unit>
+      <trans-unit id="expenseTitleError" datatype="html">
+        <source> 請輸入 1 到 120 個字的標題。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">247,253</context>
+        </context-group>
+        <note priority="1" from="description">Expense title error</note>
+      </trans-unit>
+      <trans-unit id="expenseFieldAmount" datatype="html">
+        <source>金額</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">255,257</context>
+        </context-group>
+        <note priority="1" from="description">Expense amount field</note>
+      </trans-unit>
+      <trans-unit id="expenseAmountError" datatype="html">
+        <source> 金額必須是正整數。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">259,265</context>
+        </context-group>
+        <note priority="1" from="description">Expense amount error</note>
+      </trans-unit>
+      <trans-unit id="expenseFieldCategory" datatype="html">
+        <source>分類</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">267,269</context>
+        </context-group>
+        <note priority="1" from="description">Expense category field</note>
+      </trans-unit>
+      <trans-unit id="expenseFieldDate" datatype="html">
+        <source>日期</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">278,281</context>
+        </context-group>
+        <note priority="1" from="description">Expense date field</note>
+      </trans-unit>
+      <trans-unit id="expenseFieldDescription" datatype="html">
+        <source>備註</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">285,290</context>
+        </context-group>
+        <note priority="1" from="description">Expense description field</note>
+      </trans-unit>
+      <trans-unit id="expensePayerSummary" datatype="html">
+        <source>付款人</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">291,293</context>
+        </context-group>
+        <note priority="1" from="description">Expense payer summary</note>
+      </trans-unit>
+      <trans-unit id="expenseSplitSummary" datatype="html">
+        <source>平均分攤：目前先記錄為本人支出。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">294,299</context>
+        </context-group>
+        <note priority="1" from="description">Expense split summary</note>
+      </trans-unit>
+      <trans-unit id="expenseCancel" datatype="html">
+        <source> 取消 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">309,313</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">372,376</context>
+        </context-group>
+        <note priority="1" from="description">Cancel expense</note>
+      </trans-unit>
+      <trans-unit id="expenseSave" datatype="html">
+        <source> 儲存 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">317,324</context>
+        </context-group>
+        <note priority="1" from="description">Save expense</note>
       </trans-unit>
       <trans-unit id="expenseDeleteEyebrow" datatype="html">
-        <source>LabSplit Delete</source>
+        <source> LabSplit Delete </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">339,343</context>
         </context-group>
         <note priority="1" from="description">Expense delete modal eyebrow</note>
       </trans-unit>
-      <trans-unit id="expenseDeleteDescription" datatype="html">
-        <source>刪除後會從目前清單移除，並重新載入支出資料。</source>
+      <trans-unit id="expenseDeleteConfirm" datatype="html">
+        <source> 確定要刪除這筆支出嗎？ </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">346,353</context>
+        </context-group>
+        <note priority="1" from="description">Expense delete confirmation</note>
+      </trans-unit>
+      <trans-unit id="expenseDeleteDescription" datatype="html">
+        <source> 刪除後會從目前清單移除，並重新載入支出資料。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">355,359</context>
         </context-group>
         <note priority="1" from="description">Expense delete description</note>
       </trans-unit>
@@ -335,34 +482,31 @@
         <source>將刪除</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">359,364</context>
         </context-group>
         <note priority="1" from="description">Expense delete target label</note>
-      </trans-unit>
-      <trans-unit id="expenseDeleteAction" datatype="html">
-        <source>刪除</source>
-        <context-group purpose="location">
-          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
-        </context-group>
-        <note priority="1" from="description">Confirm expense delete</note>
       </trans-unit>
       <trans-unit id="expenseDeleteInProgress" datatype="html">
         <source>刪除中…</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">381,385</context>
         </context-group>
         <note priority="1" from="description">Expense delete in progress</note>
       </trans-unit>
-      <trans-unit id="expenseDeleteFailed" datatype="html">
-        <source>支出刪除失敗，請稍後再試。</source>
+      <trans-unit id="expenseDeleteAction" datatype="html">
+        <source>刪除</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">383,391</context>
         </context-group>
-        <note priority="1" from="description">Expense delete failed</note>
+        <note priority="1" from="description">Confirm expense delete</note>
       </trans-unit>
       <trans-unit id="expenseCategoryIngredients" datatype="html">
         <source>食材</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">400</context>
         </context-group>
         <note priority="1" from="description">Expense category ingredients</note>
       </trans-unit>
@@ -370,6 +514,7 @@
         <source>獎品</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">401</context>
         </context-group>
         <note priority="1" from="description">Expense category prize</note>
       </trans-unit>
@@ -377,6 +522,7 @@
         <source>住宿</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">402</context>
         </context-group>
         <note priority="1" from="description">Expense category lodging</note>
       </trans-unit>
@@ -384,62 +530,175 @@
         <source>其他</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">403</context>
         </context-group>
         <note priority="1" from="description">Expense category other</note>
+      </trans-unit>
+      <trans-unit id="expenseAuthRequired" datatype="html">
+        <source>請先登入後再新增支出。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">509</context>
+        </context-group>
+        <note priority="1" from="description">Expense auth required</note>
+      </trans-unit>
+      <trans-unit id="expenseCreateFailed" datatype="html">
+        <source>支出建立失敗，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">669</context>
+        </context-group>
+        <note priority="1" from="description">Expense create failed</note>
+      </trans-unit>
+      <trans-unit id="expenseDeleteFailed" datatype="html">
+        <source>支出刪除失敗，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">675</context>
+        </context-group>
+        <note priority="1" from="description">Expense delete failed</note>
       </trans-unit>
       <trans-unit id="garageTitle" datatype="html">
         <source>隱藏車庫</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">10,14</context>
+          <context context-type="linenumber">27,30</context>
         </context-group>
         <note priority="1" from="description">Garage title</note>
       </trans-unit>
-      <trans-unit id="garageLeaderboard" datatype="html">
-        <source> 實驗室花費排行榜 </source>
+      <trans-unit id="garageIntro" datatype="html">
+        <source> 你發現了隱藏車庫。這裡藏著一個謎題，找到密碼，成為第一位解鎖者。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">15,19</context>
+          <context context-type="linenumber">30,34</context>
         </context-group>
-        <note priority="1" from="description">Garage leaderboard</note>
+        <note priority="1" from="description">Garage intro</note>
       </trans-unit>
-      <trans-unit id="garageCoffeeCounter" datatype="html">
-        <source> 咖啡支出計數 </source>
+      <trans-unit id="garageLoadingStatus" datatype="html">
+        <source> 正在讀取車庫狀態… </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">21,25</context>
+          <context context-type="linenumber">40,44</context>
         </context-group>
-        <note priority="1" from="description">Garage coffee counter</note>
+        <note priority="1" from="description">Garage loading status</note>
       </trans-unit>
-      <trans-unit id="garageBalancedMember" datatype="html">
-        <source> 最平衡成員 </source>
+      <trans-unit id="garageSolvedLabel" datatype="html">
+        <source> 此關卡已由以下成員率先完成： </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">27,31</context>
+          <context context-type="linenumber">49,51</context>
         </context-group>
-        <note priority="1" from="description">Garage balanced member</note>
+        <note priority="1" from="description">Garage solved label</note>
       </trans-unit>
-      <trans-unit id="garageWeirdestAmount" datatype="html">
-        <source> 最奇怪金額 </source>
+      <trans-unit id="garageCTFHeading" datatype="html">
+        <source> 輸入解鎖密碼 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">33,37</context>
+          <context context-type="linenumber">64,68</context>
         </context-group>
-        <note priority="1" from="description">Garage weirdest amount</note>
+        <note priority="1" from="description">Garage CTF heading</note>
       </trans-unit>
-      <trans-unit id="garageBadges" datatype="html">
-        <source>彩蛋徽章</source>
+      <trans-unit id="garagePasswordLabel" datatype="html">
+        <source>密碼</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">40,47</context>
+          <context context-type="linenumber">69,72</context>
         </context-group>
-        <note priority="1" from="description">Garage badges</note>
+        <note priority="1" from="description">Garage password label</note>
+      </trans-unit>
+      <trans-unit id="garagePasswordPlaceholder" datatype="html">
+        <source>輸入密碼…</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">81,84</context>
+        </context-group>
+        <note priority="1" from="description">Garage password placeholder</note>
+      </trans-unit>
+      <trans-unit id="garageSubmittingButton" datatype="html">
+        <source>解鎖中…</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">110,113</context>
+        </context-group>
+        <note priority="1" from="description">Garage submitting button</note>
+      </trans-unit>
+      <trans-unit id="garageSubmitButton" datatype="html">
+        <source>解鎖車庫</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">112,120</context>
+        </context-group>
+        <note priority="1" from="description">Garage submit button</note>
+      </trans-unit>
+      <trans-unit id="garageShowPasswordAria" datatype="html">
+        <source>顯示密碼</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">200</context>
+        </context-group>
+        <note priority="1" from="description">Garage show password aria</note>
+      </trans-unit>
+      <trans-unit id="garageHidePasswordAria" datatype="html">
+        <source>隱藏密碼</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">201</context>
+        </context-group>
+        <note priority="1" from="description">Garage hide password aria</note>
+      </trans-unit>
+      <trans-unit id="garageShowPasswordToggle" datatype="html">
+        <source>顯示</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">202</context>
+        </context-group>
+        <note priority="1" from="description">Garage show password toggle</note>
+      </trans-unit>
+      <trans-unit id="garageHidePasswordToggle" datatype="html">
+        <source>隱藏</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">203</context>
+        </context-group>
+        <note priority="1" from="description">Garage hide password toggle</note>
+      </trans-unit>
+      <trans-unit id="garageEmptyPasswordError" datatype="html">
+        <source>請先輸入密碼。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">221</context>
+        </context-group>
+        <note priority="1" from="description">Garage empty password error</note>
+      </trans-unit>
+      <trans-unit id="garageAlreadySolvedError" datatype="html">
+        <source>此關卡已被解鎖，無法再次提交。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">238</context>
+        </context-group>
+        <note priority="1" from="description">Garage already solved error</note>
+      </trans-unit>
+      <trans-unit id="garageWrongPasswordError" datatype="html">
+        <source>密碼錯誤，請再試一次。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">243</context>
+        </context-group>
+        <note priority="1" from="description">Garage wrong password error</note>
+      </trans-unit>
+      <trans-unit id="garageStatusLoadError" datatype="html">
+        <source>無法讀取車庫狀態，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
+          <context context-type="linenumber">266</context>
+        </context-group>
+        <note priority="1" from="description">Garage status load error</note>
       </trans-unit>
       <trans-unit id="landingHeroTitle" datatype="html">
         <source> 實驗室花費，精準拆帳 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">12,14</context>
+          <context context-type="linenumber">16,18</context>
         </context-group>
         <note priority="1" from="description">Landing hero title</note>
       </trans-unit>
@@ -447,7 +706,7 @@
         <source> 給任何人使用的共同支出拆帳儀表板。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">15,20</context>
+          <context context-type="linenumber">19,24</context>
         </context-group>
         <note priority="1" from="description">Landing hero subtitle</note>
       </trans-unit>
@@ -455,7 +714,7 @@
         <source>登入提供者</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">20,23</context>
+          <context context-type="linenumber">25,28</context>
         </context-group>
         <note priority="1" from="description">OAuth provider group</note>
       </trans-unit>
@@ -463,7 +722,7 @@
         <source> 使用 Google 繼續 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">27,31</context>
+          <context context-type="linenumber">33,37</context>
         </context-group>
         <note priority="1" from="description">Google login</note>
       </trans-unit>
@@ -471,7 +730,7 @@
         <source> 使用 Apple 繼續 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">36,41</context>
+          <context context-type="linenumber">42,46</context>
         </context-group>
         <note priority="1" from="description">Apple login</note>
       </trans-unit>
@@ -479,7 +738,7 @@
         <source> Apple 登入審核中，暫不開放。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">44,51</context>
+          <context context-type="linenumber">50,54</context>
         </context-group>
         <note priority="1" from="description">Apple login disabled note</note>
       </trans-unit>
@@ -487,7 +746,7 @@
         <source> Google 登入未完成：你的帳號已停用，請聯絡管理員。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">52,61</context>
+          <context context-type="linenumber">58,63</context>
         </context-group>
         <note priority="1" from="description">Google login inactive user error</note>
       </trans-unit>
@@ -495,15 +754,23 @@
         <source> Google 登入未完成，請稍後再試或聯絡管理員。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">62,71</context>
+          <context context-type="linenumber">66,72</context>
         </context-group>
         <note priority="1" from="description">Google login generic error</note>
+      </trans-unit>
+      <trans-unit id="landingDashboardCta" datatype="html">
+        <source> 前往儀表板 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
+          <context context-type="linenumber">75,82</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard CTA</note>
       </trans-unit>
       <trans-unit id="settlementsTitle" datatype="html">
         <source> 結算 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">15,20</context>
+          <context context-type="linenumber">30,35</context>
         </context-group>
         <note priority="1" from="description">Settlements title</note>
       </trans-unit>
@@ -511,7 +778,7 @@
         <source> 餘額總覽 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">21,25</context>
+          <context context-type="linenumber">36,39</context>
         </context-group>
         <note priority="1" from="description">Balance summary</note>
       </trans-unit>
@@ -519,33 +786,121 @@
         <source> 建議轉帳 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">27,33</context>
+          <context context-type="linenumber">42,45</context>
         </context-group>
         <note priority="1" from="description">Suggested transfers</note>
+      </trans-unit>
+      <trans-unit id="settlementSuggestedTransfersSection" datatype="html">
+        <source> 建議轉帳 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">54,57</context>
+        </context-group>
+        <note priority="1" from="description">Suggested transfers section</note>
+      </trans-unit>
+      <trans-unit id="settlementTransferArrow" datatype="html">
+        <source> → </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">60,62</context>
+        </context-group>
+        <note priority="1" from="description">Transfer arrow</note>
       </trans-unit>
       <trans-unit id="settlementRecordPayment" datatype="html">
         <source> 記錄付款 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">39,43</context>
+          <context context-type="linenumber">71,73</context>
         </context-group>
         <note priority="1" from="description">Record payment</note>
       </trans-unit>
-      <trans-unit id="settlementConfirmPayment" datatype="html">
-        <source> 確認付款 </source>
+      <trans-unit id="settlementTransferPendingBadge" datatype="html">
+        <source> 等待確認 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">46,50</context>
+          <context context-type="linenumber">78,84</context>
         </context-group>
-        <note priority="1" from="description">Confirm payment</note>
+        <note priority="1" from="description">Transfer pending badge</note>
+      </trans-unit>
+      <trans-unit id="settlementPendingPayments" datatype="html">
+        <source>待確認付款</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">88,90</context>
+        </context-group>
+        <note priority="1" from="description">Pending payments</note>
       </trans-unit>
       <trans-unit id="settlementEmpty" datatype="html">
         <source>目前沒有待確認付款。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">50,56</context>
+          <context context-type="linenumber">90,93</context>
         </context-group>
         <note priority="1" from="description">Settlement empty state</note>
+      </trans-unit>
+      <trans-unit id="settlementPendingArrow" datatype="html">
+        <source> → </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">96,98</context>
+        </context-group>
+        <note priority="1" from="description">Transfer arrow</note>
+      </trans-unit>
+      <trans-unit id="settlementStatusPending" datatype="html">
+        <source>待確認</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">102,105</context>
+        </context-group>
+        <note priority="1" from="description">Pending status badge</note>
+      </trans-unit>
+      <trans-unit id="settlementConfirmPayment" datatype="html">
+        <source> 確認付款 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">111,116</context>
+        </context-group>
+        <note priority="1" from="description">Confirm payment</note>
+      </trans-unit>
+      <trans-unit id="settlementPaymentRecorded" datatype="html">
+        <source>已記錄付款，等待收款方確認。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">230</context>
+        </context-group>
+        <note priority="1" from="description">Settlement payment recorded</note>
+      </trans-unit>
+      <trans-unit id="settlementPaymentRecordError" datatype="html">
+        <source>無法記錄付款，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">237</context>
+        </context-group>
+        <note priority="1" from="description">Settlement payment record error</note>
+      </trans-unit>
+      <trans-unit id="settlementPaymentConfirmed" datatype="html">
+        <source>已確認付款。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">258</context>
+        </context-group>
+        <note priority="1" from="description">Settlement payment confirmed</note>
+      </trans-unit>
+      <trans-unit id="settlementPaymentConfirmError" datatype="html">
+        <source>無法確認付款，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">269</context>
+        </context-group>
+        <note priority="1" from="description">Settlement payment confirm error</note>
+      </trans-unit>
+      <trans-unit id="settlementSummaryLoadError" datatype="html">
+        <source>無法載入結算資料，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">281</context>
+        </context-group>
+        <note priority="1" from="description">Settlement summary load error</note>
       </trans-unit>
     </body>
   </file>

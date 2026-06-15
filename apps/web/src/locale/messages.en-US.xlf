@@ -10,17 +10,13 @@
       <trans-unit id="appNavExpenses" datatype="html"><source>支出</source><target>Expenses</target></trans-unit>
       <trans-unit id="appNavSettlements" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
       <trans-unit id="appNavAdmin" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
-      <trans-unit id="appNavGarage" datatype="html"><source>車庫</source><target>Garage</target></trans-unit>
       <trans-unit id="appNavSignOut" datatype="html"><source>登出</source><target>Sign out</target></trans-unit>
-      <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>Lab Expenses. Split With Precision.</target></trans-unit>
-      <trans-unit id="landingHeroSubtitle" datatype="html"><source>給任何人使用的共同支出拆帳儀表板。</source><target>An expense cockpit for shared spending, open to anyone with a supported sign-in.</target></trans-unit>
-      <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
-      <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>Continue with Google</target></trans-unit>
-      <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>Continue with Apple</target></trans-unit>
-      <trans-unit id="landingAppleLoginDisabledNote" datatype="html"><source>Apple 登入審核中，暫不開放。</source><target>Sign in with Apple is under review and temporarily unavailable.</target></trans-unit>
-      <trans-unit id="landingGoogleLoginInactiveError" datatype="html"><source>Google 登入未完成：你的帳號已停用，請聯絡管理員。</source><target>Google sign-in did not complete: your account has been disabled. Contact an administrator.</target></trans-unit>
-      <trans-unit id="landingGoogleLoginGenericError" datatype="html"><source>Google 登入未完成，請稍後再試或聯絡管理員。</source><target>Google sign-in did not complete. Try again later or contact an administrator.</target></trans-unit>
-      <trans-unit id="landingDashboardCta" datatype="html"><source>前往儀表板</source><target>Go to dashboard</target></trans-unit>
+      <trans-unit id="adminTitle" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
+      <trans-unit id="adminUserManagement" datatype="html"><source>使用者管理</source><target>User Management</target></trans-unit>
+      <trans-unit id="adminSystemStats" datatype="html"><source>系統統計</source><target>System Statistics</target></trans-unit>
+      <trans-unit id="adminAuditLogs" datatype="html"><source>稽核紀錄</source><target>Audit Logs</target></trans-unit>
+      <trans-unit id="adminEasterEggSettings" datatype="html"><source>彩蛋設定</source><target>Easter Egg Settings</target></trans-unit>
+      <trans-unit id="adminCsvExport" datatype="html"><source>匯出 CSV</source><target>Export CSV</target></trans-unit>
       <trans-unit id="dashboardTitle" datatype="html"><source>儀表板</source><target>Dashboard</target></trans-unit>
       <trans-unit id="dashboardMetrics" datatype="html"><source>儀表板指標</source><target>Dashboard metrics</target></trans-unit>
       <trans-unit id="dashboardThisMonth" datatype="html"><source>本月支出</source><target>This Month</target></trans-unit>
@@ -29,6 +25,9 @@
       <trans-unit id="dashboardRecentActivity" datatype="html"><source>最近活動</source><target>Recent Activity</target></trans-unit>
       <trans-unit id="dashboardSettlementSuggestions" datatype="html"><source>結算建議</source><target>Settlement Suggestions</target></trans-unit>
       <trans-unit id="dashboardNoRecentActivity" datatype="html"><source>目前沒有需要結算的支出。</source><target>There are no expenses to settle.</target></trans-unit>
+      <trans-unit id="dashboardTransferArrow" datatype="html"><source>→</source><target>→</target></trans-unit>
+      <trans-unit id="dashboardSettlementLoadError" datatype="html"><source>無法載入結算資料，請稍後再試。</source><target>Could not load settlement data. Please try again later.</target></trans-unit>
+      <trans-unit id="dashboardExpensesLoadError" datatype="html"><source>無法載入支出資料，請稍後再試。</source><target>Could not load expense data. Please try again later.</target></trans-unit>
       <trans-unit id="expensesTitle" datatype="html"><source>支出</source><target>Expenses</target></trans-unit>
       <trans-unit id="expensesAdd" datatype="html"><source>新增支出</source><target>Add Expense</target></trans-unit>
       <trans-unit id="expensesSearchLabel" datatype="html"><source>搜尋標題</source><target>Search title</target></trans-unit>
@@ -40,15 +39,13 @@
       <trans-unit id="expensesParticipants" datatype="html"><source>參與者</source><target>Participants</target></trans-unit>
       <trans-unit id="expensesActions" datatype="html"><source>操作</source><target>Actions</target></trans-unit>
       <trans-unit id="expensesEmpty" datatype="html"><source>目前沒有支出。</source><target>There are no expenses yet.</target></trans-unit>
-      <trans-unit id="expensesSelfParticipant" datatype="html"><source>本人</source><target>Me</target></trans-unit>
-      <trans-unit id="expensesEditAction" datatype="html"><source>編輯</source><target>Edit</target></trans-unit>
       <trans-unit id="expensesEditActionLabel" datatype="html"><source>編輯支出</source><target>Edit expense</target></trans-unit>
       <trans-unit id="expensesEditActionTitle" datatype="html"><source>編輯支出</source><target>Edit expense</target></trans-unit>
       <trans-unit id="expensesDeleteActionLabel" datatype="html"><source>刪除支出</source><target>Delete expense</target></trans-unit>
       <trans-unit id="expensesDeleteActionTitle" datatype="html"><source>刪除支出</source><target>Delete expense</target></trans-unit>
       <trans-unit id="expenseModalEyebrow" datatype="html"><source>LabSplit Entry</source><target>LabSplit Entry</target></trans-unit>
-      <trans-unit id="expenseCreateTitle" datatype="html"><source>新增支出</source><target>Add Expense</target></trans-unit>
       <trans-unit id="expenseEditTitle" datatype="html"><source>編輯支出</source><target>Edit Expense</target></trans-unit>
+      <trans-unit id="expenseCreateTitle" datatype="html"><source>新增支出</source><target>Add Expense</target></trans-unit>
       <trans-unit id="expenseModalCloseLabel" datatype="html"><source>關閉新增支出視窗</source><target>Close add expense dialog</target></trans-unit>
       <trans-unit id="expenseFieldTitle" datatype="html"><source>標題</source><target>Title</target></trans-unit>
       <trans-unit id="expenseTitleError" datatype="html"><source>請輸入 1 到 120 個字的標題。</source><target>Enter a title between 1 and 120 characters.</target></trans-unit>
@@ -61,37 +58,62 @@
       <trans-unit id="expenseSplitSummary" datatype="html"><source>平均分攤：目前先記錄為本人支出。</source><target>Equal split: currently recorded as your own expense.</target></trans-unit>
       <trans-unit id="expenseCancel" datatype="html"><source>取消</source><target>Cancel</target></trans-unit>
       <trans-unit id="expenseSave" datatype="html"><source>儲存</source><target>Save</target></trans-unit>
-      <trans-unit id="expenseAuthRequired" datatype="html"><source>請先登入後再新增支出。</source><target>Sign in before adding an expense.</target></trans-unit>
-      <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>Could not create the expense. Please try again later.</target></trans-unit>
       <trans-unit id="expenseDeleteEyebrow" datatype="html"><source>LabSplit Delete</source><target>LabSplit Delete</target></trans-unit>
       <trans-unit id="expenseDeleteConfirm" datatype="html"><source>確定要刪除這筆支出嗎？</source><target>Delete this expense?</target></trans-unit>
       <trans-unit id="expenseDeleteDescription" datatype="html"><source>刪除後會從目前清單移除，並重新載入支出資料。</source><target>After deletion, the expense will be removed from the current list and the expense data will be reloaded.</target></trans-unit>
       <trans-unit id="expenseDeleteTarget" datatype="html"><source>將刪除</source><target>Deleting</target></trans-unit>
-      <trans-unit id="expenseDeleteAction" datatype="html"><source>刪除</source><target>Delete</target></trans-unit>
       <trans-unit id="expenseDeleteInProgress" datatype="html"><source>刪除中…</source><target>Deleting…</target></trans-unit>
-      <trans-unit id="expenseDeleteFailed" datatype="html"><source>支出刪除失敗，請稍後再試。</source><target>Could not delete the expense. Please try again later.</target></trans-unit>
+      <trans-unit id="expenseDeleteAction" datatype="html"><source>刪除</source><target>Delete</target></trans-unit>
       <trans-unit id="expenseCategoryIngredients" datatype="html"><source>食材</source><target>Ingredients</target></trans-unit>
       <trans-unit id="expenseCategoryPrize" datatype="html"><source>獎品</source><target>Prize</target></trans-unit>
       <trans-unit id="expenseCategoryLodging" datatype="html"><source>住宿</source><target>Lodging</target></trans-unit>
       <trans-unit id="expenseCategoryOther" datatype="html"><source>其他</source><target>Other</target></trans-unit>
+      <trans-unit id="expenseAuthRequired" datatype="html"><source>請先登入後再新增支出。</source><target>Sign in before adding an expense.</target></trans-unit>
+      <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>Could not create the expense. Please try again later.</target></trans-unit>
+      <trans-unit id="expenseDeleteFailed" datatype="html"><source>支出刪除失敗，請稍後再試。</source><target>Could not delete the expense. Please try again later.</target></trans-unit>
+      <trans-unit id="garageTitle" datatype="html"><source>隱藏車庫</source><target>Hidden Garage</target></trans-unit>
+      <trans-unit id="garageIntro" datatype="html"><source>你發現了隱藏車庫。這裡藏著一個謎題，找到密碼，成為第一位解鎖者。</source><target>You found the hidden garage. A puzzle is parked here: find the password and become the first unlocker.</target></trans-unit>
+      <trans-unit id="garageLoadingStatus" datatype="html"><source>正在讀取車庫狀態…</source><target>Loading garage status…</target></trans-unit>
+      <trans-unit id="garageSolvedLabel" datatype="html"><source>此關卡已由以下成員率先完成：</source><target>This challenge was first completed by:</target></trans-unit>
+      <trans-unit id="garageCTFHeading" datatype="html"><source>輸入解鎖密碼</source><target>Enter unlock password</target></trans-unit>
+      <trans-unit id="garagePasswordLabel" datatype="html"><source>密碼</source><target>Password</target></trans-unit>
+      <trans-unit id="garagePasswordPlaceholder" datatype="html"><source>輸入密碼…</source><target>Enter password…</target></trans-unit>
+      <trans-unit id="garageSubmittingButton" datatype="html"><source>解鎖中…</source><target>Unlocking…</target></trans-unit>
+      <trans-unit id="garageSubmitButton" datatype="html"><source>解鎖車庫</source><target>Unlock garage</target></trans-unit>
+      <trans-unit id="garageShowPasswordAria" datatype="html"><source>顯示密碼</source><target>Show password</target></trans-unit>
+      <trans-unit id="garageHidePasswordAria" datatype="html"><source>隱藏密碼</source><target>Hide password</target></trans-unit>
+      <trans-unit id="garageShowPasswordToggle" datatype="html"><source>顯示</source><target>Show</target></trans-unit>
+      <trans-unit id="garageHidePasswordToggle" datatype="html"><source>隱藏</source><target>Hide</target></trans-unit>
+      <trans-unit id="garageEmptyPasswordError" datatype="html"><source>請先輸入密碼。</source><target>Enter the password first.</target></trans-unit>
+      <trans-unit id="garageAlreadySolvedError" datatype="html"><source>此關卡已被解鎖，無法再次提交。</source><target>This challenge has already been unlocked; submissions are closed.</target></trans-unit>
+      <trans-unit id="garageWrongPasswordError" datatype="html"><source>密碼錯誤，請再試一次。</source><target>Incorrect password. Try again.</target></trans-unit>
+      <trans-unit id="garageStatusLoadError" datatype="html"><source>無法讀取車庫狀態，請稍後再試。</source><target>Could not load garage status. Please try again later.</target></trans-unit>
+      <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>Lab Expenses. Split With Precision.</target></trans-unit>
+      <trans-unit id="landingHeroSubtitle" datatype="html"><source>給任何人使用的共同支出拆帳儀表板。</source><target>An expense cockpit for shared spending, open to anyone with a supported sign-in.</target></trans-unit>
+      <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
+      <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>Continue with Google</target></trans-unit>
+      <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>Continue with Apple</target></trans-unit>
+      <trans-unit id="landingAppleLoginDisabledNote" datatype="html"><source>Apple 登入審核中，暫不開放。</source><target>Sign in with Apple is under review and temporarily unavailable.</target></trans-unit>
+      <trans-unit id="landingGoogleLoginInactiveError" datatype="html"><source>Google 登入未完成：你的帳號已停用，請聯絡管理員。</source><target>Google sign-in did not complete: your account has been disabled. Contact an administrator.</target></trans-unit>
+      <trans-unit id="landingGoogleLoginGenericError" datatype="html"><source>Google 登入未完成，請稍後再試或聯絡管理員。</source><target>Google sign-in did not complete. Try again later or contact an administrator.</target></trans-unit>
+      <trans-unit id="landingDashboardCta" datatype="html"><source>前往儀表板</source><target>Go to dashboard</target></trans-unit>
       <trans-unit id="settlementsTitle" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
       <trans-unit id="settlementBalanceSummary" datatype="html"><source>餘額總覽</source><target>Balance Summary</target></trans-unit>
       <trans-unit id="settlementSuggestedTransfers" datatype="html"><source>建議轉帳</source><target>Suggested Transfers</target></trans-unit>
+      <trans-unit id="settlementSuggestedTransfersSection" datatype="html"><source>建議轉帳</source><target>Suggested Transfers</target></trans-unit>
+      <trans-unit id="settlementTransferArrow" datatype="html"><source>→</source><target>→</target></trans-unit>
       <trans-unit id="settlementRecordPayment" datatype="html"><source>記錄付款</source><target>Record Payment</target></trans-unit>
-      <trans-unit id="settlementConfirmPayment" datatype="html"><source>確認付款</source><target>Confirm Payment</target></trans-unit>
+      <trans-unit id="settlementTransferPendingBadge" datatype="html"><source>等待確認</source><target>Waiting for confirmation</target></trans-unit>
+      <trans-unit id="settlementPendingPayments" datatype="html"><source>待確認付款</source><target>Pending payments</target></trans-unit>
       <trans-unit id="settlementEmpty" datatype="html"><source>目前沒有待確認付款。</source><target>There are no payments waiting for confirmation.</target></trans-unit>
-      <trans-unit id="adminTitle" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
-      <trans-unit id="adminUserManagement" datatype="html"><source>使用者管理</source><target>User Management</target></trans-unit>
-      <trans-unit id="adminSystemStats" datatype="html"><source>系統統計</source><target>System Statistics</target></trans-unit>
-      <trans-unit id="adminAuditLogs" datatype="html"><source>稽核紀錄</source><target>Audit Logs</target></trans-unit>
-      <trans-unit id="adminEasterEggSettings" datatype="html"><source>彩蛋設定</source><target>Easter Egg Settings</target></trans-unit>
-      <trans-unit id="adminCsvExport" datatype="html"><source>匯出 CSV</source><target>Export CSV</target></trans-unit>
-      <trans-unit id="garageTitle" datatype="html"><source>隱藏車庫</source><target>Hidden Garage</target></trans-unit>
-      <trans-unit id="garageLeaderboard" datatype="html"><source>實驗室花費排行榜</source><target>Lab Spending Leaderboard</target></trans-unit>
-      <trans-unit id="garageCoffeeCounter" datatype="html"><source>咖啡支出計數</source><target>Coffee Expense Counter</target></trans-unit>
-      <trans-unit id="garageBalancedMember" datatype="html"><source>最平衡成員</source><target>Most Balanced Member</target></trans-unit>
-      <trans-unit id="garageWeirdestAmount" datatype="html"><source>最奇怪金額</source><target>Weirdest Amount</target></trans-unit>
-      <trans-unit id="garageBadges" datatype="html"><source>彩蛋徽章</source><target>Easter Egg Badges</target></trans-unit>
+      <trans-unit id="settlementPendingArrow" datatype="html"><source>→</source><target>→</target></trans-unit>
+      <trans-unit id="settlementStatusPending" datatype="html"><source>待確認</source><target>Pending</target></trans-unit>
+      <trans-unit id="settlementConfirmPayment" datatype="html"><source>確認付款</source><target>Confirm Payment</target></trans-unit>
+      <trans-unit id="settlementPaymentRecorded" datatype="html"><source>已記錄付款，等待收款方確認。</source><target>Payment recorded. Waiting for the receiver to confirm.</target></trans-unit>
+      <trans-unit id="settlementPaymentRecordError" datatype="html"><source>無法記錄付款，請稍後再試。</source><target>Could not record payment. Please try again later.</target></trans-unit>
+      <trans-unit id="settlementPaymentConfirmed" datatype="html"><source>已確認付款。</source><target>Payment confirmed.</target></trans-unit>
+      <trans-unit id="settlementPaymentConfirmError" datatype="html"><source>無法確認付款，請稍後再試。</source><target>Could not confirm payment. Please try again later.</target></trans-unit>
+      <trans-unit id="settlementSummaryLoadError" datatype="html"><source>無法載入結算資料，請稍後再試。</source><target>Could not load settlement data. Please try again later.</target></trans-unit>
     </body>
   </file>
 </xliff>
