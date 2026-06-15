@@ -9,13 +9,12 @@ on:
 env:
   NODE_OPTIONS: --disable-warning=DEP0040
 
-permissions:
-  checks: read
-  contents: read
-
 jobs:
   quality:
     runs-on: ubuntu-latest
+    permissions:
+      checks: read
+      contents: read
     env:
       SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
       GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
