@@ -277,7 +277,7 @@ export async function deleteExpense(
     .bind(expenseId, DEFAULT_GROUP_ID)
     .first<ExpenseDeleteRow>();
 
-  if (!expense || expense.group_id !== DEFAULT_GROUP_ID) {
+  if (expense?.group_id !== DEFAULT_GROUP_ID) {
     throw new ExpenseNotFoundError();
   }
 
