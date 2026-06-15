@@ -212,4 +212,11 @@ jobs:
     needs: quality
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-worker.yml
-    secrets: inherit
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_D1_DATABASE_ID: ${{ secrets.CLOUDFLARE_D1_DATABASE_ID }}
+      SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
+      GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+      GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
