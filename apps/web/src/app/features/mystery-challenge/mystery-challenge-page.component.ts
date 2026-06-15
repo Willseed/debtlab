@@ -1,0 +1,641 @@
+import { DatePipe } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  OnInit,
+  computed,
+  inject,
+  signal,
+} from '@angular/core';
+import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
+
+import {
+  MysteryChallengeApiService,
+  MysteryChallengeLeaderboardEntry,
+  MysteryChallengePrompt,
+  MysteryChallengeState,
+} from './mystery-challenge-api.service';
+
+type PromptView = MysteryChallengePrompt & { readonly tokenText: string };
+
+@Component({
+  selector: 'app-mystery-challenge-page',
+  standalone: true,
+  imports: [DatePipe, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `
+    <section class="page-section" aria-labelledby="mystery-title">
+      <div class="page-section__inner">
+        <header class="mystery-hero">
+          <p class="eyebrow" i18n="Mystery challenge eyebrow@@mysteryChallengeEyebrow">
+            編碼線索序列
+          </p>
+          <h1
+            id="mystery-title"
+            class="heading-section"
+            i18n="Mystery challenge title@@mysteryChallengeTitle"
+          >
+            神秘挑戰
+          </h1>
+          <p class="mystery-hero__intro" i18n="Mystery challenge intro@@mysteryChallengeIntro">
+            解碼三組編碼線索序列，提交其中一組原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。
+          </p>
+        </header>
+
+        <section class="panel mystery-panel" aria-labelledby="mystery-status-title">
+          <h2 id="mystery-status-title" i18n="Mystery status title@@mysteryStatusTitle">
+            挑戰狀態
+          </h2>
+          @if (stateLoadError()) {
+            <p class="field__error" role="alert">{{ stateLoadError() }}</p>
+          } @else if (stateLoading()) {
+            <p
+              class="muted"
+              role="status"
+              aria-live="polite"
+              i18n="Mystery status loading@@mysteryStatusLoading"
+            >
+              正在載入挑戰狀態…
+            </p>
+          } @else {
+            <dl
+              class="mystery-status-list"
+              aria-label="挑戰狀態"
+              i18n-aria-label="Mystery status list label@@mysteryStatusListLabel"
+            >
+              <div>
+                <dt i18n="Mystery availability label@@mysteryAvailabilityLabel">開放狀態</dt>
+                <dd>{{ availabilityStatus() }}</dd>
+              </div>
+              <div>
+                <dt i18n="Mystery progress label@@mysteryProgressLabel">進度</dt>
+                <dd>{{ progressStatus() }}</dd>
+              </div>
+              <div>
+                <dt i18n="Mystery claimed label@@mysteryClaimedLabel">已領取</dt>
+                <dd>
+                  {{ challenge()?.claimedCount ?? 0 }}/{{ challenge()?.encodedPasswords?.length ?? 0 }}
+                </dd>
+              </div>
+            </dl>
+          }
+        </section>
+
+        <section aria-labelledby="mystery-values-title">
+          <h2
+            id="mystery-values-title"
+            class="mystery-subheading"
+            i18n="Mystery encoded clues title@@mysteryEncodedCluesTitle"
+          >
+            編碼線索序列
+          </h2>
+          <p
+            class="muted"
+            i18n="Mystery encoded clues description@@mysteryEncodedCluesDescription"
+          >
+            以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。
+          </p>
+
+          @if (stateLoading()) {
+            <p
+              class="muted"
+              role="status"
+              aria-live="polite"
+              i18n="Mystery values loading@@mysteryValuesLoading"
+            >
+              正在載入編碼線索…
+            </p>
+          } @else if (stateLoadError()) {
+            <p
+              class="field__error"
+              role="alert"
+              i18n="Mystery values unavailable@@mysteryValuesUnavailable"
+            >
+              無法載入編碼線索，請稍後再試。
+            </p>
+          } @else {
+            <ol class="mystery-code-list">
+              @for (prompt of prompts(); track prompt.id) {
+                <li class="panel mystery-code-list__item">
+                  <div class="mystery-code-list__header">
+                    <h3 i18n="Mystery encoded clue heading@@mysteryEncodedClueHeading">
+                      編碼線索 {{ prompt.displayOrder }}
+                    </h3>
+                    <span class="badge" [class.badge--claimed]="prompt.claimed">
+                      {{ promptClaimStatus(prompt) }}
+                    </span>
+                  </div>
+                  <code>{{ prompt.tokenText }}</code>
+                  <p class="mystery-code-list__hint-title">
+                    {{ visibleHintTitle(prompt) }}
+                  </p>
+                  <p class="mystery-code-list__hint-body">
+                    {{ visibleHintBody(prompt) }}
+                  </p>
+                </li>
+              }
+            </ol>
+          }
+        </section>
+
+        <aside class="panel mystery-panel" aria-labelledby="mystery-hint-title">
+          <h2 id="mystery-hint-title" i18n="Mystery hint title@@mysteryHintTitle">提示</h2>
+          <p id="mystery-password-hint" i18n="Mystery hint body@@mysteryHintBody">
+            這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。
+          </p>
+        </aside>
+
+        <section class="panel mystery-panel" aria-labelledby="mystery-submit-title">
+          <h2 id="mystery-submit-title" i18n="Mystery submission title@@mysterySubmissionTitle">
+            提交答案
+          </h2>
+          @if (errorMessage()) {
+            <p
+              id="mystery-submit-error"
+              class="field__error"
+              role="alert"
+              aria-live="assertive"
+            >
+              {{ errorMessage() }}
+            </p>
+          }
+          @if (submissionClosedReason()) {
+            <p class="muted" role="status" aria-live="polite">{{ submissionClosedReason() }}</p>
+          } @else if (stateLoadError()) {
+            <p
+              class="field__error"
+              role="alert"
+              i18n="Mystery submission paused state error@@mysterySubmissionPausedStateError"
+            >
+              挑戰狀態無法讀取，提交已暫停。
+            </p>
+          } @else if (stateLoading()) {
+            <p
+              class="muted"
+              role="status"
+              aria-live="polite"
+              i18n="Mystery submission waiting status@@mysterySubmissionWaitingStatus"
+            >
+              正在載入挑戰狀態…
+            </p>
+          } @else {
+            <form
+              class="mystery-form"
+              (submit)="submitPassword(); $event.preventDefault()"
+              novalidate
+            >
+              <label class="field field--wide">
+                <span i18n="Mystery password label@@mysteryPasswordLabel">原始密碼</span>
+                <input
+                  id="mystery-password"
+                  type="password"
+                  [formControl]="passwordControl"
+                  autocomplete="off"
+                  aria-required="true"
+                  [attr.aria-describedby]="
+                    errorMessage()
+                      ? 'mystery-password-hint mystery-submit-error'
+                      : 'mystery-password-hint'
+                  "
+                  i18n-placeholder="Mystery password placeholder@@mysteryPasswordPlaceholder"
+                  placeholder="輸入解碼後的密碼"
+                />
+              </label>
+              <button
+                type="submit"
+                class="button button--primary mystery-form__submit"
+                [disabled]="!canSubmit() || passwordControl.invalid"
+              >
+                @if (submitting()) {
+                  <span i18n="Mystery submitting button@@mysterySubmittingButton">提交中…</span>
+                } @else {
+                  <span i18n="Mystery submit button@@mysterySubmitButton">提交密碼</span>
+                }
+              </button>
+            </form>
+          }
+        </section>
+
+        <section class="panel mystery-panel" aria-labelledby="mystery-leaderboard-title">
+          <h2
+            id="mystery-leaderboard-title"
+            i18n="Mystery leaderboard title@@mysteryLeaderboardTitle"
+          >
+            排行榜
+          </h2>
+          @if (leaderboardLoadError()) {
+            <p class="field__error" role="alert">{{ leaderboardLoadError() }}</p>
+          } @else if (leaderboardLoading()) {
+            <p
+              class="muted"
+              role="status"
+              aria-live="polite"
+              i18n="Mystery leaderboard loading@@mysteryLeaderboardLoading"
+            >
+              正在載入排行榜…
+            </p>
+          } @else if (leaderboardEntries().length === 0) {
+            <p class="muted" i18n="Mystery leaderboard empty@@mysteryLeaderboardEmpty">
+              目前還沒有人完成挑戰。
+            </p>
+          } @else {
+            <div class="table-wrap">
+              <table>
+                <caption i18n="Mystery leaderboard caption@@mysteryLeaderboardCaption">
+                  依完成名次排序的神秘挑戰排行榜
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" i18n="Mystery leaderboard rank@@mysteryLeaderboardRank">
+                      名次
+                    </th>
+                    <th scope="col" i18n="Mystery leaderboard member@@mysteryLeaderboardMember">
+                      成員
+                    </th>
+                    <th
+                      scope="col"
+                      i18n="Mystery leaderboard completed at@@mysteryLeaderboardCompletedAt"
+                    >
+                      完成時間
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (
+                    entry of leaderboardEntries();
+                    track entry.rank + entry.displayName + entry.completedAt
+                  ) {
+                    <tr>
+                      <td class="money">{{ entry.rank }}</td>
+                      <td>{{ entry.displayName }}</td>
+                      <td>
+                        @if (completedAtDate(entry.completedAt); as completedAt) {
+                          <time [attr.datetime]="entry.completedAt">
+                            {{ completedAt | date: 'yyyy/MM/dd HH:mm' : '+0800' }}
+                          </time>
+                        } @else {
+                          <span>{{ entry.completedAt }}</span>
+                        }
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </section>
+      </div>
+    </section>
+  `,
+  styles: [
+    `
+      .mystery-hero,
+      .mystery-panel {
+        display: grid;
+        gap: var(--space-4);
+      }
+
+      .mystery-hero {
+        max-width: 48rem;
+      }
+
+      .mystery-hero__intro,
+      .mystery-code-list__hint-body,
+      .mystery-panel p {
+        color: var(--color-text-muted);
+        line-height: 1.7;
+        margin: 0;
+      }
+
+      .mystery-panel h2,
+      .mystery-subheading {
+        color: var(--color-gold-soft);
+        margin: 0;
+      }
+
+      .mystery-status-list {
+        display: grid;
+        gap: var(--space-4);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+        margin: 0;
+      }
+
+      .mystery-status-list div {
+        border-bottom: 1px solid var(--color-border);
+        padding-bottom: var(--space-3);
+      }
+
+      .mystery-status-list dt {
+        color: var(--color-text-muted);
+        font-size: 0.92rem;
+        margin-bottom: var(--space-2);
+      }
+
+      .mystery-status-list dd {
+        color: var(--color-text);
+        font-size: 1.35rem;
+        font-weight: 800;
+        margin: 0;
+      }
+
+      .mystery-code-list {
+        display: grid;
+        gap: var(--space-4);
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        list-style: none;
+        margin: var(--space-4) 0 0;
+        padding: 0;
+      }
+
+      .mystery-code-list__item,
+      .mystery-form {
+        display: grid;
+        gap: var(--space-3);
+      }
+
+      .mystery-code-list__header {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-3);
+        justify-content: space-between;
+      }
+
+      .mystery-code-list__item h3,
+      .mystery-code-list__hint-title {
+        color: var(--color-gold);
+        margin: 0;
+      }
+
+      .mystery-code-list__item code {
+        color: var(--color-text);
+        font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+        overflow-wrap: anywhere;
+      }
+
+      .badge {
+        border: 1px solid var(--color-success);
+        border-radius: 999px;
+        color: var(--color-success);
+        font-size: 0.9rem;
+        padding: var(--space-1) var(--space-3);
+      }
+
+      .badge--claimed {
+        border-color: var(--color-warning);
+        color: var(--color-warning);
+      }
+
+      .mystery-form {
+        max-width: 32rem;
+      }
+
+      .mystery-form__submit {
+        width: 100%;
+      }
+
+      .mystery-panel caption {
+        color: var(--color-text-muted);
+        margin-bottom: var(--space-3);
+        text-align: left;
+      }
+    `,
+  ],
+})
+export class MysteryChallengePageComponent implements OnInit {
+  private readonly api = inject(MysteryChallengeApiService);
+
+  protected readonly challenge = signal<MysteryChallengeState | null>(null);
+  protected readonly leaderboard = signal<readonly MysteryChallengeLeaderboardEntry[]>([]);
+  protected readonly stateLoading = signal(true);
+  protected readonly leaderboardLoading = signal(true);
+  protected readonly stateLoadError = signal('');
+  protected readonly leaderboardLoadError = signal('');
+  protected readonly submitting = signal(false);
+  protected readonly errorMessage = signal('');
+  protected readonly successMessage = signal('');
+  protected readonly passwordControl = new FormControl('', {
+    nonNullable: true,
+    validators: [Validators.required],
+  });
+
+  protected readonly prompts = computed<readonly PromptView[]>(() =>
+    [...(this.challenge()?.encodedPasswords ?? [])]
+      .sort((left, right) => left.displayOrder - right.displayOrder)
+      .map((prompt) => ({ ...prompt, tokenText: `[${prompt.tokens.join(', ')}]` })),
+  );
+
+  protected readonly leaderboardEntries = computed<readonly MysteryChallengeLeaderboardEntry[]>(() =>
+    [...this.leaderboard()].sort(compareLeaderboardEntries),
+  );
+
+  protected readonly availabilityStatus = computed(() => {
+    const challenge = this.challenge();
+    if (!challenge) return $localize`:Mystery status unavailable@@mysteryStatusUnavailable:不可用`;
+    if (challenge.completed) {
+      return $localize`:Mystery status completed@@mysteryStatusCompleted:已完成`;
+    }
+    if (challenge.status === 'active' && challenge.availableCount > 0) {
+      return $localize`:Mystery status available@@mysteryStatusAvailable:可提交`;
+    }
+    if (challenge.status === 'closed') {
+      return $localize`:Mystery status closed@@mysteryStatusClosed:已關閉`;
+    }
+    if (challenge.status === 'unavailable') {
+      return $localize`:Mystery status unavailable@@mysteryStatusUnavailable:不可用`;
+    }
+    if (challenge.availableCount <= 0) {
+      return $localize`:Mystery status all claimed@@mysteryStatusAllClaimed:全部已領取`;
+    }
+    return $localize`:Mystery status unavailable@@mysteryStatusUnavailable:不可用`;
+  });
+
+  protected readonly progressStatus = computed(() => {
+    const challenge = this.challenge();
+    if (!challenge) return $localize`:Mystery progress unavailable@@mysteryProgressUnavailable:不可用`;
+    return challenge.completed
+      ? $localize`:Mystery progress completed@@mysteryProgressCompleted:已完成`
+      : $localize`:Mystery progress open@@mysteryProgressOpen:進行中`;
+  });
+
+  protected readonly submissionClosedReason = computed(() => {
+    const challenge = this.challenge();
+    if (!challenge) return '';
+    if (this.successMessage()) return this.successMessage();
+    if (challenge.completed) {
+      return $localize`:Mystery already completed closed reason@@mysteryAlreadyCompletedClosedReason:你已完成挑戰，提交已關閉。`;
+    }
+    if (challenge.status !== 'unavailable' && challenge.availableCount <= 0) {
+      return $localize`:Mystery all claimed closed reason@@mysteryAllClaimedClosedReason:三組密碼皆已被領取，提交已關閉。`;
+    }
+    if (challenge.status === 'closed') {
+      return $localize`:Mystery closed reason@@mysteryClosedReason:挑戰已關閉，提交已暫停。`;
+    }
+    if (challenge.status !== 'active') {
+      return $localize`:Mystery unavailable closed reason@@mysteryUnavailableClosedReason:挑戰目前不可用，提交已暫停。`;
+    }
+    return '';
+  });
+
+  protected readonly canSubmit = computed(
+    () => this.challenge() !== null && this.submissionClosedReason() === '' && !this.submitting(),
+  );
+
+  ngOnInit(): void {
+    this.loadState();
+    this.loadLeaderboard();
+  }
+
+  protected promptClaimStatus(prompt: MysteryChallengePrompt): string {
+    return prompt.claimed
+      ? $localize`:Mystery prompt claimed@@mysteryPromptClaimed:已領取`
+      : $localize`:Mystery prompt available@@mysteryPromptAvailable:可解碼`;
+  }
+
+  protected visibleHintTitle(prompt: MysteryChallengePrompt): string {
+    return neutralizeVisibleEncodingName(prompt.hint.title);
+  }
+
+  protected visibleHintBody(prompt: MysteryChallengePrompt): string {
+    return neutralizeVisibleEncodingName(prompt.hint.body);
+  }
+
+  protected submitPassword(): void {
+    if (!this.canSubmit()) return;
+    const password = this.passwordControl.value.trim();
+    if (!password) {
+      this.errorMessage.set(
+        $localize`:Mystery empty password error@@mysteryEmptyPasswordError:請先輸入解碼後的密碼。`,
+      );
+      return;
+    }
+
+    this.submitting.set(true);
+    this.errorMessage.set('');
+    this.successMessage.set('');
+    this.api.submitPassword(password).subscribe({
+      next: (response) => {
+        this.leaderboard.set(response.leaderboard);
+        this.passwordControl.reset('');
+        this.successMessage.set(
+          $localize`:Mystery submit success@@mysterySubmitSuccess:已完成挑戰，提交已關閉。排行榜已更新。`,
+        );
+        this.submitting.set(false);
+        this.loadState();
+      },
+      error: (error: HttpErrorResponse) => {
+        this.submitting.set(false);
+        this.errorMessage.set(formatSubmitError(error));
+        if (isConflictError(error)) {
+          this.loadState();
+          this.loadLeaderboard();
+        }
+      },
+    });
+  }
+
+  protected completedAtDate(value: string): Date | null {
+    const timestamp = completedAtTimestamp(value);
+    return Number.isNaN(timestamp) ? null : new Date(timestamp);
+  }
+
+  private loadState(): void {
+    this.stateLoading.set(true);
+    this.stateLoadError.set('');
+    this.api.getChallengeState().subscribe({
+      next: (state) => {
+        this.challenge.set(state);
+        this.stateLoading.set(false);
+      },
+      error: () => {
+        this.challenge.set(null);
+        this.stateLoadError.set(
+          $localize`:Mystery state load error@@mysteryStateLoadError:挑戰狀態無法讀取，請稍後再試。`,
+        );
+        this.stateLoading.set(false);
+      },
+    });
+  }
+
+  private loadLeaderboard(): void {
+    this.leaderboardLoading.set(true);
+    this.leaderboardLoadError.set('');
+    this.api.getLeaderboard().subscribe({
+      next: (response) => {
+        this.leaderboard.set(response.leaderboard);
+        this.leaderboardLoading.set(false);
+      },
+      error: () => {
+        this.leaderboard.set([]);
+        this.leaderboardLoadError.set(
+          $localize`:Mystery leaderboard load error@@mysteryLeaderboardLoadError:無法載入排行榜，請稍後再試。`,
+        );
+        this.leaderboardLoading.set(false);
+      },
+    });
+  }
+}
+
+function formatSubmitError(error: HttpErrorResponse): string {
+  const code = readApiErrorCode(error);
+  if (isConflictError(error)) {
+    return $localize`:Mystery conflict generic@@mysteryConflictGeneric:你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。`;
+  }
+  if (code === 'VALIDATION_ERROR') {
+    return $localize`:Mystery validation error@@mysteryValidationError:密碼錯誤或已被使用，請確認提示後再試。`;
+  }
+  if (code === 'UNAUTHORIZED' || code === 'FORBIDDEN') {
+    return $localize`:Mystery unauthorized error@@mysteryUnauthorizedError:登入狀態已失效，請重新登入後再試。`;
+  }
+  return $localize`:Mystery wrong password error@@mysteryWrongPasswordError:無法提交密碼，請稍後再試。`;
+}
+
+function compareLeaderboardEntries(
+  left: MysteryChallengeLeaderboardEntry,
+  right: MysteryChallengeLeaderboardEntry,
+): number {
+  const rankOrder = left.rank - right.rank;
+  if (rankOrder !== 0) return rankOrder;
+
+  const leftTimestamp = completedAtTimestamp(left.completedAt);
+  const rightTimestamp = completedAtTimestamp(right.completedAt);
+  if (!Number.isNaN(leftTimestamp) && !Number.isNaN(rightTimestamp)) {
+    const timeOrder = leftTimestamp - rightTimestamp;
+    if (timeOrder !== 0) return timeOrder;
+    return left.displayName.localeCompare(right.displayName);
+  }
+  if (!Number.isNaN(leftTimestamp)) return -1;
+  if (!Number.isNaN(rightTimestamp)) return 1;
+  const completedAtOrder = left.completedAt.localeCompare(right.completedAt);
+  return completedAtOrder !== 0 ? completedAtOrder : left.displayName.localeCompare(right.displayName);
+}
+
+function completedAtTimestamp(value: string): number {
+  const normalized = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?$/u.test(value)
+    ? `${value.replace(' ', 'T')}+08:00`
+    : value;
+  return Date.parse(normalized);
+}
+
+function readApiErrorCode(error: HttpErrorResponse): string | undefined {
+  const payload = error.error as { readonly error?: { readonly code?: string } } | null;
+  return payload?.error?.code;
+}
+
+function isConflictError(error: HttpErrorResponse): boolean {
+  const code = readApiErrorCode(error);
+  return (
+    error.status === 409 ||
+    code === 'CONFLICT' ||
+    code === 'ALREADY_COMPLETED' ||
+    code === 'PASSWORD_ALREADY_CLAIMED' ||
+    code === 'MYSTERY_CHALLENGE_COMPLETED' ||
+    code === 'MYSTERY_CHALLENGE_CLAIMED'
+  );
+}
+
+function neutralizeVisibleEncodingName(value: string): string {
+  const neutralLabel = $localize`:Mystery encoded clue neutral label@@mysteryEncodedClueNeutralLabel:編碼線索`;
+  return value.replace(/o200k(?:_base)?/giu, neutralLabel);
+}

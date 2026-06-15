@@ -49,6 +49,13 @@ import { AuthService } from './core/auth/auth.service';
             >
               結算
             </a>
+            <a
+              routerLink="/mystery-challenge"
+              routerLinkActive="is-active"
+              i18n="Mystery challenge nav@@appNavMysteryChallenge"
+            >
+              神秘挑戰
+            </a>
             @if (isAdmin()) {
               <a routerLink="/admin" routerLinkActive="is-active" i18n="Admin nav@@appNavAdmin">
                 管理

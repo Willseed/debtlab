@@ -63,6 +63,7 @@ describe('AppComponent', () => {
     expect(text).not.toContain('首頁');
     expect(text).toContain('儀表板');
     expect(text).toContain('支出');
+    expect(text).toContain('神秘挑戰');
     expect(text).not.toContain('管理');
     expect(text).toContain('登出');
   });

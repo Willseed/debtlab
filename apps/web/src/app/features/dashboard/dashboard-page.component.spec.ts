@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { CurrentUser } from '../../shared/models/current-user.model';
@@ -30,6 +31,7 @@ describe('DashboardPageComponent', () => {
       providers: [
         provideHttpClient(),
         provideHttpClientTesting(),
+        provideRouter([]),
         {
           provide: AuthService,
           useValue: {
@@ -65,6 +67,7 @@ describe('DashboardPageComponent', () => {
     expect(text).toContain('NT$-300');
     expect(text).toContain('Alice');
     expect(text).toContain('Bob');
+    expect(text).toContain('前往神秘挑戰');
     expect(text).toContain('最近活動');
     expect(text).toContain('2');
   });

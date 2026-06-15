@@ -6,6 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { RouterLink } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { ExpenseApiService, ExpenseListItem } from '../expenses/expense-api.service';
@@ -18,6 +19,7 @@ import {
 @Component({
   selector: 'app-dashboard-page',
   standalone: true,
+  imports: [RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="page-section" aria-labelledby="dashboard-title">
@@ -25,6 +27,16 @@ import {
         <h1 id="dashboard-title" class="heading-section" i18n="Dashboard title@@dashboardTitle">
           儀表板
         </h1>
+
+        <div class="button-row">
+          <a
+            class="button button--secondary"
+            routerLink="/mystery-challenge"
+            i18n="Dashboard mystery challenge link@@dashboardMysteryChallengeLink"
+          >
+            前往神秘挑戰
+          </a>
+        </div>
 
         <div
           class="metric-grid"

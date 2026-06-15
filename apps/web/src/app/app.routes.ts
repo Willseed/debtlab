@@ -38,6 +38,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'mystery-challenge',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/mystery-challenge/mystery-challenge-page.component').then(
+        (module) => module.MysteryChallengePageComponent,
+      ),
+  },
+  {
     path: 'admin',
     canActivate: [adminGuard],
     loadComponent: () =>

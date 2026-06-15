@@ -54,15 +54,23 @@
         <source> 結算 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">50,53</context>
+          <context context-type="linenumber">50,54</context>
         </context-group>
         <note priority="1" from="description">Settlements nav</note>
+      </trans-unit>
+      <trans-unit id="appNavMysteryChallenge" datatype="html">
+        <source> 神秘挑戰 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/app.component.ts</context>
+          <context context-type="linenumber">57,60</context>
+        </context-group>
+        <note priority="1" from="description">Mystery challenge nav</note>
       </trans-unit>
       <trans-unit id="appNavAdmin" datatype="html">
         <source> 管理 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">54,58</context>
+          <context context-type="linenumber">61,65</context>
         </context-group>
         <note priority="1" from="description">Admin nav</note>
       </trans-unit>
@@ -70,7 +78,7 @@
         <source> 登出 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">63,70</context>
+          <context context-type="linenumber">70,77</context>
         </context-group>
         <note priority="1" from="description">Sign out nav</note>
       </trans-unit>
@@ -78,7 +86,7 @@
         <source>GitHub 程式碼庫</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">84,89</context>
+          <context context-type="linenumber">87,89</context>
         </context-group>
         <note priority="1" from="description">Repository link label</note>
       </trans-unit>
@@ -86,7 +94,7 @@
         <source>Copyright 2026</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/app.component.ts</context>
-          <context context-type="linenumber">89,90</context>
+          <context context-type="linenumber">90,98</context>
         </context-group>
         <note priority="1" from="description">Footer copyright</note>
       </trans-unit>
@@ -142,15 +150,23 @@
         <source> 儀表板 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">26,32</context>
+          <context context-type="linenumber">28,33</context>
         </context-group>
         <note priority="1" from="description">Dashboard title</note>
+      </trans-unit>
+      <trans-unit id="dashboardMysteryChallengeLink" datatype="html">
+        <source> 前往神秘挑戰 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
+          <context context-type="linenumber">37,44</context>
+        </context-group>
+        <note priority="1" from="description">Dashboard mystery challenge link</note>
       </trans-unit>
       <trans-unit id="dashboardMetrics" datatype="html">
         <source>儀表板指標</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">32,34</context>
+          <context context-type="linenumber">44,46</context>
         </context-group>
         <note priority="1" from="description">Dashboard metrics group</note>
       </trans-unit>
@@ -158,7 +174,7 @@
         <source>本月支出</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">36,38</context>
+          <context context-type="linenumber">48,50</context>
         </context-group>
         <note priority="1" from="description">This month card</note>
       </trans-unit>
@@ -166,7 +182,7 @@
         <source>你的餘額</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">40,42</context>
+          <context context-type="linenumber">52,54</context>
         </context-group>
         <note priority="1" from="description">Balance card</note>
       </trans-unit>
@@ -174,7 +190,7 @@
         <source>待處理</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">44,45</context>
+          <context context-type="linenumber">56,57</context>
         </context-group>
         <note priority="1" from="description">Action card</note>
       </trans-unit>
@@ -182,7 +198,7 @@
         <source>最近活動</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">48,50</context>
+          <context context-type="linenumber">60,62</context>
         </context-group>
         <note priority="1" from="description">Activity card</note>
       </trans-unit>
@@ -190,7 +206,7 @@
         <source> 結算建議 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">61,64</context>
+          <context context-type="linenumber">73,76</context>
         </context-group>
         <note priority="1" from="description">Dashboard settlement suggestions</note>
       </trans-unit>
@@ -198,7 +214,7 @@
         <source> 目前沒有需要結算的支出。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">65,69</context>
+          <context context-type="linenumber">77,81</context>
         </context-group>
         <note priority="1" from="description">Dashboard empty state</note>
       </trans-unit>
@@ -206,7 +222,7 @@
         <source> → </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">72,74</context>
+          <context context-type="linenumber">84,86</context>
         </context-group>
         <note priority="1" from="description">Transfer arrow</note>
       </trans-unit>
@@ -214,7 +230,7 @@
         <source>無法載入結算資料，請稍後再試。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">147</context>
+          <context context-type="linenumber">161</context>
         </context-group>
         <note priority="1" from="description">Dashboard settlement load error</note>
       </trans-unit>
@@ -222,7 +238,7 @@
         <source>無法載入支出資料，請稍後再試。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/dashboard/dashboard-page.component.ts</context>
-          <context context-type="linenumber">156</context>
+          <context context-type="linenumber">170</context>
         </context-group>
         <note priority="1" from="description">Dashboard expenses load error</note>
       </trans-unit>
@@ -591,10 +607,10 @@
         <note priority="1" from="description">Garage intro</note>
       </trans-unit>
       <trans-unit id="garageLoadingStatus" datatype="html">
-        <source> 正在讀取車庫狀態… </source>
+        <source>正在讀取車庫狀態…</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">40,44</context>
+          <context context-type="linenumber">39,42</context>
         </context-group>
         <note priority="1" from="description">Garage loading status</note>
       </trans-unit>
@@ -602,7 +618,7 @@
         <source> 此關卡已由以下成員率先完成： </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">49,51</context>
+          <context context-type="linenumber">44,46</context>
         </context-group>
         <note priority="1" from="description">Garage solved label</note>
       </trans-unit>
@@ -610,7 +626,7 @@
         <source> 輸入解鎖密碼 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">64,68</context>
+          <context context-type="linenumber">59,63</context>
         </context-group>
         <note priority="1" from="description">Garage CTF heading</note>
       </trans-unit>
@@ -618,7 +634,7 @@
         <source>密碼</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">69,72</context>
+          <context context-type="linenumber">64,67</context>
         </context-group>
         <note priority="1" from="description">Garage password label</note>
       </trans-unit>
@@ -626,7 +642,7 @@
         <source>輸入密碼…</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">81,84</context>
+          <context context-type="linenumber">76,79</context>
         </context-group>
         <note priority="1" from="description">Garage password placeholder</note>
       </trans-unit>
@@ -634,7 +650,7 @@
         <source>解鎖中…</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">110,113</context>
+          <context context-type="linenumber">102,105</context>
         </context-group>
         <note priority="1" from="description">Garage submitting button</note>
       </trans-unit>
@@ -642,7 +658,7 @@
         <source>解鎖車庫</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">112,120</context>
+          <context context-type="linenumber">104,112</context>
         </context-group>
         <note priority="1" from="description">Garage submit button</note>
       </trans-unit>
@@ -650,7 +666,7 @@
         <source>顯示密碼</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">200</context>
+          <context context-type="linenumber">194</context>
         </context-group>
         <note priority="1" from="description">Garage show password aria</note>
       </trans-unit>
@@ -658,7 +674,7 @@
         <source>隱藏密碼</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">201</context>
+          <context context-type="linenumber">195</context>
         </context-group>
         <note priority="1" from="description">Garage hide password aria</note>
       </trans-unit>
@@ -666,7 +682,7 @@
         <source>顯示</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">202</context>
+          <context context-type="linenumber">196</context>
         </context-group>
         <note priority="1" from="description">Garage show password toggle</note>
       </trans-unit>
@@ -674,7 +690,7 @@
         <source>隱藏</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">203</context>
+          <context context-type="linenumber">197</context>
         </context-group>
         <note priority="1" from="description">Garage hide password toggle</note>
       </trans-unit>
@@ -682,7 +698,7 @@
         <source>請先輸入密碼。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">221</context>
+          <context context-type="linenumber">215</context>
         </context-group>
         <note priority="1" from="description">Garage empty password error</note>
       </trans-unit>
@@ -690,7 +706,7 @@
         <source>此關卡已被解鎖，無法再次提交。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">238</context>
+          <context context-type="linenumber">232</context>
         </context-group>
         <note priority="1" from="description">Garage already solved error</note>
       </trans-unit>
@@ -698,7 +714,7 @@
         <source>密碼錯誤，請再試一次。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">243</context>
+          <context context-type="linenumber">237</context>
         </context-group>
         <note priority="1" from="description">Garage wrong password error</note>
       </trans-unit>
@@ -706,7 +722,7 @@
         <source>無法讀取車庫狀態，請稍後再試。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/garage/garage-page.component.ts</context>
-          <context context-type="linenumber">266</context>
+          <context context-type="linenumber">260</context>
         </context-group>
         <note priority="1" from="description">Garage status load error</note>
       </trans-unit>
@@ -781,6 +797,438 @@
           <context context-type="linenumber">75,82</context>
         </context-group>
         <note priority="1" from="description">Dashboard CTA</note>
+      </trans-unit>
+      <trans-unit id="mysteryChallengeEyebrow" datatype="html">
+        <source> 編碼線索序列 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">32,37</context>
+        </context-group>
+        <note priority="1" from="description">Mystery challenge eyebrow</note>
+      </trans-unit>
+      <trans-unit id="mysteryChallengeTitle" datatype="html">
+        <source> 神秘挑戰 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">39,41</context>
+        </context-group>
+        <note priority="1" from="description">Mystery challenge title</note>
+      </trans-unit>
+      <trans-unit id="mysteryChallengeIntro" datatype="html">
+        <source> 解碼三組編碼線索序列，提交其中一組原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">42,46</context>
+        </context-group>
+        <note priority="1" from="description">Mystery challenge intro</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusTitle" datatype="html">
+        <source> 挑戰狀態 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">48,51</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status title</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusLoading" datatype="html">
+        <source> 正在載入挑戰狀態… </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">59,64</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status loading</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusListLabel" datatype="html">
+        <source>挑戰狀態</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">65,68</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status list label</note>
+      </trans-unit>
+      <trans-unit id="mysteryAvailabilityLabel" datatype="html">
+        <source>開放狀態</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">68,72</context>
+        </context-group>
+        <note priority="1" from="description">Mystery availability label</note>
+      </trans-unit>
+      <trans-unit id="mysteryProgressLabel" datatype="html">
+        <source>進度</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">73,76</context>
+        </context-group>
+        <note priority="1" from="description">Mystery progress label</note>
+      </trans-unit>
+      <trans-unit id="mysteryClaimedLabel" datatype="html">
+        <source>已領取</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">77,78</context>
+        </context-group>
+        <note priority="1" from="description">Mystery claimed label</note>
+      </trans-unit>
+      <trans-unit id="mysteryEncodedCluesTitle" datatype="html">
+        <source> 編碼線索序列 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">91,95</context>
+        </context-group>
+        <note priority="1" from="description">Mystery encoded clues title</note>
+      </trans-unit>
+      <trans-unit id="mysteryEncodedCluesDescription" datatype="html">
+        <source> 以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">97,104</context>
+        </context-group>
+        <note priority="1" from="description">Mystery encoded clues description</note>
+      </trans-unit>
+      <trans-unit id="mysteryValuesLoading" datatype="html">
+        <source> 正在載入編碼線索… </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">107,111</context>
+        </context-group>
+        <note priority="1" from="description">Mystery values loading</note>
+      </trans-unit>
+      <trans-unit id="mysteryValuesUnavailable" datatype="html">
+        <source> 無法載入編碼線索，請稍後再試。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">115,119</context>
+        </context-group>
+        <note priority="1" from="description">Mystery values unavailable</note>
+      </trans-unit>
+      <trans-unit id="mysteryEncodedClueHeading" datatype="html">
+        <source> 編碼線索 <x id="INTERPOLATION" equiv-text="{{ prompt.displayOrder }}"/> </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">123,124</context>
+        </context-group>
+        <note priority="1" from="description">Mystery encoded clue heading</note>
+      </trans-unit>
+      <trans-unit id="mysteryHintTitle" datatype="html">
+        <source>提示</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">144,145</context>
+        </context-group>
+        <note priority="1" from="description">Mystery hint title</note>
+      </trans-unit>
+      <trans-unit id="mysteryHintBody" datatype="html">
+        <source> 這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">145,149</context>
+        </context-group>
+        <note priority="1" from="description">Mystery hint body</note>
+      </trans-unit>
+      <trans-unit id="mysterySubmissionTitle" datatype="html">
+        <source> 提交答案 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">151,156</context>
+        </context-group>
+        <note priority="1" from="description">Mystery submission title</note>
+      </trans-unit>
+      <trans-unit id="mysterySubmissionPausedStateError" datatype="html">
+        <source> 挑戰狀態無法讀取，提交已暫停。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">171,177</context>
+        </context-group>
+        <note priority="1" from="description">Mystery submission paused state error</note>
+      </trans-unit>
+      <trans-unit id="mysterySubmissionWaitingStatus" datatype="html">
+        <source> 正在載入挑戰狀態… </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">180,185</context>
+        </context-group>
+        <note priority="1" from="description">Mystery submission waiting status</note>
+      </trans-unit>
+      <trans-unit id="mysteryPasswordLabel" datatype="html">
+        <source>原始密碼</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">189,193</context>
+        </context-group>
+        <note priority="1" from="description">Mystery password label</note>
+      </trans-unit>
+      <trans-unit id="mysteryPasswordPlaceholder" datatype="html">
+        <source>輸入解碼後的密碼</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">202,207</context>
+        </context-group>
+        <note priority="1" from="description">Mystery password placeholder</note>
+      </trans-unit>
+      <trans-unit id="mysterySubmittingButton" datatype="html">
+        <source>提交中…</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">211,214</context>
+        </context-group>
+        <note priority="1" from="description">Mystery submitting button</note>
+      </trans-unit>
+      <trans-unit id="mysterySubmitButton" datatype="html">
+        <source>提交密碼</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">213,220</context>
+        </context-group>
+        <note priority="1" from="description">Mystery submit button</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardTitle" datatype="html">
+        <source> 排行榜 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">225,228</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard title</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardLoading" datatype="html">
+        <source> 正在載入排行榜… </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">236,239</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard loading</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardEmpty" datatype="html">
+        <source> 目前還沒有人完成挑戰。 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">240,245</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard empty</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardCaption" datatype="html">
+        <source> 依完成名次排序的神秘挑戰排行榜 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">246,250</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard caption</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardRank" datatype="html">
+        <source> 名次 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">251,253</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard rank</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardMember" datatype="html">
+        <source> 成員 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">254,258</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard member</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardCompletedAt" datatype="html">
+        <source> 完成時間 </source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">260,265</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard completed at</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusUnavailable" datatype="html">
+        <source>不可用</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">435</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">446</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">451</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status unavailable</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusCompleted" datatype="html">
+        <source>已完成</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">437</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status completed</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusAvailable" datatype="html">
+        <source>可提交</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">440</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status available</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusClosed" datatype="html">
+        <source>已關閉</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">443</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status closed</note>
+      </trans-unit>
+      <trans-unit id="mysteryStatusAllClaimed" datatype="html">
+        <source>全部已領取</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">449</context>
+        </context-group>
+        <note priority="1" from="description">Mystery status all claimed</note>
+      </trans-unit>
+      <trans-unit id="mysteryProgressUnavailable" datatype="html">
+        <source>不可用</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">456</context>
+        </context-group>
+        <note priority="1" from="description">Mystery progress unavailable</note>
+      </trans-unit>
+      <trans-unit id="mysteryProgressCompleted" datatype="html">
+        <source>已完成</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">458</context>
+        </context-group>
+        <note priority="1" from="description">Mystery progress completed</note>
+      </trans-unit>
+      <trans-unit id="mysteryProgressOpen" datatype="html">
+        <source>進行中</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">459</context>
+        </context-group>
+        <note priority="1" from="description">Mystery progress open</note>
+      </trans-unit>
+      <trans-unit id="mysteryAlreadyCompletedClosedReason" datatype="html">
+        <source>你已完成挑戰，提交已關閉。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">467</context>
+        </context-group>
+        <note priority="1" from="description">Mystery already completed closed reason</note>
+      </trans-unit>
+      <trans-unit id="mysteryAllClaimedClosedReason" datatype="html">
+        <source>三組密碼皆已被領取，提交已關閉。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">470</context>
+        </context-group>
+        <note priority="1" from="description">Mystery all claimed closed reason</note>
+      </trans-unit>
+      <trans-unit id="mysteryClosedReason" datatype="html">
+        <source>挑戰已關閉，提交已暫停。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">473</context>
+        </context-group>
+        <note priority="1" from="description">Mystery closed reason</note>
+      </trans-unit>
+      <trans-unit id="mysteryUnavailableClosedReason" datatype="html">
+        <source>挑戰目前不可用，提交已暫停。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">476</context>
+        </context-group>
+        <note priority="1" from="description">Mystery unavailable closed reason</note>
+      </trans-unit>
+      <trans-unit id="mysteryPromptClaimed" datatype="html">
+        <source>已領取</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">492</context>
+        </context-group>
+        <note priority="1" from="description">Mystery prompt claimed</note>
+      </trans-unit>
+      <trans-unit id="mysteryPromptAvailable" datatype="html">
+        <source>可解碼</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">493</context>
+        </context-group>
+        <note priority="1" from="description">Mystery prompt available</note>
+      </trans-unit>
+      <trans-unit id="mysteryEmptyPasswordError" datatype="html">
+        <source>請先輸入解碼後的密碼。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">509</context>
+        </context-group>
+        <note priority="1" from="description">Mystery empty password error</note>
+      </trans-unit>
+      <trans-unit id="mysterySubmitSuccess" datatype="html">
+        <source>已完成挑戰，提交已關閉。排行榜已更新。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">522</context>
+        </context-group>
+        <note priority="1" from="description">Mystery submit success</note>
+      </trans-unit>
+      <trans-unit id="mysteryStateLoadError" datatype="html">
+        <source>挑戰狀態無法讀取，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">554</context>
+        </context-group>
+        <note priority="1" from="description">Mystery state load error</note>
+      </trans-unit>
+      <trans-unit id="mysteryLeaderboardLoadError" datatype="html">
+        <source>無法載入排行榜，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">572</context>
+        </context-group>
+        <note priority="1" from="description">Mystery leaderboard load error</note>
+      </trans-unit>
+      <trans-unit id="mysteryConflictGeneric" datatype="html">
+        <source>你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">583</context>
+        </context-group>
+        <note priority="1" from="description">Mystery conflict generic</note>
+      </trans-unit>
+      <trans-unit id="mysteryValidationError" datatype="html">
+        <source>密碼錯誤或已被使用，請確認提示後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">586</context>
+        </context-group>
+        <note priority="1" from="description">Mystery validation error</note>
+      </trans-unit>
+      <trans-unit id="mysteryUnauthorizedError" datatype="html">
+        <source>登入狀態已失效，請重新登入後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">589</context>
+        </context-group>
+        <note priority="1" from="description">Mystery unauthorized error</note>
+      </trans-unit>
+      <trans-unit id="mysteryWrongPasswordError" datatype="html">
+        <source>無法提交密碼，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">591</context>
+        </context-group>
+        <note priority="1" from="description">Mystery wrong password error</note>
+      </trans-unit>
+      <trans-unit id="mysteryEncodedClueNeutralLabel" datatype="html">
+        <source>編碼線索</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/mystery-challenge/mystery-challenge-page.component.ts</context>
+          <context context-type="linenumber">639</context>
+        </context-group>
+        <note priority="1" from="description">Mystery encoded clue neutral label</note>
       </trans-unit>
       <trans-unit id="settlementsTitle" datatype="html">
         <source> 結算 </source>
@@ -866,7 +1314,7 @@
         <source>待確認</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">102,105</context>
+          <context context-type="linenumber">102,106</context>
         </context-group>
         <note priority="1" from="description">Pending status badge</note>
       </trans-unit>
@@ -874,7 +1322,7 @@
         <source> 確認付款 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
-          <context context-type="linenumber">111,116</context>
+          <context context-type="linenumber">112,117</context>
         </context-group>
         <note priority="1" from="description">Confirm payment</note>
       </trans-unit>

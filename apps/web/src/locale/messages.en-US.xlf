@@ -9,6 +9,7 @@
       <trans-unit id="appNavDashboard" datatype="html"><source>儀表板</source><target>Dashboard</target></trans-unit>
       <trans-unit id="appNavExpenses" datatype="html"><source>支出</source><target>Expenses</target></trans-unit>
       <trans-unit id="appNavSettlements" datatype="html"><source>結算</source><target>Settlements</target></trans-unit>
+      <trans-unit id="appNavMysteryChallenge" datatype="html"><source>神秘挑戰</source><target>Mystery Challenge</target></trans-unit>
       <trans-unit id="appNavAdmin" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
       <trans-unit id="appNavSignOut" datatype="html"><source>登出</source><target>Sign out</target></trans-unit>
       <trans-unit id="appRepositoryLinkLabel" datatype="html"><source>GitHub 程式碼庫</source><target>GitHub repository</target></trans-unit>
@@ -20,6 +21,7 @@
       <trans-unit id="adminEasterEggSettings" datatype="html"><source>彩蛋設定</source><target>Easter Egg Settings</target></trans-unit>
       <trans-unit id="adminCsvExport" datatype="html"><source>匯出 CSV</source><target>Export CSV</target></trans-unit>
       <trans-unit id="dashboardTitle" datatype="html"><source>儀表板</source><target>Dashboard</target></trans-unit>
+      <trans-unit id="dashboardMysteryChallengeLink" datatype="html"><source>前往神秘挑戰</source><target>Go to Mystery Challenge</target></trans-unit>
       <trans-unit id="dashboardMetrics" datatype="html"><source>儀表板指標</source><target>Dashboard metrics</target></trans-unit>
       <trans-unit id="dashboardThisMonth" datatype="html"><source>本月支出</source><target>This Month</target></trans-unit>
       <trans-unit id="dashboardYourBalance" datatype="html"><source>你的餘額</source><target>Your Balance</target></trans-unit>
@@ -90,6 +92,59 @@
       <trans-unit id="garageAlreadySolvedError" datatype="html"><source>此關卡已被解鎖，無法再次提交。</source><target>This challenge has already been unlocked; submissions are closed.</target></trans-unit>
       <trans-unit id="garageWrongPasswordError" datatype="html"><source>密碼錯誤，請再試一次。</source><target>Incorrect password. Try again.</target></trans-unit>
       <trans-unit id="garageStatusLoadError" datatype="html"><source>無法讀取車庫狀態，請稍後再試。</source><target>Could not load garage status. Please try again later.</target></trans-unit>
+      <trans-unit id="mysteryChallengeEyebrow" datatype="html"><source>編碼線索序列</source><target>Encoded clue sequence</target></trans-unit>
+      <trans-unit id="mysteryChallengeTitle" datatype="html"><source>神秘挑戰</source><target>Mystery Challenge</target></trans-unit>
+      <trans-unit id="mysteryChallengeIntro" datatype="html"><source>解碼三組編碼線索序列，提交其中一組原始密碼。每位成員只能完成一次，每組密碼也只接受第一位提交者。</source><target>Decode three encoded clue sequences and submit one original password. Each member can complete the challenge once, and each password accepts only its first submitter.</target></trans-unit>
+      <trans-unit id="mysteryStatusTitle" datatype="html"><source>挑戰狀態</source><target>Challenge status</target></trans-unit>
+      <trans-unit id="mysteryStatusLoading" datatype="html"><source>正在載入挑戰狀態…</source><target>Loading challenge status…</target></trans-unit>
+      <trans-unit id="mysteryStatusListLabel" datatype="html"><source>挑戰狀態</source><target>Challenge status</target></trans-unit>
+      <trans-unit id="mysteryAvailabilityLabel" datatype="html"><source>開放狀態</source><target>Availability</target></trans-unit>
+      <trans-unit id="mysteryProgressLabel" datatype="html"><source>進度</source><target>Progress</target></trans-unit>
+      <trans-unit id="mysteryClaimedLabel" datatype="html"><source>已領取</source><target>Claimed</target></trans-unit>
+      <trans-unit id="mysteryEncodedCluesTitle" datatype="html"><source>編碼線索序列</source><target>Encoded clue sequences</target></trans-unit>
+      <trans-unit id="mysteryEncodedCluesDescription" datatype="html"><source>以下三組數字序列是編碼後的線索；請還原其中一組並提交原始密碼。</source><target>These three numeric sequences are encoded clues. Restore one of them and submit the original password.</target></trans-unit>
+      <trans-unit id="mysteryValuesLoading" datatype="html"><source>正在載入編碼線索…</source><target>Loading encoded clues…</target></trans-unit>
+      <trans-unit id="mysteryValuesUnavailable" datatype="html"><source>無法載入編碼線索，請稍後再試。</source><target>Could not load the encoded clues. Please try again later.</target></trans-unit>
+      <trans-unit id="mysteryEncodedClueHeading" datatype="html"><source>編碼線索 <x id="INTERPOLATION" equiv-text="{{ prompt.displayOrder }}"/></source><target>Encoded clue <x id="INTERPOLATION" equiv-text="{{ prompt.displayOrder }}"/></target></trans-unit>
+      <trans-unit id="mysteryHintTitle" datatype="html"><source>提示</source><target>Hint</target></trans-unit>
+      <trans-unit id="mysteryHintBody" datatype="html"><source>這道題的靈感來自 OpenAI 風格招募謎題：別急著暴力猜測，先觀察編碼線索如何切開單字，再把序列帶回原文。</source><target>This puzzle is inspired by OpenAI-style recruiting riddles: do not brute-force first; inspect how encoded clues split words, then lead the sequence back to the original text.</target></trans-unit>
+      <trans-unit id="mysterySubmissionTitle" datatype="html"><source>提交答案</source><target>Submit answer</target></trans-unit>
+      <trans-unit id="mysterySubmissionPausedStateError" datatype="html"><source>挑戰狀態無法讀取，提交已暫停。</source><target>Challenge status unavailable; submissions are paused.</target></trans-unit>
+      <trans-unit id="mysterySubmissionWaitingStatus" datatype="html"><source>正在載入挑戰狀態…</source><target>Loading challenge status…</target></trans-unit>
+      <trans-unit id="mysteryPasswordLabel" datatype="html"><source>原始密碼</source><target>Original password</target></trans-unit>
+      <trans-unit id="mysteryPasswordPlaceholder" datatype="html"><source>輸入解碼後的密碼</source><target>Enter the decoded password</target></trans-unit>
+      <trans-unit id="mysterySubmittingButton" datatype="html"><source>提交中…</source><target>Submitting…</target></trans-unit>
+      <trans-unit id="mysterySubmitButton" datatype="html"><source>提交密碼</source><target>Submit password</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardTitle" datatype="html"><source>排行榜</source><target>Leaderboard</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardLoading" datatype="html"><source>正在載入排行榜…</source><target>Loading leaderboard…</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardEmpty" datatype="html"><source>目前還沒有人完成挑戰。</source><target>No one has completed the challenge yet.</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardCaption" datatype="html"><source>依完成名次排序的神秘挑戰排行榜</source><target>Mystery challenge leaderboard ordered by completion rank</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardRank" datatype="html"><source>名次</source><target>Rank</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardMember" datatype="html"><source>成員</source><target>Member</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardCompletedAt" datatype="html"><source>完成時間</source><target>Completion time</target></trans-unit>
+      <trans-unit id="mysteryStatusUnavailable" datatype="html"><source>不可用</source><target>Unavailable</target></trans-unit>
+      <trans-unit id="mysteryStatusCompleted" datatype="html"><source>已完成</source><target>Completed</target></trans-unit>
+      <trans-unit id="mysteryStatusAvailable" datatype="html"><source>可提交</source><target>Open for submission</target></trans-unit>
+      <trans-unit id="mysteryStatusAllClaimed" datatype="html"><source>全部已領取</source><target>All claimed</target></trans-unit>
+      <trans-unit id="mysteryStatusClosed" datatype="html"><source>已關閉</source><target>Closed</target></trans-unit>
+      <trans-unit id="mysteryProgressUnavailable" datatype="html"><source>不可用</source><target>Unavailable</target></trans-unit>
+      <trans-unit id="mysteryProgressCompleted" datatype="html"><source>已完成</source><target>Completed</target></trans-unit>
+      <trans-unit id="mysteryProgressOpen" datatype="html"><source>進行中</source><target>In progress</target></trans-unit>
+      <trans-unit id="mysteryAlreadyCompletedClosedReason" datatype="html"><source>你已完成挑戰，提交已關閉。</source><target>You have completed the challenge. Submissions are closed.</target></trans-unit>
+      <trans-unit id="mysteryAllClaimedClosedReason" datatype="html"><source>三組密碼皆已被領取，提交已關閉。</source><target>All three passwords have been claimed. Submissions are closed.</target></trans-unit>
+      <trans-unit id="mysteryClosedReason" datatype="html"><source>挑戰已關閉，提交已暫停。</source><target>The challenge is closed. Submissions are paused.</target></trans-unit>
+      <trans-unit id="mysteryUnavailableClosedReason" datatype="html"><source>挑戰目前不可用，提交已暫停。</source><target>The challenge is unavailable. Submissions are paused.</target></trans-unit>
+      <trans-unit id="mysteryPromptClaimed" datatype="html"><source>已領取</source><target>Claimed</target></trans-unit>
+      <trans-unit id="mysteryPromptAvailable" datatype="html"><source>可解碼</source><target>Available to decode</target></trans-unit>
+      <trans-unit id="mysteryEncodedClueNeutralLabel" datatype="html"><source>編碼線索</source><target>encoded clue</target></trans-unit>
+      <trans-unit id="mysteryEmptyPasswordError" datatype="html"><source>請先輸入解碼後的密碼。</source><target>Enter the decoded password first.</target></trans-unit>
+      <trans-unit id="mysterySubmitSuccess" datatype="html"><source>已完成挑戰，提交已關閉。排行榜已更新。</source><target>Challenge completed. Submissions are closed and the leaderboard has been updated.</target></trans-unit>
+      <trans-unit id="mysteryStateLoadError" datatype="html"><source>挑戰狀態無法讀取，請稍後再試。</source><target>Challenge status unavailable; please try again later.</target></trans-unit>
+      <trans-unit id="mysteryLeaderboardLoadError" datatype="html"><source>無法載入排行榜，請稍後再試。</source><target>Could not load the leaderboard. Please try again later.</target></trans-unit>
+      <trans-unit id="mysteryConflictGeneric" datatype="html"><source>你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。</source><target>You have completed the challenge, or this password has already been claimed. Submissions are closed; check challenge status.</target></trans-unit>
+      <trans-unit id="mysteryValidationError" datatype="html"><source>密碼錯誤或已被使用，請確認提示後再試。</source><target>The password is incorrect or already used. Check the hint and try again.</target></trans-unit>
+      <trans-unit id="mysteryUnauthorizedError" datatype="html"><source>登入狀態已失效，請重新登入後再試。</source><target>Your sign-in has expired. Sign in again and retry.</target></trans-unit>
+      <trans-unit id="mysteryWrongPasswordError" datatype="html"><source>無法提交密碼，請稍後再試。</source><target>Could not submit the password. Please try again later.</target></trans-unit>
       <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>Lab Expenses. Split With Precision.</target></trans-unit>
       <trans-unit id="landingHeroSubtitle" datatype="html"><source>給任何人使用的共同支出拆帳儀表板。</source><target>An expense cockpit for shared spending, open to anyone with a supported sign-in.</target></trans-unit>
       <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
