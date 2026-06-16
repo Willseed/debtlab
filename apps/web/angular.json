@@ -42,6 +42,11 @@
                 "glob": "**/*",
                 "input": "src/assets",
                 "output": "assets"
+              },
+              {
+                "glob": "_headers",
+                "input": "src",
+                "output": "."
               }
             ],
             "styles": [
@@ -53,6 +58,14 @@
           "configurations": {
             "production": {
               "localize": ["zh-Hant", "en-US"],
+              "optimization": {
+                "scripts": true,
+                "styles": {
+                  "minify": true,
+                  "inlineCritical": false
+                },
+                "fonts": true
+              },
               "fileReplacements": [
                 {
                   "replace": "src/environments/environment.ts",

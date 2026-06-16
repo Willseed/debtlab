@@ -327,6 +327,38 @@ tr:hover td {
   animation-delay: calc(var(--field-index, 0) * 34ms);
 }
 
+.expense-modal__field--0 {
+  --field-index: 0;
+}
+
+.expense-modal__field--1 {
+  --field-index: 1;
+}
+
+.expense-modal__field--2 {
+  --field-index: 2;
+}
+
+.expense-modal__field--3 {
+  --field-index: 3;
+}
+
+.expense-modal__field--4 {
+  --field-index: 4;
+}
+
+.expense-modal__field--5 {
+  --field-index: 5;
+}
+
+.expense-modal__field--6 {
+  --field-index: 6;
+}
+
+.expense-modal__field--7 {
+  --field-index: 7;
+}
+
 .expense-modal__summary {
   background: rgb(214 168 79 / 0.08);
   border: 1px solid var(--color-border);

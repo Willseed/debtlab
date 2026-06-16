@@ -32,6 +32,27 @@ INTERNAL_ERROR
 NOT_IMPLEMENTED
 ```
 
+## Security Headers
+
+The Angular static deployment ships `apps/web/src/_headers` for Cloudflare
+Pages / Workers Assets. The Worker applies the same posture to `/api/*` through
+security header middleware. Required response headers include:
+
+```txt
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Content-Security-Policy
+X-Frame-Options: DENY
+X-Content-Type-Options: nosniff
+Referrer-Policy: strict-origin-when-cross-origin
+Permissions-Policy
+Cross-Origin-Opener-Policy: same-origin
+```
+
+The web CSP intentionally keeps Google OAuth, Apple OAuth, and Cloudflare
+analytics/beacon origins available while blocking framing and object embeds. The
+`/api/health` browser HTML response keeps its stricter route-specific CSP for
+the CTF clue page, and the security middleware must not overwrite it.
+
 ## Auth
 
 Production `/api/*` traffic is served by the Cloudflare Worker route `lab.buy2330.cc/api/*`.

@@ -10,11 +10,13 @@ import { mysteryChallengeRoutes } from './routes/mystery-challenge';
 import { paymentRoutes } from './routes/payments';
 import { settlementRoutes } from './routes/settlements';
 import { errorResponse } from './http/error-response';
+import { securityHeaders } from './middleware/security-headers';
 import { validateOrigin } from './middleware/validate-origin';
 import { AppBindings } from './types';
 
 const app = new Hono<AppBindings>();
 
+app.use('/api/*', securityHeaders);
 app.use('/api/*', validateOrigin);
 
 app.route('/api/health', healthRoutes);

@@ -616,18 +616,16 @@ describe('ExpenseListPageComponent', () => {
     flushMemberList();
     flushExpenseList([createExpenseItem({ id: 'exp_guard_participant' }), bobOnlyExpense]);
 
-    const [participantExpense, nonParticipantExpense] = componentInternals().expenses();
-    if (!participantExpense || !nonParticipantExpense) {
-      throw new Error('Expected participant guard fixtures');
-    }
+    const participantExpense = createExpenseRow(createExpenseItem({ id: 'exp_guard_participant' }));
+    const nonParticipantExpense = createExpenseRow(bobOnlyExpense);
 
     currentUserState.set(null);
-    componentInternals().joinExpenseParticipant(nonParticipantExpense, new Event('click'));
+    invokeComponentMethod('joinExpenseParticipant', nonParticipantExpense, new Event('click'));
     http.expectNone('/api/expenses/exp_guard_nonparticipant/participants/me');
 
     currentUserState.set(currentUser);
-    componentInternals().joinExpenseParticipant(participantExpense, new Event('click'));
-    componentInternals().leaveExpenseParticipant(nonParticipantExpense, new Event('click'));
+    invokeComponentMethod('joinExpenseParticipant', participantExpense, new Event('click'));
+    invokeComponentMethod('leaveExpenseParticipant', nonParticipantExpense, new Event('click'));
 
     http.expectNone('/api/expenses/exp_guard_participant/participants/me');
     http.expectNone('/api/expenses/exp_guard_nonparticipant/participants/me');
@@ -732,7 +730,8 @@ describe('ExpenseListPageComponent', () => {
     flushExpenseList([createExpenseItem({ id: 'exp_pending_replace' })]);
     clickDeleteIcon();
     fixture.detectChanges();
-    componentInternals().replaceExpenseRow(
+    invokeComponentMethod(
+      'replaceExpenseRow',
       createExpenseItem({ id: 'exp_pending_replace', title: 'Updated Beans' }),
     );
     fixture.detectChanges();
@@ -1195,17 +1194,33 @@ describe('ExpenseListPageComponent', () => {
     fixture.detectChanges();
   }
 
-  function componentInternals(): {
-    readonly expenses: () => readonly unknown[];
-    readonly joinExpenseParticipant: (expense: unknown, event: Event) => void;
-    readonly leaveExpenseParticipant: (expense: unknown, event: Event) => void;
-    readonly replaceExpenseRow: (expense: ExpenseListItem) => void;
-  } {
-    return fixture.componentInstance as unknown as {
-      readonly expenses: () => readonly unknown[];
-      readonly joinExpenseParticipant: (expense: unknown, event: Event) => void;
-      readonly leaveExpenseParticipant: (expense: unknown, event: Event) => void;
-      readonly replaceExpenseRow: (expense: ExpenseListItem) => void;
+  function invokeComponentMethod(name: string, ...args: readonly unknown[]): void {
+    const method: unknown = Object.getPrototypeOf(fixture.componentInstance)[name];
+
+    if (typeof method !== 'function') {
+      throw new Error(`Component method not found: ${name}`);
+    }
+
+    Reflect.apply(method, fixture.componentInstance, args);
+  }
+
+  function createExpenseRow(expense: ExpenseListItem): unknown {
+    return {
+      id: expense.id,
+      title: expense.title,
+      category: expense.category,
+      categoryLabel: '食材',
+      amount: expense.amount,
+      expenseDate: expense.expenseDate,
+      paidById: expense.paidBy.id,
+      paidBy: expense.paidBy.displayName,
+      participantIds: expense.participants.map((participant) => participant.userId),
+      participantsLabel: expense.participants
+        .map((participant) => participant.displayName)
+        .join(', '),
+      description: expense.description ?? '',
+      canEdit: expense.canEdit,
+      canDelete: expense.canDelete,
     };
   }
 

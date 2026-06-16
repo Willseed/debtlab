@@ -137,6 +137,13 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
 - Session cookie name: `labsplit_session`.
 - Session cookies must be `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, and
   time-limited.
+- Static web assets and `/api/*` responses must send security headers:
+  HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
+  `Permissions-Policy`, and `Cross-Origin-Opener-Policy`.
+- CSP must preserve the app's Google OAuth, Apple OAuth, and Cloudflare
+  analytics/beacon origins while blocking framing and object embeds. The
+  `/api/health` clue page may keep a route-specific stricter CSP because it
+  intentionally renders self-contained HTML.
 - Do not expose stack traces to users, private data to guests, unsafe debug
   endpoints, or client-side role claims as authority.
 

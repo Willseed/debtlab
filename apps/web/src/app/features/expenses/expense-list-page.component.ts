@@ -346,7 +346,7 @@ type ExpenseForm = {
             </button>
           </div>
 
-          <div class="expense-modal__field" style="--field-index: 0">
+          <div class="expense-modal__field expense-modal__field--0">
             <label class="field">
               <span i18n="Expense title field@@expenseFieldTitle">標題</span>
               <input #firstExpenseField type="text" formControlName="title" autocomplete="off" />
@@ -358,7 +358,7 @@ type ExpenseForm = {
             </label>
           </div>
 
-          <div class="expense-modal__field" style="--field-index: 1">
+          <div class="expense-modal__field expense-modal__field--1">
             <label class="field">
               <span i18n="Expense amount field@@expenseFieldAmount">金額</span>
               <input type="number" inputmode="numeric" min="1" step="1" formControlName="amount" />
@@ -370,7 +370,7 @@ type ExpenseForm = {
             </label>
           </div>
 
-          <div class="expense-modal__field" style="--field-index: 2">
+          <div class="expense-modal__field expense-modal__field--2">
             <label class="field">
               <span i18n="Expense category field@@expenseFieldCategory">分類</span>
               <select formControlName="category">
@@ -381,14 +381,14 @@ type ExpenseForm = {
             </label>
           </div>
 
-          <div class="expense-modal__field" style="--field-index: 3">
+          <div class="expense-modal__field expense-modal__field--3">
             <label class="field">
               <span i18n="Expense date field@@expenseFieldDate">日期</span>
               <input type="date" formControlName="expenseDate" />
             </label>
           </div>
 
-          <div class="expense-modal__field" style="--field-index: 4">
+          <div class="expense-modal__field expense-modal__field--4">
             <label class="field field--wide">
               <span i18n="Expense description field@@expenseFieldDescription">備註</span>
               <textarea rows="3" formControlName="description"></textarea>
@@ -396,11 +396,11 @@ type ExpenseForm = {
           </div>
 
           @if (isEditing()) {
-            <div class="expense-modal__summary expense-modal__field" style="--field-index: 5">
+            <div class="expense-modal__summary expense-modal__field expense-modal__field--5">
               <span i18n="Expense payer summary@@expensePayerSummary">付款人</span>
               <strong>{{ editingExpenseSummary()?.paidBy }}</strong>
             </div>
-            <div class="expense-modal__summary expense-modal__field" style="--field-index: 6">
+            <div class="expense-modal__summary expense-modal__field expense-modal__field--6">
               <span i18n="Expense participants column@@expensesParticipants">參與者</span>
               <strong>{{ editingExpenseSummary()?.participantsLabel }}</strong>
               <span i18n="Expense edit split locked@@expenseEditSplitLocked"
@@ -408,7 +408,7 @@ type ExpenseForm = {
               >
             </div>
           } @else {
-            <div class="expense-modal__field" style="--field-index: 5">
+            <div class="expense-modal__field expense-modal__field--5">
               <label class="field">
                 <span i18n="Expense payer summary@@expensePayerSummary">付款人</span>
                 <select formControlName="paidByUserId">
@@ -419,7 +419,7 @@ type ExpenseForm = {
               </label>
             </div>
 
-            <div class="expense-modal__field" style="--field-index: 6">
+            <div class="expense-modal__field expense-modal__field--6">
               <label class="field">
                 <span i18n="Expense participants column@@expensesParticipants">參與者</span>
                 <select multiple size="4" formControlName="participantUserIds">
@@ -441,7 +441,7 @@ type ExpenseForm = {
               </label>
             </div>
 
-            <div class="expense-modal__summary expense-modal__field" style="--field-index: 7">
+            <div class="expense-modal__summary expense-modal__field expense-modal__field--7">
               <span i18n="Expense split summary@@expenseSplitSummary"
                 >平均分攤：將在選取的參與者之間分攤。</span
               >
