@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 
 import { Hono } from 'hono';
 
+import { SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE } from '../src/http/configuration-error-response';
 import app from '../src/index';
 import {
   CONTENT_SECURITY_POLICY,
@@ -13,6 +14,10 @@ import {
   securityHeaders,
 } from '../src/middleware/security-headers';
 import { AppBindings } from '../src/types';
+import {
+  assertNoInternalConfigurationLeak,
+  captureConsoleError,
+} from './configuration-error-test-helpers';
 
 test('securityHeaders adds project security headers to API responses', async () => {
   const app = new Hono<AppBindings>();
@@ -158,7 +163,9 @@ test('index rejects non-GET static route requests before assets', async () => {
 });
 
 test('index reports missing static asset binding explicitly', async () => {
-  const response = await app.request('/', undefined, createTestEnv());
+  const { result: response, output } = await captureConsoleError(() =>
+    Promise.resolve(app.request('/', undefined, createTestEnv())),
+  );
 
   assert.equal(response.status, 500);
   assert.deepEqual(await response.json(), {
@@ -168,6 +175,30 @@ test('index reports missing static asset binding explicitly', async () => {
       details: {},
     },
   });
+  assert.match(output, /Static asset binding is not configured\./u);
+});
+
+test('index hides missing static asset binding details in production', async () => {
+  const { result: response, output } = await captureConsoleError(() =>
+    Promise.resolve(
+      app.request('/', undefined, {
+        ...createTestEnv(),
+        ENVIRONMENT: 'production',
+      }),
+    ),
+  );
+  const bodyText = await response.clone().text();
+
+  assert.equal(response.status, 503);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE,
+      details: {},
+    },
+  });
+  assertNoInternalConfigurationLeak(bodyText);
+  assert.match(output, /Static asset binding is not configured\./u);
 });
 
 test('index maps unexpected static asset failures to internal errors', async () => {

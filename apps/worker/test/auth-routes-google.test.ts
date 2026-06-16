@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { authRoutes, createAuthRoutes } from '../src/routes/auth';
+import { SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE } from '../src/http/configuration-error-response';
 import { createSessionToken, SESSION_COOKIE_NAME } from '../src/services/auth.service';
 import {
   getGoogleOAuthStateCookieName,
@@ -15,6 +16,10 @@ import {
   readSetCookie,
   requestAuthRoute,
 } from './auth-test-helpers';
+import {
+  assertNoInternalConfigurationLeak,
+  captureConsoleError,
+} from './configuration-error-test-helpers';
 
 const TEST_ENV: AppBindings['Bindings'] = {
   DB: {} as D1Database,
@@ -58,9 +63,11 @@ test('Google OAuth start sets a state cookie and redirects to Google', async () 
 });
 
 test('Google OAuth start reports missing Worker secrets before redirecting', async () => {
-  const response = await requestAuth('/api/auth/google/start', undefined, {
-    GOOGLE_CLIENT_SECRET: undefined,
-  });
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth('/api/auth/google/start', undefined, {
+      GOOGLE_CLIENT_SECRET: undefined,
+    }),
+  );
 
   const details = await assertApiError(
     response,
@@ -70,6 +77,28 @@ test('Google OAuth start reports missing Worker secrets before redirecting', asy
   );
 
   assert.deepEqual(details, {});
+  assert.match(output, /Google OAuth is not configured\./u);
+});
+
+test('Google OAuth start hides missing Worker secret details in production', async () => {
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth('/api/auth/google/start', undefined, {
+      GOOGLE_CLIENT_SECRET: undefined,
+      ENVIRONMENT: 'production',
+    }),
+  );
+  const bodyText = await response.clone().text();
+
+  const details = await assertApiError(
+    response,
+    503,
+    'INTERNAL_ERROR',
+    SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE,
+  );
+
+  assert.deepEqual(details, {});
+  assertNoInternalConfigurationLeak(bodyText);
+  assert.match(output, /Google OAuth is not configured\./u);
 });
 
 test('Google OAuth callback rejects requests without the matching state cookie', async () => {
@@ -182,38 +211,88 @@ test('Google OAuth callback redirects Google verification failures back to the a
 
 test('Google OAuth callback redirects configuration failures back to the app', async () => {
   const state = VALID_GOOGLE_STATE;
-  const response = await requestAuth(
-    `/api/auth/google/callback?state=${state}&code=authorization-code`,
-    {
-      headers: {
-        Cookie: `${getGoogleOAuthStateCookieName(state)}=${state}`,
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      `/api/auth/google/callback?state=${state}&code=authorization-code`,
+      {
+        headers: {
+          Cookie: `${getGoogleOAuthStateCookieName(state)}=${state}`,
+        },
       },
-    },
-    {
-      GOOGLE_CLIENT_SECRET: undefined,
-    },
+      {
+        GOOGLE_CLIENT_SECRET: undefined,
+      },
+    ),
   );
 
   assertAuthRedirect(response, 'google_oauth_not_configured');
+  assert.match(output, /Google OAuth is not configured\./u);
+});
+
+test('Google OAuth callback hides configuration redirect codes in production', async () => {
+  const state = VALID_GOOGLE_STATE;
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      `/api/auth/google/callback?state=${state}&code=authorization-code`,
+      {
+        headers: {
+          Cookie: `${getGoogleOAuthStateCookieName(state)}=${state}`,
+        },
+      },
+      {
+        GOOGLE_CLIENT_SECRET: undefined,
+        ENVIRONMENT: 'production',
+      },
+    ),
+  );
+
+  assertAuthRedirect(response, 'service_unavailable');
+  assert.match(output, /Google OAuth is not configured\./u);
 });
 
 test('Google OAuth callback redirects session creation failures back to the app', async () => {
   const state = VALID_GOOGLE_STATE;
   const routes = createAuthRoutes(createGoogleDependencies(createSessionUser()));
-  const response = await requestAuth(
-    `/api/auth/google/callback?state=${state}&code=authorization-code`,
-    {
-      headers: {
-        Cookie: `${getGoogleOAuthStateCookieName(state)}=${state}`,
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      `/api/auth/google/callback?state=${state}&code=authorization-code`,
+      {
+        headers: {
+          Cookie: `${getGoogleOAuthStateCookieName(state)}=${state}`,
+        },
       },
-    },
-    {
-      SESSION_SECRET: '',
-    },
-    routes,
+      {
+        SESSION_SECRET: '',
+      },
+      routes,
+    ),
   );
 
   assertAuthRedirect(response, 'session_unavailable');
+  assert.match(output, /Session secret is not configured\./u);
+});
+
+test('Google OAuth callback hides session configuration redirect codes in production', async () => {
+  const state = VALID_GOOGLE_STATE;
+  const routes = createAuthRoutes(createGoogleDependencies(createSessionUser()));
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      `/api/auth/google/callback?state=${state}&code=authorization-code`,
+      {
+        headers: {
+          Cookie: `${getGoogleOAuthStateCookieName(state)}=${state}`,
+        },
+      },
+      {
+        ENVIRONMENT: 'production',
+        SESSION_SECRET: '',
+      },
+      routes,
+    ),
+  );
+
+  assertAuthRedirect(response, 'service_unavailable');
+  assert.match(output, /Session secret is not configured\./u);
 });
 
 test('Google OAuth callback redirects unexpected backend failures back to the app', async () => {
@@ -290,6 +369,39 @@ test('Google one-tap endpoint verifies credentials before issuing a session cook
   assert.match(setCookie, /(?:^|;\s*)Path=\/(?:;|$)/u);
   assert.match(setCookie, /SameSite=Lax/u);
   assert.match(setCookie, /Secure/u);
+});
+
+test('Google one-tap endpoint hides missing session secret details in production', async () => {
+  const routes = createAuthRoutes(createGoogleDependencies(createSessionUser()));
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      '/api/auth/google',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ credential: 'signed-google-id-token' }),
+      },
+      {
+        ENVIRONMENT: 'production',
+        SESSION_SECRET: '',
+      },
+      routes,
+    ),
+  );
+  const bodyText = await response.clone().text();
+
+  const details = await assertApiError(
+    response,
+    503,
+    'INTERNAL_ERROR',
+    SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE,
+  );
+
+  assert.deepEqual(details, {});
+  assertNoInternalConfigurationLeak(bodyText);
+  assert.match(output, /Session secret is not configured\./u);
 });
 
 test('Google one-tap endpoint keeps the standard API error shape for verification failures', async () => {

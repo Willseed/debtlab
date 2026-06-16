@@ -9,6 +9,7 @@ import { memberRoutes } from './routes/members';
 import { mysteryChallengeRoutes } from './routes/mystery-challenge';
 import { paymentRoutes } from './routes/payments';
 import { settlementRoutes } from './routes/settlements';
+import { configurationErrorResponse } from './http/configuration-error-response';
 import { errorResponse } from './http/error-response';
 import { securityHeaders } from './middleware/security-headers';
 import { validateOrigin } from './middleware/validate-origin';
@@ -16,6 +17,9 @@ import { AppBindings } from './types';
 
 const app = new Hono<AppBindings>();
 const SOURCE_MAP_EXTENSION = '.map';
+const STATIC_ASSET_BINDING_CONFIGURATION_ERROR = new Error(
+  'Static asset binding is not configured.',
+);
 
 app.use('*', securityHeaders);
 app.use('/api/*', validateOrigin);
@@ -47,7 +51,7 @@ app.all('*', async (c) => {
   }
 
   if (!c.env.ASSETS) {
-    return errorResponse(c, 500, 'INTERNAL_ERROR', 'Static asset binding is not configured.');
+    return configurationErrorResponse(c, STATIC_ASSET_BINDING_CONFIGURATION_ERROR);
   }
 
   return c.env.ASSETS.fetch(c.req.raw);

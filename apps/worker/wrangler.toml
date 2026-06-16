@@ -23,6 +23,7 @@ routes = [
 ]
 
 [env.production.vars]
+ENVIRONMENT = "production"
 APP_BASE_URL = "https://lab.buy2330.cc"
 
 [[env.production.d1_databases]]

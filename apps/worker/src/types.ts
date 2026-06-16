@@ -4,6 +4,7 @@ export type Env = {
   readonly ASSETS?: StaticAssetsBinding;
   readonly DB: D1Database;
   readonly SESSION_SECRET: string;
+  readonly ENVIRONMENT?: string;
   readonly APP_BASE_URL?: string;
   readonly GOOGLE_CLIENT_ID?: string;
   readonly GOOGLE_CLIENT_SECRET?: string;

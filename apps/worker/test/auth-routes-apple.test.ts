@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
+import { SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE } from '../src/http/configuration-error-response';
 import { createAuthRoutes } from '../src/routes/auth';
 import { SESSION_COOKIE_NAME } from '../src/services/auth.service';
 import {
@@ -15,6 +16,10 @@ import {
   readSetCookie,
   requestAuthRoute,
 } from './auth-test-helpers';
+import {
+  assertNoInternalConfigurationLeak,
+  captureConsoleError,
+} from './configuration-error-test-helpers';
 
 const TEST_ENV: AppBindings['Bindings'] = {
   DB: {} as D1Database,
@@ -63,9 +68,11 @@ test('Apple OAuth start sets a nonce-backed state cookie and redirects to Apple'
 });
 
 test('Apple OAuth start reports missing Worker secrets before redirecting', async () => {
-  const response = await requestAuth('/api/auth/apple/start', undefined, {
-    APPLE_PRIVATE_KEY: undefined,
-  });
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth('/api/auth/apple/start', undefined, {
+      APPLE_PRIVATE_KEY: undefined,
+    }),
+  );
 
   const details = await assertApiError(
     response,
@@ -75,6 +82,28 @@ test('Apple OAuth start reports missing Worker secrets before redirecting', asyn
   );
 
   assert.deepEqual(details, {});
+  assert.match(output, /Apple OAuth is not configured\./u);
+});
+
+test('Apple OAuth start hides missing Worker secret details in production', async () => {
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth('/api/auth/apple/start', undefined, {
+      APPLE_PRIVATE_KEY: undefined,
+      ENVIRONMENT: 'production',
+    }),
+  );
+  const bodyText = await response.clone().text();
+
+  const details = await assertApiError(
+    response,
+    503,
+    'INTERNAL_ERROR',
+    SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE,
+  );
+
+  assert.deepEqual(details, {});
+  assertNoInternalConfigurationLeak(bodyText);
+  assert.match(output, /Apple OAuth is not configured\./u);
 });
 
 test('Apple OAuth callback rejects requests without the matching state cookie', async () => {
@@ -239,42 +268,96 @@ test('Apple OAuth callback redirects Apple verification failures back to the app
 
 test('Apple OAuth callback redirects configuration failures back to the app', async () => {
   const state = VALID_APPLE_STATE;
-  const response = await requestAuth(
-    '/api/auth/apple/callback',
-    createAppleCallbackInit(
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      '/api/auth/apple/callback',
+      createAppleCallbackInit(
+        {
+          state,
+          code: 'authorization-code',
+        },
+        `${getAppleOAuthStateCookieName(state)}=${VALID_APPLE_NONCE}`,
+      ),
       {
-        state,
-        code: 'authorization-code',
+        APPLE_PRIVATE_KEY: undefined,
       },
-      `${getAppleOAuthStateCookieName(state)}=${VALID_APPLE_NONCE}`,
     ),
-    {
-      APPLE_PRIVATE_KEY: undefined,
-    },
   );
 
   assertAuthRedirect(response, 'apple_oauth_not_configured');
+  assert.match(output, /Apple OAuth is not configured\./u);
+});
+
+test('Apple OAuth callback hides configuration redirect codes in production', async () => {
+  const state = VALID_APPLE_STATE;
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      '/api/auth/apple/callback',
+      createAppleCallbackInit(
+        {
+          state,
+          code: 'authorization-code',
+        },
+        `${getAppleOAuthStateCookieName(state)}=${VALID_APPLE_NONCE}`,
+      ),
+      {
+        APPLE_PRIVATE_KEY: undefined,
+        ENVIRONMENT: 'production',
+      },
+    ),
+  );
+
+  assertAuthRedirect(response, 'service_unavailable');
+  assert.match(output, /Apple OAuth is not configured\./u);
 });
 
 test('Apple OAuth callback redirects session creation failures back to the app', async () => {
   const state = VALID_APPLE_STATE;
   const routes = createAuthRoutes(createAppleDependencies(createSessionUser()));
-  const response = await requestAuth(
-    '/api/auth/apple/callback',
-    createAppleCallbackInit(
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      '/api/auth/apple/callback',
+      createAppleCallbackInit(
+        {
+          state,
+          code: 'authorization-code',
+        },
+        `${getAppleOAuthStateCookieName(state)}=${VALID_APPLE_NONCE}`,
+      ),
       {
-        state,
-        code: 'authorization-code',
+        SESSION_SECRET: '',
       },
-      `${getAppleOAuthStateCookieName(state)}=${VALID_APPLE_NONCE}`,
+      routes,
     ),
-    {
-      SESSION_SECRET: '',
-    },
-    routes,
   );
 
   assertAuthRedirect(response, 'session_unavailable');
+  assert.match(output, /Session secret is not configured\./u);
+});
+
+test('Apple OAuth callback hides session configuration redirect codes in production', async () => {
+  const state = VALID_APPLE_STATE;
+  const routes = createAuthRoutes(createAppleDependencies(createSessionUser()));
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      '/api/auth/apple/callback',
+      createAppleCallbackInit(
+        {
+          state,
+          code: 'authorization-code',
+        },
+        `${getAppleOAuthStateCookieName(state)}=${VALID_APPLE_NONCE}`,
+      ),
+      {
+        ENVIRONMENT: 'production',
+        SESSION_SECRET: '',
+      },
+      routes,
+    ),
+  );
+
+  assertAuthRedirect(response, 'service_unavailable');
+  assert.match(output, /Session secret is not configured\./u);
 });
 
 test('Apple OAuth callback redirects unexpected backend failures back to the app', async () => {
@@ -304,22 +387,51 @@ test('Apple OAuth callback redirects unexpected backend failures back to the app
 
 test('Apple identity-token endpoint reports missing Worker secrets before verification', async () => {
   const routes = createAuthRoutes(createAppleDependencies(createSessionUser()));
-  const response = await requestAuth(
-    '/api/auth/apple',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      '/api/auth/apple',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identityToken: 'signed-apple-id-token' }),
       },
-      body: JSON.stringify({ identityToken: 'signed-apple-id-token' }),
-    },
-    {
-      APPLE_PRIVATE_KEY: undefined,
-    },
-    routes,
+      {
+        APPLE_PRIVATE_KEY: undefined,
+      },
+      routes,
+    ),
   );
 
   await assertApiError(response, 500, 'INTERNAL_ERROR', 'Apple OAuth is not configured.');
+  assert.match(output, /Apple OAuth is not configured\./u);
+});
+
+test('Apple identity-token endpoint hides missing Worker secret details in production', async () => {
+  const routes = createAuthRoutes(createAppleDependencies(createSessionUser()));
+  const { result: response, output } = await captureConsoleError(() =>
+    requestAuth(
+      '/api/auth/apple',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identityToken: 'signed-apple-id-token' }),
+      },
+      {
+        APPLE_PRIVATE_KEY: undefined,
+        ENVIRONMENT: 'production',
+      },
+      routes,
+    ),
+  );
+  const bodyText = await response.clone().text();
+
+  await assertApiError(response, 503, 'INTERNAL_ERROR', SERVICE_TEMPORARILY_UNAVAILABLE_MESSAGE);
+  assertNoInternalConfigurationLeak(bodyText);
+  assert.match(output, /Apple OAuth is not configured\./u);
 });
 
 test('Origin middleware allows only the Apple form_post callback bypass', async () => {

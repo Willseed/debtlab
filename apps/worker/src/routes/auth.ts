@@ -1,6 +1,11 @@
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { Hono } from 'hono';
+import { type Context, Hono } from 'hono';
 
+import {
+  configurationErrorResponse,
+  logConfigurationError,
+  productionSafeAuthErrorCode,
+} from '../http/configuration-error-response';
 import { errorResponse } from '../http/error-response';
 import { requireAuth } from '../middleware/require-auth';
 import {
@@ -35,6 +40,9 @@ import { appleAuthSchema, googleAuthSchema } from '../validation/schemas';
 
 const OAUTH_STATE_TTL_SECONDS = 600;
 const OAUTH_RANDOM_PATTERN = /^[0-9a-f]{64}$/u;
+const SESSION_SECRET_CONFIGURATION_ERROR = new Error('Session secret is not configured.');
+
+type AuthContext = Context<AppBindings>;
 
 type AuthDependencies = {
   readonly exchangeGoogleAuthorizationCode: typeof exchangeGoogleAuthorizationCode;
@@ -108,7 +116,9 @@ export function createAuthRoutes(
       if (sessionResult) {
         return redirectGoogleCallbackError(
           c,
-          user.status === 'active' ? 'session_unavailable' : 'user_not_active',
+          user.status === 'active'
+            ? productionSafeAuthErrorCode(c.env, 'session_unavailable')
+            : 'user_not_active',
         );
       }
 
@@ -210,7 +220,9 @@ export function createAuthRoutes(
       if (sessionResult) {
         return redirectAppleCallbackError(
           c,
-          user.status === 'active' ? 'session_unavailable' : 'user_not_active',
+          user.status === 'active'
+            ? productionSafeAuthErrorCode(c.env, 'session_unavailable')
+            : 'user_not_active',
         );
       }
 
@@ -268,7 +280,7 @@ export function createAuthRoutes(
 
 export const authRoutes = createAuthRoutes();
 
-function clearSessionCookie(c: Parameters<typeof deleteCookie>[0]): void {
+function clearSessionCookie(c: AuthContext): void {
   deleteCookie(c, SESSION_COOKIE_NAME, {
     path: '/',
     secure: true,
@@ -276,7 +288,7 @@ function clearSessionCookie(c: Parameters<typeof deleteCookie>[0]): void {
   });
 }
 
-function setGoogleStateCookie(c: Parameters<typeof setCookie>[0], state: string): void {
+function setGoogleStateCookie(c: AuthContext, state: string): void {
   setCookie(c, getGoogleOAuthStateCookieName(state), state, {
     httpOnly: true,
     maxAge: OAUTH_STATE_TTL_SECONDS,
@@ -286,11 +298,7 @@ function setGoogleStateCookie(c: Parameters<typeof setCookie>[0], state: string)
   });
 }
 
-function setAppleStateCookie(
-  c: Parameters<typeof setCookie>[0],
-  state: string,
-  nonce: string,
-): void {
+function setAppleStateCookie(c: AuthContext, state: string, nonce: string): void {
   setCookie(c, getAppleOAuthStateCookieName(state), nonce, {
     httpOnly: true,
     maxAge: OAUTH_STATE_TTL_SECONDS,
@@ -344,12 +352,9 @@ function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null;
 }
 
-async function issueSession(
-  c: Parameters<typeof setCookie>[0],
-  user: SessionUser,
-): Promise<Response | null> {
+async function issueSession(c: AuthContext, user: SessionUser): Promise<Response | null> {
   if (!c.env.SESSION_SECRET) {
-    return errorResponse(c, 500, 'INTERNAL_ERROR', 'Session secret is not configured.');
+    return configurationErrorResponse(c, SESSION_SECRET_CONFIGURATION_ERROR);
   }
 
   if (user.status !== 'active') {
@@ -370,9 +375,9 @@ async function issueSession(
   return null;
 }
 
-function handleGoogleOAuthError(c: Parameters<typeof setCookie>[0], error: unknown): Response {
+function handleGoogleOAuthError(c: AuthContext, error: unknown): Response {
   if (error instanceof GoogleOAuthConfigurationError) {
-    return errorResponse(c, 500, 'INTERNAL_ERROR', error.message);
+    return configurationErrorResponse(c, error);
   }
 
   if (error instanceof GoogleOAuthVerificationError) {
@@ -382,12 +387,13 @@ function handleGoogleOAuthError(c: Parameters<typeof setCookie>[0], error: unkno
   throw error;
 }
 
-function handleGoogleOAuthCallbackError(
-  c: Parameters<typeof setCookie>[0],
-  error: unknown,
-): Response {
+function handleGoogleOAuthCallbackError(c: AuthContext, error: unknown): Response {
   if (error instanceof GoogleOAuthConfigurationError) {
-    return redirectGoogleCallbackError(c, 'google_oauth_not_configured');
+    logConfigurationError(error);
+    return redirectGoogleCallbackError(
+      c,
+      productionSafeAuthErrorCode(c.env, 'google_oauth_not_configured'),
+    );
   }
 
   if (error instanceof GoogleOAuthVerificationError) {
@@ -397,9 +403,9 @@ function handleGoogleOAuthCallbackError(
   return redirectGoogleCallbackError(c, 'google_callback_failed');
 }
 
-function handleAppleOAuthError(c: Parameters<typeof setCookie>[0], error: unknown): Response {
+function handleAppleOAuthError(c: AuthContext, error: unknown): Response {
   if (error instanceof AppleOAuthConfigurationError) {
-    return errorResponse(c, 500, 'INTERNAL_ERROR', error.message);
+    return configurationErrorResponse(c, error);
   }
 
   if (error instanceof AppleOAuthVerificationError) {
@@ -409,12 +415,13 @@ function handleAppleOAuthError(c: Parameters<typeof setCookie>[0], error: unknow
   throw error;
 }
 
-function handleAppleOAuthCallbackError(
-  c: Parameters<typeof setCookie>[0],
-  error: unknown,
-): Response {
+function handleAppleOAuthCallbackError(c: AuthContext, error: unknown): Response {
   if (error instanceof AppleOAuthConfigurationError) {
-    return redirectAppleCallbackError(c, 'apple_oauth_not_configured');
+    logConfigurationError(error);
+    return redirectAppleCallbackError(
+      c,
+      productionSafeAuthErrorCode(c.env, 'apple_oauth_not_configured'),
+    );
   }
 
   if (error instanceof AppleOAuthVerificationError) {
@@ -425,24 +432,15 @@ function handleAppleOAuthCallbackError(
   return redirectAppleCallbackError(c, 'apple_callback_failed');
 }
 
-function redirectGoogleCallbackError(
-  c: Parameters<typeof setCookie>[0],
-  errorCode: string,
-): Response {
+function redirectGoogleCallbackError(c: AuthContext, errorCode: string): Response {
   return redirectAuthCallbackError(c, errorCode);
 }
 
-function redirectAppleCallbackError(
-  c: Parameters<typeof setCookie>[0],
-  errorCode: string,
-): Response {
+function redirectAppleCallbackError(c: AuthContext, errorCode: string): Response {
   return redirectAuthCallbackError(c, errorCode);
 }
 
-function redirectAuthCallbackError(
-  c: Parameters<typeof setCookie>[0],
-  errorCode: string,
-): Response {
+function redirectAuthCallbackError(c: AuthContext, errorCode: string): Response {
   const redirectUrl = new URL('/', c.env.APP_BASE_URL ?? new URL(c.req.url).origin);
   redirectUrl.searchParams.set('auth_error', errorCode);
 

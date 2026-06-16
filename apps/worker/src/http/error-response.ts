@@ -6,7 +6,7 @@ export type ErrorDetails = Readonly<Record<string, unknown>>;
 
 export function errorResponse(
   c: Context,
-  status: 400 | 401 | 403 | 404 | 409 | 415 | 422 | 429 | 500 | 501,
+  status: 400 | 401 | 403 | 404 | 409 | 415 | 422 | 429 | 500 | 501 | 503,
   code: ApiErrorCode,
   message: string,
   details: ErrorDetails = {},

@@ -94,6 +94,8 @@ being blocked by preflight. Unsafe mutation methods still require an allowed
 request bodies to use `application/json` or an `+json` media type. Production
 `APP_BASE_URL=https://lab.buy2330.cc` must not allow localhost origins; local
 development origins are allowed only when `APP_BASE_URL` itself is local.
+Production configuration failures return the generic message
+`Service temporarily unavailable.` while server logs keep diagnostics.
 
 Production static serving must not expose JavaScript or CSS source maps. The
 Angular production build disables source maps and the Worker returns 404 for
