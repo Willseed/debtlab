@@ -14,6 +14,20 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'activate',
+    loadComponent: () =>
+      import('./features/activation/activate-page.component').then(
+        (module) => module.ActivatePageComponent,
+      ),
+  },
+  {
+    path: 'join',
+    loadComponent: () =>
+      import('./features/activation/activate-page.component').then(
+        (module) => module.ActivatePageComponent,
+      ),
+  },
+  {
     path: 'dashboard',
     canActivate: [authGuard],
     loadComponent: () =>

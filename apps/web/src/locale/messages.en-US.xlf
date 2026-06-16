@@ -14,6 +14,25 @@
       <trans-unit id="appNavSignOut" datatype="html"><source>登出</source><target>Sign out</target></trans-unit>
       <trans-unit id="appRepositoryLinkLabel" datatype="html"><source>GitHub 程式碼庫</source><target>GitHub repository</target></trans-unit>
       <trans-unit id="appFooterCopyright" datatype="html"><source>© 2026 pony. All rights reserved.</source><target>© 2026 pony. All rights reserved.</target></trans-unit>
+      <trans-unit id="activateEyebrow" datatype="html"><source>LabSplit Invite</source><target>LabSplit Invite</target></trans-unit>
+      <trans-unit id="activateTitle" datatype="html"><source>啟用邀請</source><target>Activate invitation</target></trans-unit>
+      <trans-unit id="activateIntro" datatype="html"><source>請登入後輸入邀請碼，手動啟用你的 LabSplit 帳號。</source><target>After signing in, enter the invite code to manually activate your LabSplit account.</target></trans-unit>
+      <trans-unit id="activateInviteCodeLabel" datatype="html"><source>邀請碼</source><target>Invite code</target></trans-unit>
+      <trans-unit id="activateInviteHint" datatype="html"><source>我們會在讀取連結後清除網址中的邀請碼。</source><target>The invite code is removed from the URL after the link is read.</target></trans-unit>
+      <trans-unit id="activateInviteRequiredField" datatype="html"><source>請先輸入邀請碼。</source><target>Enter the invite code first.</target></trans-unit>
+      <trans-unit id="activateSubmitCountdown" datatype="html"><source>請等待 <x id="INTERPOLATION" equiv-text="{{ retryAfterSeconds() }}"/> 秒</source><target>Wait <x id="INTERPOLATION" equiv-text="{{ retryAfterSeconds() }}"/> seconds</target></trans-unit>
+      <trans-unit id="activateSubmitting" datatype="html"><source>啟用中…</source><target>Activating…</target></trans-unit>
+      <trans-unit id="activateSubmit" datatype="html"><source>啟用邀請</source><target>Activate invitation</target></trans-unit>
+      <trans-unit id="activateLoginPrompt" datatype="html"><source>登入後會回到這個頁面，邀請碼只暫存在本次瀏覽工作階段。</source><target>After signing in, you will return to this page. The invite code is stored only for this browser session.</target></trans-unit>
+      <trans-unit id="activateOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
+      <trans-unit id="activateGoogleLogin" datatype="html"><source>使用 Google 登入</source><target>Sign in with Google</target></trans-unit>
+      <trans-unit id="activateAppleLogin" datatype="html"><source>使用 Apple 登入</source><target>Sign in with Apple</target></trans-unit>
+      <trans-unit id="activateRateLimitWithSeconds" datatype="html"><source>嘗試次數太多，請等待 <x id="seconds" equiv-text="seconds"/> 秒後再試。</source><target>Too many attempts. Wait <x id="seconds" equiv-text="seconds"/> seconds before trying again.</target></trans-unit>
+      <trans-unit id="activateEmptyInviteError" datatype="html"><source>請先輸入邀請碼。</source><target>Enter the invite code first.</target></trans-unit>
+      <trans-unit id="activateAuthRequired" datatype="html"><source>請先登入後再啟用邀請。</source><target>Sign in before activating the invitation.</target></trans-unit>
+      <trans-unit id="activateRateLimitGeneric" datatype="html"><source>嘗試次數太多，請稍後再試。</source><target>Too many attempts. Please try again later.</target></trans-unit>
+      <trans-unit id="activateInvalidInvite" datatype="html"><source>邀請碼不正確或已失效。</source><target>The invite code is incorrect or has expired.</target></trans-unit>
+      <trans-unit id="activateGenericError" datatype="html"><source>無法啟用邀請，請稍後再試。</source><target>Could not activate the invitation. Please try again later.</target></trans-unit>
       <trans-unit id="adminTitle" datatype="html"><source>管理</source><target>Admin</target></trans-unit>
       <trans-unit id="adminUserManagement" datatype="html"><source>使用者管理</source><target>User Management</target></trans-unit>
       <trans-unit id="adminSystemStats" datatype="html"><source>系統統計</source><target>System Statistics</target></trans-unit>

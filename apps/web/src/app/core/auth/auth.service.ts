@@ -9,6 +9,10 @@ type AuthMeResponse = {
   readonly user: CurrentUser;
 };
 
+type ActivateResponse = {
+  readonly user: CurrentUser;
+};
+
 type LogoutResponse = {
   readonly ok: boolean;
 };
@@ -47,6 +51,17 @@ export class AuthService {
 
   startAppleSignIn(): void {
     this.browserWindow.location.assign(`${this.apiBaseUrl}/auth/apple/start`);
+  }
+
+  activate(inviteCode: string): Observable<CurrentUser> {
+    return this.http
+      .post<ActivateResponse>(`${this.apiBaseUrl}/auth/activate`, { inviteCode })
+      .pipe(
+        map((response) => response.user),
+        tap((user) => {
+          this.currentUserState.set(user);
+        }),
+      );
   }
 
   signOut(): Observable<boolean> {

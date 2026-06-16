@@ -91,6 +91,27 @@ describe('AuthService', () => {
     expect(locationAssign).toHaveBeenCalledOnceWith('/api/auth/apple/start');
   });
 
+  it('activates an invite and exposes the active current user', () => {
+    const activeUser: CurrentUser = {
+      ...adminUser,
+      status: 'active',
+    };
+    let result: CurrentUser | undefined;
+
+    authService.activate('INVITE-CODE').subscribe((user) => {
+      result = user;
+    });
+
+    const request = http.expectOne('/api/auth/activate');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({ inviteCode: 'INVITE-CODE' });
+    request.flush({ user: activeUser });
+
+    expect(result).toEqual(activeUser);
+    expect(authService.currentUser()).toEqual(activeUser);
+    expect(authService.isAuthenticated()).toBeTrue();
+  });
+
   it('clears the current user after successful sign out', () => {
     authService.refresh().subscribe();
     http.expectOne('/api/auth/me').flush({ user: adminUser });
