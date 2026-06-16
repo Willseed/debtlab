@@ -50,12 +50,17 @@ Permissions-Policy
 Cross-Origin-Opener-Policy: same-origin
 ```
 
-The web CSP intentionally keeps Google OAuth, Apple OAuth, and Cloudflare
-analytics/beacon origins available while blocking framing and object embeds.
-GitHub Pages does not apply `_headers`; it must not be the production header
-enforcement path. The `/api/health` browser HTML response keeps its stricter
-route-specific CSP for the CTF clue page, and the security middleware must not
-overwrite it.
+The web CSP intentionally keeps Google OAuth, Apple OAuth, Cloudflare
+analytics/beacon origins, and Angular runtime component styles available while
+blocking framing and object embeds. GitHub Pages does not apply `_headers`; it
+must not be the production header enforcement path. The `/api/health` browser
+HTML response keeps its stricter route-specific CSP for the CTF clue page, and
+the security middleware must not overwrite it.
+
+API preflight requests from allowed origins return CORS credentials headers so
+browser clients can call same-site and configured local development APIs without
+being blocked by preflight. Unsafe mutation methods still require an allowed
+`Origin` header.
 
 ## Auth
 

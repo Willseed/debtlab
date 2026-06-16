@@ -10,7 +10,7 @@ export const CONTENT_SECURITY_POLICY = [
   "form-action 'self' https://accounts.google.com https://appleid.apple.com",
   "connect-src 'self' https://lab.buy2330.cc https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://appleid.apple.com https://cloudflareinsights.com https://*.cloudflareinsights.com",
   "script-src 'self' https://accounts.google.com https://appleid.cdn-apple.com https://static.cloudflareinsights.com",
-  "style-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: https://www.gstatic.com https://*.googleusercontent.com",
   "font-src 'self'",
   "frame-src 'self' https://accounts.google.com https://appleid.apple.com",

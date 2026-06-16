@@ -143,9 +143,12 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
   HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
   `Permissions-Policy`, and `Cross-Origin-Opener-Policy`.
 - CSP must preserve the app's Google OAuth, Apple OAuth, and Cloudflare
-  analytics/beacon origins while blocking framing and object embeds. The
-  `/api/health` clue page may keep a route-specific stricter CSP because it
-  intentionally renders self-contained HTML.
+  analytics/beacon origins and must allow Angular runtime component styles while
+  blocking framing and object embeds. The `/api/health` clue page may keep a
+  route-specific stricter CSP because it intentionally renders self-contained
+  HTML.
+- API preflight requests may return CORS credentials headers for allowed origins
+  only; unsafe mutation methods still require an allowed `Origin`.
 - Do not expose stack traces to users, private data to guests, unsafe debug
   endpoints, or client-side role claims as authority.
 
