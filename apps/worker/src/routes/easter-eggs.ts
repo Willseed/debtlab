@@ -6,9 +6,11 @@ import { requireAuth } from '../middleware/require-auth';
 import { verifyGarageCtfPassword } from '../services/garage-ctf.service';
 import { AppBindings } from '../types';
 
-const solveSchema = z.object({
-  password: z.string().min(1).max(256),
-});
+const solveSchema = z
+  .object({
+    password: z.string().min(1).max(256),
+  })
+  .strict();
 
 type GarageCTFFirstSolveRow = {
   readonly user_id: string;

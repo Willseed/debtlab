@@ -4,7 +4,7 @@ import { readGarageCtfPassword } from '../services/garage-ctf.service';
 import { readMysteryChallengeClues } from '../services/mystery-challenge.service';
 import { AppBindings } from '../types';
 
-function renderHealthPageHtml(): string {
+function renderHealthPageHtml(styleNonce: string): string {
   const mysteryClueCards = renderMysteryClueCards();
 
   return `<!doctype html>
@@ -13,7 +13,7 @@ function renderHealthPageHtml(): string {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LabSplit API Health</title>
-    <style>
+    <style nonce="${styleNonce}">
       :root {
         color-scheme: dark;
         font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -216,15 +216,6 @@ function formatTokenSequence(tokens: readonly number[]): string {
   return `[${tokens.join(', ')}]`;
 }
 
-const HEALTH_HTML_HEADERS = {
-  'Cache-Control': 'no-store',
-  'Content-Security-Policy':
-    "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
-  'Content-Type': 'text/html; charset=utf-8',
-  'Referrer-Policy': 'no-referrer',
-  'X-Content-Type-Options': 'nosniff',
-};
-
 const HEALTH_JSON_HEADERS = {
   'Cache-Control': 'no-store',
   'Content-Type': 'application/json; charset=utf-8',
@@ -235,8 +226,10 @@ export const healthRoutes = new Hono<AppBindings>();
 
 healthRoutes.get('/', async (c) => {
   if (acceptsHtml(c.req.header('Accept'))) {
-    return new Response(renderHealthPageHtml(), {
-      headers: HEALTH_HTML_HEADERS,
+    const styleNonce = createCspNonce();
+
+    return new Response(renderHealthPageHtml(styleNonce), {
+      headers: createHealthHtmlHeaders(styleNonce),
     });
   }
 
@@ -277,4 +270,27 @@ function escapeHtml(value: string): string {
     .replaceAll('>', '&gt;')
     .replaceAll('"', '&quot;')
     .replaceAll("'", '&#39;');
+}
+
+function createHealthHtmlHeaders(styleNonce: string): HeadersInit {
+  return {
+    'Cache-Control': 'no-store',
+    'Content-Security-Policy': [
+      "default-src 'none'",
+      `style-src 'nonce-${styleNonce}'`,
+      "base-uri 'none'",
+      "form-action 'none'",
+      "frame-ancestors 'none'",
+    ].join('; '),
+    'Content-Type': 'text/html; charset=utf-8',
+    'Referrer-Policy': 'no-referrer',
+    'X-Content-Type-Options': 'nosniff',
+  };
+}
+
+function createCspNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+
+  return btoa(Array.from(bytes, (byte) => String.fromCodePoint(byte)).join(''));
 }

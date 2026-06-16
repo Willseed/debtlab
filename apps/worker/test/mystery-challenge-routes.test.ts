@@ -722,7 +722,7 @@ function makeApp() {
 }
 
 function env(db: FakeMysteryD1) {
-  return { DB: db as unknown as D1Database, SESSION_SECRET };
+  return { DB: db as unknown as D1Database, SESSION_SECRET, APP_BASE_URL: ALLOWED_ORIGIN };
 }
 
 async function authCookie(user: SessionUser): Promise<string> {

@@ -2,7 +2,11 @@
 
 All API routes live under `/api`.
 
-All request bodies must be validated with Zod. Authenticated routes require a valid `labsplit_session` cookie and a current active user record in D1. Admin routes also require current D1 admin authorization; role and status must not be trusted from stale session claims alone.
+All request bodies must be validated with strict Zod allowlists; unknown fields
+are rejected rather than silently assigned. Authenticated routes require a valid
+`labsplit_session` cookie and a current active user record in D1. Admin routes
+also require current D1 admin authorization; role and status must not be trusted
+from stale session claims alone.
 
 D1 timestamp defaults and Worker-managed timestamp updates use `datetime('now', '+8 hours')` so stored operational timestamps are UTC+8 text values.
 
@@ -27,6 +31,7 @@ VALIDATION_ERROR
 NOT_FOUND
 CONFLICT
 OAUTH_VERIFICATION_FAILED
+UNSUPPORTED_MEDIA_TYPE
 SPLIT_TOTAL_MISMATCH
 INTERNAL_ERROR
 NOT_IMPLEMENTED
@@ -50,17 +55,25 @@ Permissions-Policy
 Cross-Origin-Opener-Policy: same-origin
 ```
 
-The web CSP intentionally keeps Google OAuth, Apple OAuth, Cloudflare
-analytics/beacon origins, and Angular runtime component styles available while
-blocking framing and object embeds. GitHub Pages does not apply `_headers`; it
-must not be the production header enforcement path. The `/api/health` browser
-HTML response keeps its stricter route-specific CSP for the CTF clue page, and
-the security middleware must not overwrite it.
+The web CSP intentionally keeps Google OAuth, Apple OAuth, and Cloudflare
+analytics/beacon origins available while blocking framing, object embeds, and
+inline styles. GitHub Pages does not apply `_headers`; it must not be the
+production header enforcement path. The `/api/health` browser HTML response
+keeps its stricter route-specific CSP for the CTF clue page by using a
+per-response style nonce, and the security middleware must not overwrite it.
 
+All `/api/*` responses are `Cache-Control: no-store` and vary on `Cookie`.
 API preflight requests from allowed origins return CORS credentials headers so
 browser clients can call same-site and configured local development APIs without
 being blocked by preflight. Unsafe mutation methods still require an allowed
-`Origin` header.
+`Origin` header, reject browser `Sec-Fetch-Site: cross-site`, and require JSON
+request bodies to use `application/json` or an `+json` media type. Production
+`APP_BASE_URL=https://lab.buy2330.cc` must not allow localhost origins; local
+development origins are allowed only when `APP_BASE_URL` itself is local.
+
+Production static serving must not expose JavaScript or CSS source maps. The
+Angular production build disables source maps and the Worker returns 404 for
+static `.map` requests.
 
 ## Auth
 

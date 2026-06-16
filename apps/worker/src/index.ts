@@ -15,6 +15,7 @@ import { validateOrigin } from './middleware/validate-origin';
 import { AppBindings } from './types';
 
 const app = new Hono<AppBindings>();
+const SOURCE_MAP_EXTENSION = '.map';
 
 app.use('*', securityHeaders);
 app.use('/api/*', validateOrigin);
@@ -31,11 +32,17 @@ app.route('/api/payments', paymentRoutes);
 app.route('/api/admin', adminRoutes);
 
 app.all('*', async (c) => {
-  if (new URL(c.req.url).pathname.startsWith('/api/')) {
+  const pathname = new URL(c.req.url).pathname;
+
+  if (pathname.startsWith('/api/')) {
     return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
   }
 
   if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+    return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
+  }
+
+  if (pathname.endsWith(SOURCE_MAP_EXTENSION)) {
     return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
   }
 

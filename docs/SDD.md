@@ -143,22 +143,31 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
   HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
   `Permissions-Policy`, and `Cross-Origin-Opener-Policy`.
 - CSP must preserve the app's Google OAuth, Apple OAuth, and Cloudflare
-  analytics/beacon origins and must allow Angular runtime component styles while
-  blocking framing and object embeds. The `/api/health` clue page may keep a
-  route-specific stricter CSP because it intentionally renders self-contained
-  HTML.
+  analytics/beacon origins while blocking inline styles, framing, and object
+  embeds. The `/api/health` clue page may keep a route-specific stricter CSP
+  with a per-response style nonce because it intentionally renders
+  self-contained HTML.
+- All `/api/*` responses are `Cache-Control: no-store` and vary on `Cookie` so
+  private session-backed data is never reused across users by intermediary
+  caches.
 - API preflight requests may return CORS credentials headers for allowed origins
-  only; unsafe mutation methods still require an allowed `Origin`.
+  only; unsafe mutation methods still require an allowed `Origin`, reject
+  `Sec-Fetch-Site: cross-site`, and reject non-JSON request bodies except for
+  the Sign in with Apple `form_post` callback protected by OAuth state.
 - Do not expose stack traces to users, private data to guests, unsafe debug
-  endpoints, or client-side role claims as authority.
+  endpoints, source maps in production static serving, or client-side role
+  claims as authority.
+- API request bodies must use strict allowlists and reject unexpected fields to
+  prevent mass assignment of role, status, ownership, settlement, or audit
+  properties.
 
-Allowed production origin:
+Allowed production origin when production `APP_BASE_URL` is configured:
 
 ```txt
 https://lab.buy2330.cc
 ```
 
-Allowed local development origins:
+Allowed local development origins only when `APP_BASE_URL` is itself local:
 
 ```txt
 http://localhost:4200

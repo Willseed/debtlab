@@ -77,7 +77,13 @@ test('health returns HTML for browser navigation Accept headers', async () => {
   assert.equal(response.headers.get('Content-Type'), 'text/html; charset=utf-8');
   assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
   assert.equal(response.headers.get('Referrer-Policy'), 'no-referrer');
-  assert.match(response.headers.get('Content-Security-Policy') ?? '', /default-src 'none'/u);
+  const contentSecurityPolicy = response.headers.get('Content-Security-Policy') ?? '';
+  const styleNonce = readStyleNonce(body);
+
+  assert.match(contentSecurityPolicy, /default-src 'none'/u);
+  assert.ok(contentSecurityPolicy.includes(`style-src 'nonce-${styleNonce}'`));
+  assert.doesNotMatch(contentSecurityPolicy, /unsafe-inline/u);
+  assert.ok(styleNonce.length > 0);
   assert.match(body, /^<!doctype html>/u);
   assert.match(body, /LabSplit Black Gold/u);
   assert.match(body, /Operational/u);
@@ -173,4 +179,10 @@ function createThrowingD1(): D1Database {
       throw new Error('Hidden garage CTF config should not be read for HTML health responses.');
     },
   } as unknown as D1Database;
+}
+
+function readStyleNonce(body: string): string {
+  const match = body.match(/<style nonce="([^"]+)">/u);
+  assert.ok(match?.[1]);
+  return match[1];
 }

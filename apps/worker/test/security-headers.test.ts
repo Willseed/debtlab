@@ -31,11 +31,14 @@ test('securityHeaders adds project security headers to API responses', async () 
   assert.match(response.headers.get('Content-Security-Policy') ?? '', /accounts\.google\.com/u);
   assert.match(response.headers.get('Content-Security-Policy') ?? '', /appleid\.apple\.com/u);
   assert.match(response.headers.get('Content-Security-Policy') ?? '', /cloudflareinsights\.com/u);
+  assert.doesNotMatch(response.headers.get('Content-Security-Policy') ?? '', /unsafe-inline/u);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.match(response.headers.get('Vary') ?? '', /Cookie/u);
 });
 
 test('securityHeaders preserves route-specific Content-Security-Policy values', async () => {
   const app = new Hono<AppBindings>();
-  const routeCsp = "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'";
+  const routeCsp = "default-src 'none'; style-src 'nonce-route'; frame-ancestors 'none'";
   app.use('/api/*', securityHeaders);
   app.get(
     '/api/html',
@@ -75,6 +78,22 @@ test('index serves static assets with security headers outside /api', async () =
   );
   assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
   assert.equal(response.headers.get('X-Frame-Options'), 'DENY');
+});
+
+test('index blocks production source map disclosure from static assets', async () => {
+  const response = await app.request('/main.abc123.js.map', undefined, {
+    ...createTestEnv(),
+    ASSETS: createThrowingAssets(),
+  });
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: 'NOT_FOUND',
+      message: 'Route not found.',
+      details: {},
+    },
+  });
 });
 
 test('index does not fall back API misses to static assets', async () => {

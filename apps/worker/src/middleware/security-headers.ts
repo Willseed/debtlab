@@ -10,7 +10,7 @@ export const CONTENT_SECURITY_POLICY = [
   "form-action 'self' https://accounts.google.com https://appleid.apple.com",
   "connect-src 'self' https://lab.buy2330.cc https://accounts.google.com https://oauth2.googleapis.com https://www.googleapis.com https://appleid.apple.com https://cloudflareinsights.com https://*.cloudflareinsights.com",
   "script-src 'self' https://accounts.google.com https://appleid.cdn-apple.com https://static.cloudflareinsights.com",
-  "style-src 'self' 'unsafe-inline'",
+  "style-src 'self'",
   "img-src 'self' data: https://www.gstatic.com https://*.googleusercontent.com",
   "font-src 'self'",
   "frame-src 'self' https://accounts.google.com https://appleid.apple.com",
@@ -50,8 +50,16 @@ const SECURITY_HEADERS = {
   'X-Frame-Options': 'DENY',
 } as const;
 
+const API_CACHE_CONTROL = 'no-store';
+const API_VARY_HEADER = 'Cookie';
+
 export const securityHeaders: MiddlewareHandler<AppBindings> = async (c, next) => {
   await next();
+
+  if (new URL(c.req.url).pathname.startsWith('/api/')) {
+    c.res.headers.set('Cache-Control', API_CACHE_CONTROL);
+    appendVaryHeader(c.res.headers, API_VARY_HEADER);
+  }
 
   for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
     if (!c.res.headers.has(name)) {
@@ -59,3 +67,18 @@ export const securityHeaders: MiddlewareHandler<AppBindings> = async (c, next) =
     }
   }
 };
+
+function appendVaryHeader(headers: Headers, value: string): void {
+  const currentValue = headers.get('Vary');
+
+  if (!currentValue) {
+    headers.set('Vary', value);
+    return;
+  }
+
+  const existingValues = currentValue.split(',').map((entry) => entry.trim().toLowerCase());
+
+  if (!existingValues.includes(value.toLowerCase())) {
+    headers.set('Vary', `${currentValue}, ${value}`);
+  }
+}

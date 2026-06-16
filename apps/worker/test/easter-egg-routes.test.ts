@@ -309,7 +309,7 @@ function createTestApp(db: D1Database) {
   return {
     app: {
       request: (path: string, init?: RequestInit) =>
-        app.request(path, init, { DB: db, SESSION_SECRET }),
+        app.request(path, init, { DB: db, SESSION_SECRET, APP_BASE_URL: ALLOWED_ORIGIN }),
     },
   };
 }
