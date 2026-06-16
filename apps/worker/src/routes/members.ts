@@ -4,7 +4,10 @@ import { errorResponse } from '../http/error-response';
 import { requireDefaultGroupMember } from '../middleware/require-default-group-member';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
-import { type DefaultGroupMember, listDefaultGroupMembers } from '../services/default-group.service';
+import {
+  type DefaultGroupMember,
+  listDefaultGroupMembers,
+} from '../services/default-group.service';
 import { AppBindings } from '../types';
 
 export const memberRoutes = new Hono<AppBindings>();
