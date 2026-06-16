@@ -117,9 +117,22 @@ import {
         min-width: 0;
       }
 
+      .metric-grid {
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+      }
+
+      .metric-card {
+        container-type: inline-size;
+      }
+
       .metric-card__value {
         max-width: 100%;
-        overflow-wrap: anywhere;
+        overflow-wrap: normal;
+        white-space: nowrap;
+      }
+
+      .metric-card__value.money {
+        font-size: clamp(1.35rem, 7.5cqi, 3.25rem);
       }
 
       @media (max-width: 720px) {
@@ -134,6 +147,10 @@ import {
         .metric-card__value {
           font-size: clamp(1.625rem, 8vw, 2.5rem);
           line-height: 1.1;
+        }
+
+        .metric-card__value.money {
+          font-size: clamp(1.35rem, 7cqi, 2.5rem);
         }
       }
     `,

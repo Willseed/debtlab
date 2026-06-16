@@ -121,6 +121,38 @@ describe('DashboardPageComponent', () => {
     expect(monthlyValue?.scrollWidth ?? 0).toBeLessThanOrEqual(monthlyValue?.clientWidth ?? 0);
   });
 
+  it('keeps a long monthly spending value on one desktop line without overflowing', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '1024px';
+    fixture.detectChanges();
+
+    http.expectOne('/api/settlements/summary').flush(createSummary());
+    http.expectOne('/api/expenses').flush({
+      expenses: [createExpense({ amount: 123_456_789_012, expenseDate: currentMonthDate() })],
+      nextCursor: null,
+    });
+    fixture.detectChanges();
+
+    for (const width of ['1024px', '1180px']) {
+      host.style.width = width;
+      fixture.detectChanges();
+
+      const monthlyValue = host.querySelector<HTMLElement>('.metric-card__value.money');
+
+      expect(monthlyValue).withContext('monthly spending metric value').not.toBeNull();
+      if (!monthlyValue) return;
+
+      const lineHeight = Number.parseFloat(getComputedStyle(monthlyValue).lineHeight);
+      expect(monthlyValue.scrollWidth)
+        .withContext(`monthly value should fit at ${width}`)
+        .toBeLessThanOrEqual(monthlyValue.clientWidth);
+      expect(monthlyValue.getBoundingClientRect().height)
+        .withContext(`monthly value should remain single-line at ${width}`)
+        .toBeLessThanOrEqual(lineHeight + 1);
+    }
+  });
+
   it('falls back to zero member-specific amounts without a current user', () => {
     currentUserState.set(null);
     fixture.detectChanges();
