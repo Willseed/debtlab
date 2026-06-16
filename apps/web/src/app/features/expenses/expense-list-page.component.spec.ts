@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { CurrentUser } from '../../shared/models/current-user.model';
-import { ExpenseListItem } from './expense-api.service';
+import { ExpenseListItem, MemberListItem } from './expense-api.service';
 import { ExpenseListPageComponent } from './expense-list-page.component';
 
 describe('ExpenseListPageComponent', () => {
@@ -41,6 +41,7 @@ describe('ExpenseListPageComponent', () => {
     fixture = TestBed.createComponent(ExpenseListPageComponent);
     http = TestBed.inject(HttpTestingController);
     fixture.detectChanges();
+    flushMemberList();
     flushExpenseList();
   });
 
@@ -66,11 +67,13 @@ describe('ExpenseListPageComponent', () => {
 
     setInputValue('input[formcontrolname="title"]', '');
     setInputValue('input[formcontrolname="amount"]', '');
+    setMultiSelectValues('select[formcontrolname="participantUserIds"]', []);
     clickButton('儲存');
     fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('請輸入 1 到 120 個字的標題。');
     expect(fixture.nativeElement.textContent).toContain('金額必須是正整數。');
+    expect(fixture.nativeElement.textContent).toContain('請至少選取一位參與者。');
   });
 
   it('submits a self-paid equal split expense and adds it to the table', () => {
@@ -113,6 +116,124 @@ describe('ExpenseListPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('住宿');
     expect(fixture.nativeElement.textContent).not.toContain('lodging');
     expect(fixture.nativeElement.textContent).toContain('NT$9600');
+  });
+
+  it('submits an equal split expense for a selected payer and multiple participants', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+
+    setInputValue('input[formcontrolname="title"]', 'Team Dinner');
+    setInputValue('input[formcontrolname="amount"]', '2400');
+    setInputValue('input[formcontrolname="expenseDate"]', '2026-06-14');
+    setSelectValue('select[formcontrolname="category"]', 'other');
+    setSelectValue('select[formcontrolname="paidByUserId"]', 'usr_bob');
+    setMultiSelectValues('select[formcontrolname="participantUserIds"]', ['usr_member', 'usr_bob']);
+    setFormMemberValues('usr_bob', ['usr_member', 'usr_bob']);
+    clickButton('儲存');
+
+    const request = http.expectOne('/api/expenses');
+    expect(request.request.method).toBe('POST');
+    expect(request.request.body).toEqual({
+      title: 'Team Dinner',
+      description: undefined,
+      amount: 2400,
+      currency: 'TWD',
+      paidByUserId: 'usr_bob',
+      category: 'other',
+      expenseDate: '2026-06-14',
+      splitMethod: 'equal',
+      participants: [{ userId: 'usr_member' }, { userId: 'usr_bob' }],
+    });
+
+    request.flush({ expense: { id: 'exp_team' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_team',
+        title: 'Team Dinner',
+        amount: 2400,
+        paidBy: { id: 'usr_bob', displayName: 'Bob' },
+        participants: [
+          { userId: 'usr_member', displayName: currentUser.displayName, shareAmount: 1200 },
+          { userId: 'usr_bob', displayName: 'Bob', shareAmount: 1200 },
+        ],
+        canEdit: false,
+        canDelete: false,
+      }),
+    ]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Team Dinner');
+    expect(fixture.nativeElement.textContent).toContain('Bob');
+    expect(fixture.nativeElement.textContent).toContain('Member User, Bob');
+  });
+
+  it('uses current-user fallback labels when the member list cannot load', () => {
+    expectFallbackMemberLabel(
+      {
+        id: 'usr_named_fallback',
+        email: 'named@example.com',
+        displayName: 'Named Fallback',
+        role: 'member',
+        status: 'active',
+      },
+      'Named Fallback',
+    );
+    expectFallbackMemberLabel(
+      {
+        id: 'usr_email_fallback',
+        email: 'email@example.com',
+        role: 'member',
+        status: 'active',
+      } as CurrentUser,
+      'email@example.com',
+    );
+    expectFallbackMemberLabel(
+      {
+        id: 'usr_id_fallback',
+        role: 'member',
+        status: 'active',
+      } as CurrentUser,
+      'usr_id_fallback',
+    );
+  });
+
+  it('fills empty payer and participant defaults when members arrive after the modal opens', () => {
+    currentUserState.set(null);
+    recreateComponent();
+    flushExpenseList();
+
+    clickButton('新增支出');
+    fixture.detectChanges();
+
+    expect(
+      (
+        fixture.nativeElement.querySelector(
+          'select[formcontrolname="paidByUserId"]',
+        ) as HTMLSelectElement
+      ).value,
+    ).toBe('');
+
+    flushMemberList([
+      {
+        userId: 'usr_late_member',
+        displayName: 'Late Member',
+        role: 'member',
+        status: 'active',
+        joinedAt: '2026-06-16 09:02:00',
+      },
+    ]);
+    fixture.detectChanges();
+
+    const component = fixture.componentInstance as unknown as {
+      readonly form: {
+        readonly controls: {
+          readonly paidByUserId: { readonly value: string };
+          readonly participantUserIds: { readonly value: readonly string[] };
+        };
+      };
+    };
+    expect(component.form.controls.paidByUserId.value).toBe('usr_late_member');
+    expect(component.form.controls.participantUserIds.value).toEqual(['usr_late_member']);
   });
 
   it('renders localized category labels in the expense table', () => {
@@ -320,7 +441,36 @@ describe('ExpenseListPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('Other Member');
     expect(fixture.nativeElement.textContent).not.toContain('編輯支出');
     expect(fixture.nativeElement.textContent).not.toContain('儲存');
+    (fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    fixture.detectChanges();
+    expect(fixture.nativeElement.textContent).not.toContain('支出明細');
     http.expectNone('/api/expenses/exp_readonly');
+  });
+
+  it('keeps read-only expense details closed while the create modal is open', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_readonly_guard' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_readonly_guard',
+        canEdit: false,
+        canDelete: false,
+      }),
+    ]);
+    fixture.detectChanges();
+
+    clickButton('新增支出');
+    fixture.detectChanges();
+    (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('LabSplit Entry');
+    expect(fixture.nativeElement.textContent).not.toContain('支出明細');
   });
 
   it('opens a delete confirmation modal before soft deleting and reloading the list', () => {
@@ -662,6 +812,35 @@ describe('ExpenseListPageComponent', () => {
     findButton(name).click();
   }
 
+  function recreateComponent(): void {
+    fixture.destroy();
+    fixture = TestBed.createComponent(ExpenseListPageComponent);
+    fixture.detectChanges();
+  }
+
+  function expectFallbackMemberLabel(user: CurrentUser, expectedLabel: string): void {
+    currentUserState.set(user);
+    recreateComponent();
+    http.expectOne('/api/members').error(new ProgressEvent('error'), {
+      status: 0,
+      statusText: 'Network Error',
+    });
+    flushExpenseList();
+
+    clickButton('新增支出');
+    fixture.detectChanges();
+
+    const payerOptions = Array.from(
+      (
+        fixture.nativeElement.querySelector(
+          'select[formcontrolname="paidByUserId"]',
+        ) as HTMLSelectElement
+      ).options,
+    ).map((option) => option.textContent?.trim());
+
+    expect(payerOptions).toContain(expectedLabel);
+  }
+
   function findButton(name: string): HTMLButtonElement {
     const button = Array.from(
       fixture.nativeElement.querySelectorAll('button') as NodeListOf<HTMLButtonElement>,
@@ -683,13 +862,34 @@ describe('ExpenseListPageComponent', () => {
   function setInputValue(selector: string, value: string): void {
     const input = fixture.nativeElement.querySelector(selector) as HTMLInputElement;
     input.value = value;
-    input.dispatchEvent(new Event('input'));
+    input.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
   function setSelectValue(selector: string, value: string): void {
     const select = fixture.nativeElement.querySelector(selector) as HTMLSelectElement;
     select.value = value;
-    select.dispatchEvent(new Event('change'));
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function setMultiSelectValues(selector: string, values: readonly string[]): void {
+    const select = fixture.nativeElement.querySelector(selector) as HTMLSelectElement;
+    for (const option of Array.from(select.options)) {
+      option.selected = values.includes(option.value);
+    }
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function setFormMemberValues(paidByUserId: string, participantUserIds: readonly string[]): void {
+    const component = fixture.componentInstance as unknown as {
+      readonly form: {
+        readonly controls: {
+          readonly paidByUserId: { setValue(value: string): void };
+          readonly participantUserIds: { setValue(value: readonly string[]): void };
+        };
+      };
+    };
+    component.form.controls.paidByUserId.setValue(paidByUserId);
+    component.form.controls.participantUserIds.setValue(participantUserIds);
   }
 
   function fillValidExpense(): void {
@@ -704,6 +904,32 @@ describe('ExpenseListPageComponent', () => {
     expect(request.request.method).toBe('GET');
     request.flush({ expenses, nextCursor: null });
     fixture.detectChanges();
+  }
+
+  function flushMemberList(members: readonly MemberListItem[] = createMemberList()): void {
+    const request = http.expectOne('/api/members');
+    expect(request.request.method).toBe('GET');
+    request.flush({ members });
+    fixture.detectChanges();
+  }
+
+  function createMemberList(): readonly MemberListItem[] {
+    return [
+      {
+        userId: currentUser.id,
+        displayName: currentUser.displayName,
+        role: currentUser.role,
+        status: currentUser.status,
+        joinedAt: '2026-06-16 09:00:00',
+      },
+      {
+        userId: 'usr_bob',
+        displayName: 'Bob',
+        role: 'member',
+        status: 'active',
+        joinedAt: '2026-06-16 09:01:00',
+      },
+    ];
   }
 
   function createExpenseItem(overrides: Partial<ExpenseListItem> = {}): ExpenseListItem {

@@ -188,11 +188,8 @@ export class SettlementsPageComponent implements OnInit {
   canRecordTransfer(t: SuggestedTransfer): boolean {
     const userId = this.authService.currentUser()?.id;
     const isAdmin = this.authService.isAdmin();
-    return (
-      !!userId &&
-      (userId === t.fromUserId || userId === t.toUserId || isAdmin) &&
-      !this.hasPendingPaymentForTransfer(t)
-    );
+    const isJoinedMember = this.summary()?.balances.some((balance) => balance.userId === userId);
+    return !!userId && (isJoinedMember || isAdmin) && !this.hasPendingPaymentForTransfer(t);
   }
 
   canConfirm(p: PendingPayment): boolean {

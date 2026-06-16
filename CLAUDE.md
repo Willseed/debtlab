@@ -110,16 +110,16 @@ handling.
 - Reject empty participant lists, duplicate participants, zero/negative amounts,
   invalid users, and custom splits whose total does not equal the expense amount.
 - Expense list/detail access is limited to creators, active group members, or
-  participants. Any active authenticated member may create their own expenses;
-  direct API calls cannot create expenses on behalf of other users.
-- Only the expense creator may edit or soft-delete default-group expenses;
+  participants. Any active authenticated member may create expenses for active
+  default-group payers and participants.
+- Only the expense payer may edit or soft-delete default-group expenses;
   deleted expenses cannot be edited.
 - Soft-deleted expenses are ignored in active settlement calculations. Pending
   payments do not reduce balances; confirmed payments do. Disabled users remain
   in historical settlement data but cannot create new expenses.
-- Payments may be created by the authenticated sender, receiver, or admin. A
-  sender-created payment stays pending until receiver/admin confirmation;
-  receiver/admin-created payments are confirmed immediately. Reject duplicate
+- Payments may be created by active default-group members or admins for
+  outstanding suggested transfers. Receiver/admin-created payments are confirmed
+  immediately; other member-created payments stay pending. Reject duplicate
   pending payments for the same sender/receiver pair.
 - Easter eggs must never affect accounting correctness.
 - All API routes live under `/api`, request bodies use Zod validation, and

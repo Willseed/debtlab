@@ -6,10 +6,12 @@ import {
   createExpense,
   deleteExpense,
   ExpenseForbiddenError,
+  ExpenseInvalidParticipantsError,
   ExpenseNotFoundError,
   getExpense,
   listExpenses,
   updateExpense,
+  validateExpenseMembers,
 } from '../services/expense.service';
 import { calculateExpenseShares } from '../services/split.service';
 import { AppBindings } from '../types';
@@ -41,16 +43,13 @@ expenseRoutes.post('/', async (c) => {
 
   const currentUser = c.get('currentUser');
 
-  if (
-    parsed.data.paidByUserId !== currentUser.id ||
-    parsed.data.participants.some((participant) => participant.userId !== currentUser.id)
-  ) {
-    return errorResponse(
-      c,
-      403,
-      'FORBIDDEN',
-      'Expense creation is currently limited to the authenticated user.',
-    );
+  try {
+    await validateExpenseMembers(c.env.DB, currentUser, parsed.data);
+  } catch (error) {
+    if (error instanceof ExpenseInvalidParticipantsError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
+    }
+    throw error;
   }
 
   let shares: ReturnType<typeof calculateExpenseShares>;

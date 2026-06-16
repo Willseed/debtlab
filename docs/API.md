@@ -98,7 +98,10 @@ Clears `labsplit_session`.
 
 ### GET `/api/members`
 
-Authenticated. Returns active and historical members visible to the group.
+Authenticated. Returns active and historical default-group members visible to
+the group. If the caller has not yet been persisted in `group_members`, the
+response includes the active caller as a selectable default-group member
+fallback.
 
 ### PATCH `/api/members/:userId`
 
@@ -110,7 +113,7 @@ Admin only. Updates role or status and writes audit logs for role/status changes
 
 Authenticated. Returns expenses the caller may view as creator, active group
 member, or participant. Each expense includes `canEdit` and `canDelete`
-permissions; only creators receive `true`. Supports filters:
+permissions; only the payer (`paidBy.id`) receives `true`. Supports filters:
 
 ```txt
 from
@@ -126,9 +129,11 @@ Accepted expense categories are `ingredients`, `prize`, `lodging`, and `other`.
 ### POST `/api/expenses`
 
 Any authenticated active member may create an expense and participant shares in
-D1. The sum of shares must equal `amount`. The MVP UI creates a
-self-paid/self-participated expense for the authenticated user; direct API calls
-cannot create expenses on behalf of other users.
+D1. `paidByUserId` and every participant must be an active default-group member;
+the authenticated caller is accepted as an active member and is inserted into the
+default group on first expense creation. The sum of shares must equal `amount`.
+The UI supports choosing the payer and one or more active members for equal
+splits.
 
 Required split methods:
 
@@ -145,12 +150,13 @@ authorized as creator, active group member, or participant.
 
 ### PATCH `/api/expenses/:expenseId`
 
-Only the expense creator may edit default-group expenses. Deleted expenses
-cannot be edited.
+Only the expense payer may edit default-group expenses. Deleted expenses cannot
+be edited. Editing an amount preserves split correctness by recalculating the
+existing participant shares according to the stored split method.
 
 ### DELETE `/api/expenses/:expenseId`
 
-Only the expense creator may soft-delete default-group expenses by setting
+Only the expense payer may soft-delete default-group expenses by setting
 `deleted_at`.
 
 ## Settlements
@@ -193,13 +199,15 @@ Soft-deleted expenses are ignored. Pending payments do not reduce balances. Conf
 
 ### POST `/api/payments`
 
-Authenticated sender, receiver, or admin only. The sender and receiver must be
-different users. A sender-created payment is pending until the receiver or admin
-confirms it. A receiver-created or admin-created payment is recorded as
-confirmed immediately, because those roles are already authorized to confirm the
-payment. Duplicate pending payments for the same sender/receiver pair are
-rejected with `409 CONFLICT`. Payment creation writes an audit log; immediate
-confirmation also writes a confirmation audit log.
+Authenticated active default-group member or admin only. The sender and receiver
+must be different active default-group members, and the payment must match an
+outstanding suggested transfer direction with an amount no greater than the
+suggested transfer amount. Payments created by the receiver or admin are
+recorded as confirmed immediately; payments created by any other joined member
+remain pending until the receiver or admin confirms them. Duplicate pending
+payments for the same sender/receiver pair are rejected with `409 CONFLICT`.
+Payment creation writes an audit log; immediate confirmation also writes a
+confirmation audit log.
 
 Response (`status` is `pending` or `confirmed`):
 

@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { errorResponse, notImplemented } from '../http/error-response';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
+import { listDefaultGroupMembers } from '../services/default-group.service';
 import { AppBindings } from '../types';
 import { memberPatchSchema } from '../validation/schemas';
 
@@ -10,8 +11,10 @@ export const memberRoutes = new Hono<AppBindings>();
 
 memberRoutes.use('*', requireAuth);
 
-memberRoutes.get('/', (c) => {
-  return c.json({ members: [] });
+memberRoutes.get('/', async (c) => {
+  const members = await listDefaultGroupMembers(c.env.DB, c.get('currentUser'));
+
+  return c.json({ members });
 });
 
 memberRoutes.patch('/:userId', requireAdmin, async (c) => {

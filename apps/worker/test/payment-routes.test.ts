@@ -78,11 +78,12 @@ class FakePaymentD1 {
   constructor(
     readonly currentUser: SessionUser = alice,
     pendingPayment: PaymentRow | null = DEFAULT_PENDING_PAYMENT,
-    private readonly opts: {
+    readonly opts: {
       duplicatePendingPayment?: Pick<PaymentRow, 'id'> | null;
       forceZeroChanges?: boolean;
       throwOnBatch?: boolean;
       forceNullMeta?: boolean;
+      includeCarolMember?: boolean;
     } = {},
   ) {
     this.pendingPayment = pendingPayment;
@@ -149,8 +150,85 @@ class FakePaymentStatement {
   }
 
   async all<T>(): Promise<{ results: T[] }> {
+    if (this.sql.includes('FROM group_members gm')) {
+      const members = [
+        { user_id: alice.id, display_name: alice.displayName },
+        { user_id: bob.id, display_name: bob.displayName },
+      ];
+
+      if (this.db.opts.includeCarolMember) {
+        members.push({ user_id: carol.id, display_name: carol.displayName });
+      }
+
+      return { results: members as T[] };
+    }
+
+    if (this.sql.includes('FROM group_members')) {
+      const members = [{ user_id: alice.id }, { user_id: bob.id }];
+
+      if (this.db.opts.includeCarolMember) {
+        members.push({ user_id: carol.id });
+      }
+
+      return { results: members as T[] };
+    }
+
+    if (this.sql.includes('FROM expenses')) {
+      return {
+        results: [
+          {
+            id: 'exp_settlement',
+            paid_by_user_id: bob.id,
+            amount: 600,
+            deleted_at: null,
+          },
+        ] as T[],
+      };
+    }
+
+    if (this.sql.includes('FROM expense_participants')) {
+      return {
+        results: [
+          { expense_id: 'exp_settlement', user_id: alice.id, share_amount: 300 },
+          { expense_id: 'exp_settlement', user_id: bob.id, share_amount: 300 },
+        ] as T[],
+      };
+    }
+
+    if (this.sql.includes('FROM payments')) {
+      return {
+        results: this.db.pendingPayment
+          ? [mapPaymentRowForSettlement(this.db.pendingPayment) as T]
+          : [],
+      };
+    }
+
     return { results: [] };
   }
+}
+
+function mapPaymentRowForSettlement(row: PaymentRow) {
+  return {
+    id: row.id,
+    from_user_id: row.from_user_id,
+    from_display_name: displayNameForUser(row.from_user_id),
+    to_user_id: row.to_user_id,
+    to_display_name: displayNameForUser(row.to_user_id),
+    amount: row.amount,
+    currency: row.currency,
+    note: row.note,
+    status: row.status,
+    created_at: row.created_at,
+    confirmed_at: row.confirmed_at,
+  };
+}
+
+function displayNameForUser(userId: string): string {
+  if (userId === alice.id) return alice.displayName;
+  if (userId === bob.id) return bob.displayName;
+  if (userId === carol.id) return carol.displayName;
+  if (userId === adminUser.id) return adminUser.displayName;
+  return userId;
 }
 
 function makeApp(_db: FakePaymentD1) {
@@ -260,6 +338,30 @@ test('POST /api/payments lets an admin record and confirm a payment between othe
   assert.equal(body.payment.status, 'confirmed');
 });
 
+test('POST /api/payments lets any joined active member record a relevant suggested transfer', async () => {
+  const db = new FakePaymentD1(carol, DEFAULT_PENDING_PAYMENT, { includeCarolMember: true });
+  const app = makeApp(db);
+  const cookie = await authCookie(carol);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: alice.id, toUserId: bob.id, amount: 300 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 201);
+  const body = (await response.json()) as { payment: { id: string; status: string } };
+  assert.equal(body.payment.status, 'pending');
+});
+
 test('POST /api/payments rejects self-payment', async () => {
   const db = new FakePaymentD1(alice);
   const app = makeApp(db);
@@ -306,6 +408,56 @@ test('POST /api/payments rejects recording a payment for unrelated members', asy
   assert.equal(response.status, 403);
   const body = (await response.json()) as { error: { code: string } };
   assert.equal(body.error.code, 'FORBIDDEN');
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('POST /api/payments rejects transfers that are not currently suggested', async () => {
+  const db = new FakePaymentD1(alice);
+  const app = makeApp(db);
+  const cookie = await authCookie(alice);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: bob.id, toUserId: alice.id, amount: 300 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 422);
+  const body = (await response.json()) as { error: { code: string } };
+  assert.equal(body.error.code, 'VALIDATION_ERROR');
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('POST /api/payments rejects amounts larger than the outstanding suggested transfer', async () => {
+  const db = new FakePaymentD1(alice);
+  const app = makeApp(db);
+  const cookie = await authCookie(alice);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: alice.id, toUserId: bob.id, amount: 301 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 422);
+  const body = (await response.json()) as { error: { code: string } };
+  assert.equal(body.error.code, 'VALIDATION_ERROR');
   assert.equal(db.batchStatements.length, 0);
 });
 

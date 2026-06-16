@@ -97,6 +97,15 @@ Secondary buttons:
 3. Text color foreground.
 4. Same focus behavior as primary buttons.
 
+OAuth provider buttons on the public landing page:
+
+1. Large, prominent touch targets with visible provider text.
+2. Google uses a white surface, `#747775` border, and `#1f1f1f` text.
+3. Apple uses a black surface with white border and white text.
+4. Use localized text/button styling only; do not add external fonts,
+   trademark assets, or heavyweight image assets.
+5. Same focus behavior as primary buttons.
+
 ### Dashboard Card
 
 Metric cards use:

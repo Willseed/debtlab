@@ -66,28 +66,37 @@ describe('LandingPageComponent', () => {
     expect(authService.startAppleSignIn).toHaveBeenCalledOnceWith();
   });
 
-  it('renders enabled brand-style Google and Apple sign-in buttons', () => {
+  it('renders enabled large official-style Google and Apple sign-in buttons', () => {
     createComponent();
 
+    const providerGroup = fixture.nativeElement.querySelector(
+      '.hero-band__login-actions',
+    ) as HTMLElement;
     const googleButton = fixture.nativeElement.querySelector(
       '.oauth-button--google',
     ) as HTMLButtonElement;
     const appleButton = fixture.nativeElement.querySelector(
       '.oauth-button--apple',
     ) as HTMLButtonElement;
+    const googleLabel = fixture.nativeElement.querySelector(
+      '#landing-google-login-label',
+    ) as HTMLElement;
+    const appleLabel = fixture.nativeElement.querySelector(
+      '#landing-apple-login-label',
+    ) as HTMLElement;
 
+    expect(providerGroup.getAttribute('role')).toBe('group');
+    expect(providerGroup.getAttribute('aria-label')).toBe('登入提供者');
     expect(googleButton).withContext('Google button').not.toBeNull();
     expect(appleButton).withContext('Apple button').not.toBeNull();
     expect(googleButton.disabled).toBeFalse();
     expect(appleButton.disabled).toBeFalse();
-    expect(googleButton.getAttribute('aria-label')).toBe('使用 Google 繼續');
-    expect(appleButton.getAttribute('aria-label')).toBe('使用 Apple 繼續');
-    expect(googleButton.textContent?.trim()).toBe('');
-    expect(appleButton.textContent?.trim()).toBe('');
-    expect(googleButton.querySelector('.oauth-button__logo--google')).not.toBeNull();
-    expect(appleButton.querySelector('.oauth-button__logo--apple')).not.toBeNull();
-    expect(googleButton.querySelector('[aria-hidden="true"]')).not.toBeNull();
-    expect(appleButton.querySelector('[aria-hidden="true"]')).not.toBeNull();
+    expect(googleButton.getAttribute('aria-labelledby')).toBe('landing-google-login-label');
+    expect(appleButton.getAttribute('aria-labelledby')).toBe('landing-apple-login-label');
+    expect(googleButton.textContent?.trim()).toBe('使用 Google 繼續');
+    expect(appleButton.textContent?.trim()).toBe('使用 Apple 繼續');
+    expect(googleLabel.textContent?.trim()).toBe('使用 Google 繼續');
+    expect(appleLabel.textContent?.trim()).toBe('使用 Apple 繼續');
   });
 
   it('renders the public OAuth-gated landing subtitle', () => {

@@ -62,7 +62,10 @@
       <trans-unit id="expenseFieldDate" datatype="html"><source>日期</source><target>Date</target></trans-unit>
       <trans-unit id="expenseFieldDescription" datatype="html"><source>備註</source><target>Notes</target></trans-unit>
       <trans-unit id="expensePayerSummary" datatype="html"><source>付款人</source><target>Paid by</target></trans-unit>
-      <trans-unit id="expenseSplitSummary" datatype="html"><source>平均分攤：目前先記錄為本人支出。</source><target>Equal split: currently recorded as your own expense.</target></trans-unit>
+      <trans-unit id="expenseEditSplitLocked" datatype="html"><source>分攤成員沿用原支出設定。</source><target>Split participants keep the original expense settings.</target></trans-unit>
+      <trans-unit id="expenseParticipantHint" datatype="html"><source>按住 Command 或 Shift 可選取多位成員。</source><target>Hold Command or Shift to select multiple members.</target></trans-unit>
+      <trans-unit id="expenseParticipantsError" datatype="html"><source>請至少選取一位參與者。</source><target>Select at least one participant.</target></trans-unit>
+      <trans-unit id="expenseSplitSummary" datatype="html"><source>平均分攤：將在選取的參與者之間分攤。</source><target>Equal split: shared among the selected participants.</target></trans-unit>
       <trans-unit id="expenseCancel" datatype="html"><source>取消</source><target>Cancel</target></trans-unit>
       <trans-unit id="expenseSave" datatype="html"><source>儲存</source><target>Save</target></trans-unit>
       <trans-unit id="expenseDeleteEyebrow" datatype="html"><source>LabSplit Delete</source><target>LabSplit Delete</target></trans-unit>

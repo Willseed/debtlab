@@ -20,6 +20,7 @@ import {
   ExpenseCategory,
   ExpenseCreateResponse,
   ExpenseListItem,
+  MemberListItem,
 } from './expense-api.service';
 
 declare const $localize: (
@@ -34,7 +35,9 @@ type ExpenseRow = {
   readonly categoryLabel: string;
   readonly amount: number;
   readonly expenseDate: string;
+  readonly paidById: string;
   readonly paidBy: string;
+  readonly participantIds: readonly string[];
   readonly participantsLabel: string;
   readonly description: string;
   readonly canEdit: boolean;
@@ -46,6 +49,8 @@ type ExpenseForm = {
   readonly amount: FormControl<number | null>;
   readonly category: FormControl<ExpenseCategory>;
   readonly expenseDate: FormControl<string>;
+  readonly paidByUserId: FormControl<string>;
+  readonly participantUserIds: FormControl<readonly string[]>;
   readonly description: FormControl<string>;
 };
 
@@ -293,13 +298,58 @@ type ExpenseForm = {
             </label>
           </div>
 
-          <div class="expense-modal__summary expense-modal__field" style="--field-index: 5">
-            <span i18n="Expense payer summary@@expensePayerSummary">付款人</span>
-            <strong>{{ currentUserName() }}</strong>
-            <span i18n="Expense split summary@@expenseSplitSummary"
-              >平均分攤：目前先記錄為本人支出。</span
-            >
-          </div>
+          @if (isEditing()) {
+            <div class="expense-modal__summary expense-modal__field" style="--field-index: 5">
+              <span i18n="Expense payer summary@@expensePayerSummary">付款人</span>
+              <strong>{{ editingExpenseSummary()?.paidBy }}</strong>
+            </div>
+            <div class="expense-modal__summary expense-modal__field" style="--field-index: 6">
+              <span i18n="Expense participants column@@expensesParticipants">參與者</span>
+              <strong>{{ editingExpenseSummary()?.participantsLabel }}</strong>
+              <span i18n="Expense edit split locked@@expenseEditSplitLocked"
+                >分攤成員沿用原支出設定。</span
+              >
+            </div>
+          } @else {
+            <div class="expense-modal__field" style="--field-index: 5">
+              <label class="field">
+                <span i18n="Expense payer summary@@expensePayerSummary">付款人</span>
+                <select formControlName="paidByUserId">
+                  @for (member of activeMemberOptions(); track member.userId) {
+                    <option [value]="member.userId">{{ member.displayName }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+
+            <div class="expense-modal__field" style="--field-index: 6">
+              <label class="field">
+                <span i18n="Expense participants column@@expensesParticipants">參與者</span>
+                <select multiple size="4" formControlName="participantUserIds">
+                  @for (member of activeMemberOptions(); track member.userId) {
+                    <option [value]="member.userId">{{ member.displayName }}</option>
+                  }
+                </select>
+                <span class="muted" i18n="Expense participant select hint@@expenseParticipantHint"
+                  >按住 Command 或 Shift 可選取多位成員。</span
+                >
+                @if (participantsInvalid()) {
+                  <span
+                    class="field__error"
+                    i18n="Expense participants error@@expenseParticipantsError"
+                  >
+                    請至少選取一位參與者。
+                  </span>
+                }
+              </label>
+            </div>
+
+            <div class="expense-modal__summary expense-modal__field" style="--field-index: 7">
+              <span i18n="Expense split summary@@expenseSplitSummary"
+                >平均分攤：將在選取的參與者之間分攤。</span
+              >
+            </div>
+          }
 
           @if (statusMessage()) {
             <p class="field__error" role="status">{{ statusMessage() }}</p>
@@ -487,6 +537,7 @@ export class ExpenseListPageComponent implements OnInit {
     { value: 'lodging', label: this.categoryLabels.lodging },
     { value: 'other', label: this.categoryLabels.other },
   ];
+  protected readonly members = signal<readonly MemberListItem[]>([]);
   protected readonly expenses = signal<readonly ExpenseRow[]>([]);
   protected readonly isCreateModalOpen = signal(false);
   protected readonly isSubmitting = signal(false);
@@ -497,15 +548,14 @@ export class ExpenseListPageComponent implements OnInit {
   protected readonly statusMessage = signal('');
   protected readonly editingExpenseId = signal<string | null>(null);
   protected readonly isEditing = computed(() => this.editingExpenseId() !== null);
+  protected readonly editingExpenseSummary = computed(() => {
+    const editingId = this.editingExpenseId();
+    return editingId ? (this.expenses().find((expense) => expense.id === editingId) ?? null) : null;
+  });
   protected readonly hasDeleteFlowPending = computed(
     () => this.pendingDeleteExpense() !== null || this.deletingExpenseIds().size > 0,
   );
-  protected readonly currentUserName = computed(
-    () =>
-      this.authService.currentUser()?.displayName ??
-      this.authService.currentUser()?.email ??
-      'User',
-  );
+  protected readonly activeMemberOptions = computed(() => this.buildActiveMemberOptions());
 
   protected readonly form = new FormGroup<ExpenseForm>({
     title: new FormControl('', {
@@ -520,6 +570,14 @@ export class ExpenseListPageComponent implements OnInit {
       nonNullable: true,
       validators: [Validators.required],
     }),
+    paidByUserId: new FormControl('', {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
+    participantUserIds: new FormControl<readonly string[]>([], {
+      nonNullable: true,
+      validators: [Validators.required],
+    }),
     description: new FormControl('', {
       nonNullable: true,
       validators: [Validators.maxLength(1000)],
@@ -527,6 +585,7 @@ export class ExpenseListPageComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.loadMembersFromDatabase();
     this.loadExpensesFromDatabase();
   }
 
@@ -539,6 +598,8 @@ export class ExpenseListPageComponent implements OnInit {
       amount: null,
       category: 'other',
       expenseDate: new Date().toISOString().slice(0, 10),
+      paidByUserId: this.defaultPayerId(),
+      participantUserIds: this.defaultParticipantIds(),
       description: '',
     });
     this.isCreateModalOpen.set(true);
@@ -558,6 +619,8 @@ export class ExpenseListPageComponent implements OnInit {
       amount: expense.amount,
       category: expense.category,
       expenseDate: expense.expenseDate,
+      paidByUserId: expense.paidById,
+      participantUserIds: expense.participantIds,
       description: expense.description,
     });
     this.isCreateModalOpen.set(true);
@@ -576,6 +639,8 @@ export class ExpenseListPageComponent implements OnInit {
       amount: null,
       category: 'other',
       expenseDate: new Date().toISOString().slice(0, 10),
+      paidByUserId: this.defaultPayerId(),
+      participantUserIds: this.defaultParticipantIds(),
       description: '',
     });
   }
@@ -612,7 +677,11 @@ export class ExpenseListPageComponent implements OnInit {
       return;
     }
 
-    if (this.form.invalid || this.form.controls.amount.value === null) {
+    if (
+      this.form.invalid ||
+      this.form.controls.amount.value === null ||
+      (!this.isEditing() && this.form.controls.participantUserIds.value.length === 0)
+    ) {
       this.form.markAllAsTouched();
       return;
     }
@@ -636,11 +705,11 @@ export class ExpenseListPageComponent implements OnInit {
           description: formValue.description.trim() || undefined,
           amount,
           currency: 'TWD',
-          paidByUserId: currentUser.id,
+          paidByUserId: formValue.paidByUserId,
           category: formValue.category,
           expenseDate: formValue.expenseDate,
           splitMethod: 'equal',
-          participants: [{ userId: currentUser.id }],
+          participants: formValue.participantUserIds.map((userId) => ({ userId })),
         });
 
     request$.subscribe({
@@ -803,6 +872,19 @@ export class ExpenseListPageComponent implements OnInit {
     });
   }
 
+  private loadMembersFromDatabase(): void {
+    this.expenseApiService.listMembers().subscribe({
+      next: (response) => {
+        this.members.set(response.members);
+        this.syncCreateMemberDefaults();
+      },
+      error: () => {
+        this.members.set([]);
+        this.syncCreateMemberDefaults();
+      },
+    });
+  }
+
   private mapExpenseRow(expense: ExpenseListItem): ExpenseRow {
     return {
       id: expense.id,
@@ -811,7 +893,9 @@ export class ExpenseListPageComponent implements OnInit {
       categoryLabel: this.categoryLabels[expense.category],
       amount: expense.amount,
       expenseDate: expense.expenseDate,
+      paidById: expense.paidBy.id,
       paidBy: expense.paidBy.displayName,
+      participantIds: expense.participants.map((participant) => participant.userId),
       participantsLabel: expense.participants
         .map((participant) => participant.displayName)
         .join(', '),
@@ -819,6 +903,61 @@ export class ExpenseListPageComponent implements OnInit {
       canEdit: expense.canEdit,
       canDelete: expense.canDelete,
     };
+  }
+
+  private buildActiveMemberOptions(): readonly MemberListItem[] {
+    const membersById = new Map<string, MemberListItem>();
+
+    for (const member of this.members()) {
+      if (member.status === 'active') {
+        membersById.set(member.userId, member);
+      }
+    }
+
+    const currentUser = this.authService.currentUser();
+    if (currentUser && !membersById.has(currentUser.id)) {
+      membersById.set(currentUser.id, {
+        userId: currentUser.id,
+        displayName: currentUser.displayName ?? currentUser.email ?? currentUser.id,
+        role: currentUser.role,
+        status: currentUser.status,
+        joinedAt: null,
+      });
+    }
+
+    return [...membersById.values()];
+  }
+
+  private defaultPayerId(): string {
+    const currentUserId = this.authService.currentUser()?.id;
+
+    if (
+      currentUserId &&
+      this.activeMemberOptions().some((member) => member.userId === currentUserId)
+    ) {
+      return currentUserId;
+    }
+
+    return this.activeMemberOptions()[0]?.userId ?? '';
+  }
+
+  private defaultParticipantIds(): readonly string[] {
+    const payerId = this.defaultPayerId();
+    return payerId ? [payerId] : [];
+  }
+
+  private syncCreateMemberDefaults(): void {
+    if (!this.isCreateModalOpen() || this.isEditing()) {
+      return;
+    }
+
+    if (!this.form.controls.paidByUserId.value) {
+      this.form.controls.paidByUserId.setValue(this.defaultPayerId());
+    }
+
+    if (this.form.controls.participantUserIds.value.length === 0) {
+      this.form.controls.participantUserIds.setValue(this.defaultParticipantIds());
+    }
   }
 
   protected titleInvalid(): boolean {
@@ -829,5 +968,10 @@ export class ExpenseListPageComponent implements OnInit {
   protected amountInvalid(): boolean {
     const control = this.form.controls.amount;
     return control.invalid && (control.dirty || control.touched);
+  }
+
+  protected participantsInvalid(): boolean {
+    const control = this.form.controls.participantUserIds;
+    return control.value.length === 0 && (control.dirty || control.touched);
   }
 }

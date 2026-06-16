@@ -19,12 +19,15 @@ const currentUser: SessionUser = {
 
 type FakeExpenseUpdateRow = {
   readonly group_id?: string;
+  readonly paid_by_user_id?: string;
   readonly created_by: string;
   readonly amount: number;
+  readonly split_method?: 'equal' | 'custom' | 'ratio';
 };
 
 type FakeExpenseDeleteRow = {
   readonly group_id: string;
+  readonly paid_by_user_id?: string;
   readonly created_by: string;
   readonly title: string;
   readonly amount: number;
@@ -49,6 +52,7 @@ class FakeExpenseRouteD1 {
   readonly expenseRows: readonly FakeExpenseListRow[];
   readonly participantRows: readonly unknown[];
   readonly expenseDeleteRow: FakeExpenseDeleteRow | null;
+  readonly activeMemberIds: readonly string[];
 
   constructor(
     readonly user: SessionUser = currentUser,
@@ -60,14 +64,17 @@ class FakeExpenseRouteD1 {
     expenseDeleteRow: FakeExpenseDeleteRow | null = expenseOwnerRow
       ? {
           group_id: expenseOwnerRow.group_id ?? 'grp_default',
+          paid_by_user_id: expenseOwnerRow.paid_by_user_id ?? expenseOwnerRow.created_by,
           created_by: expenseOwnerRow.created_by,
           title: 'Route coffee',
           amount: expenseOwnerRow.amount,
           currency: 'TWD',
         }
       : null,
+    activeMemberIds: readonly string[] = [user.id],
   ) {
     this.expenseDeleteRow = expenseDeleteRow;
+    this.activeMemberIds = activeMemberIds;
     this.expenseRows = [
       {
         id: 'exp_route',
@@ -77,8 +84,8 @@ class FakeExpenseRouteD1 {
         currency: 'TWD',
         category: 'ingredients',
         expense_date: '2026-06-14',
-        paid_by_user_id: user.id,
-        paid_by_display_name: user.displayName,
+        paid_by_user_id: expenseOwnerRow?.paid_by_user_id ?? user.id,
+        paid_by_display_name: displayNameForUser(expenseOwnerRow?.paid_by_user_id ?? user.id),
         created_by: expenseOwnerRow?.created_by ?? user.id,
       },
     ];
@@ -159,11 +166,17 @@ class FakeExpenseRouteStatement {
         return null;
       }
 
-      return this.db.expenseDeleteRow as T;
+      return this.db.expenseDeleteRow
+        ? ({
+            ...this.db.expenseDeleteRow,
+            paid_by_user_id:
+              this.db.expenseDeleteRow.paid_by_user_id ?? this.db.expenseDeleteRow.created_by,
+          } as T)
+        : null;
     }
 
     if (
-      this.sql.includes('SELECT group_id, created_by, amount') &&
+      this.sql.includes('SELECT group_id, paid_by_user_id, amount, split_method') &&
       this.sql.includes('FROM expenses')
     ) {
       if (
@@ -173,7 +186,14 @@ class FakeExpenseRouteStatement {
         return null;
       }
 
-      return this.db.expenseOwnerRow as T;
+      return this.db.expenseOwnerRow
+        ? ({
+            ...this.db.expenseOwnerRow,
+            paid_by_user_id:
+              this.db.expenseOwnerRow.paid_by_user_id ?? this.db.expenseOwnerRow.created_by,
+            split_method: this.db.expenseOwnerRow.split_method ?? 'equal',
+          } as T)
+        : null;
     }
 
     if (this.sql.includes('SELECT id') && this.sql.includes('FROM expenses')) {
@@ -192,8 +212,23 @@ class FakeExpenseRouteStatement {
       return { results: this.db.participantRows as readonly T[] };
     }
 
+    if (this.sql.includes('FROM group_members')) {
+      return {
+        results: this.db.activeMemberIds.map((userId) => ({
+          user_id: userId,
+        })) as unknown as readonly T[],
+      };
+    }
+
     return { results: [] };
   }
+}
+
+function displayNameForUser(userId: string): string {
+  if (userId === currentUser.id) return currentUser.displayName;
+  if (userId === 'usr_bob') return 'Bob';
+  if (userId === 'usr_other') return 'Other Member';
+  return userId;
 }
 
 test('GET /api/expenses returns persisted D1 expenses', async () => {
@@ -249,6 +284,40 @@ test('POST /api/expenses writes a lodging self-paid expense', async () => {
   assert.equal(db.batchStatements[0]?.[2]?.[8], 'lodging');
 });
 
+test('POST /api/expenses accepts active default-group payer and participants', async () => {
+  const db = new FakeExpenseRouteD1(
+    currentUser,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: 'usr_bob',
+      created_by: currentUser.id,
+      amount: 420,
+    },
+    undefined,
+    [currentUser.id, 'usr_bob'],
+  );
+  const response = await requestExpenseRoute('/api/expenses', db, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(
+      createExpenseBody({
+        paidByUserId: 'usr_bob',
+        participants: [{ userId: currentUser.id }, { userId: 'usr_bob' }],
+      }),
+    ),
+  });
+
+  assert.equal(response.status, 201);
+  const participantInserts = db.batchStatements[0]?.filter(([sql]) =>
+    sql.includes('INSERT INTO expense_participants'),
+  );
+  assert.equal(participantInserts?.length, 2);
+  assert.equal(participantInserts?.[0]?.[3], currentUser.id);
+  assert.equal(participantInserts?.[1]?.[3], 'usr_bob');
+});
+
 test('POST /api/expenses rejects invalid bodies before D1 writes', async () => {
   const db = new FakeExpenseRouteD1();
   const response = await requestExpenseRoute('/api/expenses', db, {
@@ -263,7 +332,7 @@ test('POST /api/expenses rejects invalid bodies before D1 writes', async () => {
   assert.equal(db.batchStatements.length, 0);
 });
 
-test('POST /api/expenses rejects creating for other users', async () => {
+test('POST /api/expenses rejects inactive or unrelated payer users', async () => {
   const response = await requestExpenseRoute('/api/expenses', new FakeExpenseRouteD1(), {
     method: 'POST',
     headers: {
@@ -306,6 +375,7 @@ test('GET /api/expenses/:expenseId returns authorized non-creator details as rea
     '/api/expenses/exp_route',
     new FakeExpenseRouteD1(currentUser, {
       group_id: 'grp_default',
+      paid_by_user_id: 'usr_other',
       created_by: 'usr_other',
       amount: 420,
     }),
@@ -322,8 +392,8 @@ test('GET /api/expenses/:expenseId returns authorized non-creator details as rea
       category: 'ingredients',
       expenseDate: '2026-06-14',
       paidBy: {
-        id: currentUser.id,
-        displayName: currentUser.displayName,
+        id: 'usr_other',
+        displayName: 'Other Member',
       },
       participants: [
         {
@@ -415,9 +485,10 @@ test('PATCH /api/expenses/:expenseId maps already deleted expenses to not found'
   assert.equal(db.batchStatements.length, 0);
 });
 
-test('PATCH /api/expenses/:expenseId rejects non-creators', async () => {
+test('PATCH /api/expenses/:expenseId rejects non-payers', async () => {
   const db = new FakeExpenseRouteD1(currentUser, {
     group_id: 'grp_default',
+    paid_by_user_id: 'usr_other',
     created_by: 'usr_other',
     amount: 420,
   });
@@ -433,9 +504,28 @@ test('PATCH /api/expenses/:expenseId rejects non-creators', async () => {
     response,
     403,
     'FORBIDDEN',
-    'Only the expense creator may edit or delete this expense.',
+    'Only the expense payer may edit or delete this expense.',
   );
   assert.equal(db.batchStatements.length, 0);
+});
+
+test('PATCH /api/expenses/:expenseId allows payer even when another member recorded it', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, {
+    group_id: 'grp_default',
+    paid_by_user_id: currentUser.id,
+    created_by: 'usr_bob',
+    amount: 420,
+  });
+  const response = await requestExpenseRoute('/api/expenses/exp_route', db, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title: 'Payer update' }),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(db.batchStatements.length, 1);
 });
 
 test('PATCH /api/expenses/:expenseId validates Origin when the app middleware is mounted', async () => {
@@ -482,9 +572,10 @@ test('PATCH /api/expenses/:expenseId validates Origin when the app middleware is
   assert.equal(db.batchStatements.length, 1);
 });
 
-test('DELETE /api/expenses/:expenseId rejects non-creators', async () => {
+test('DELETE /api/expenses/:expenseId rejects non-payers', async () => {
   const db = new FakeExpenseRouteD1(currentUser, {
     group_id: 'grp_default',
+    paid_by_user_id: 'usr_other',
     created_by: 'usr_other',
     amount: 420,
   });
@@ -496,7 +587,7 @@ test('DELETE /api/expenses/:expenseId rejects non-creators', async () => {
     response,
     403,
     'FORBIDDEN',
-    'Only the expense creator may edit or delete this expense.',
+    'Only the expense payer may edit or delete this expense.',
   );
   assert.equal(db.batchStatements.length, 0);
 });

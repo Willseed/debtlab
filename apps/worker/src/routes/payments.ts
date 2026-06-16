@@ -10,6 +10,7 @@ import {
   PaymentCreationForbiddenError,
   PaymentAlreadyConfirmedError,
   PaymentNotFoundError,
+  PaymentTransferNotRelevantError,
   SelfPaymentError,
 } from '../services/payment.service';
 import { AppBindings } from '../types';
@@ -44,6 +45,9 @@ paymentRoutes.post('/', async (c) => {
     }
     if (err instanceof PaymentCreationForbiddenError) {
       return errorResponse(c, 403, 'FORBIDDEN', err.message);
+    }
+    if (err instanceof PaymentTransferNotRelevantError) {
+      return errorResponse(c, 422, 'VALIDATION_ERROR', err.message);
     }
     if (err instanceof PendingPaymentAlreadyExistsError) {
       return errorResponse(c, 409, 'CONFLICT', err.message);

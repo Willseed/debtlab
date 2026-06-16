@@ -65,12 +65,16 @@ test('authenticated member uses authenticated navigation without seeing login or
       readonly displayName: string;
       readonly shareAmount: number;
     }[];
+    readonly canEdit: boolean;
+    readonly canDelete: boolean;
   };
   type ExpenseCreateRequest = {
     readonly title: string;
     readonly amount: number;
     readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
     readonly expenseDate: string;
+    readonly paidByUserId: string;
+    readonly participants: readonly { readonly userId: string }[];
   };
   let persistedExpenses: readonly ExpenseListItem[] = [];
 
@@ -112,6 +116,8 @@ test('authenticated member uses authenticated navigation without seeing login or
               shareAmount: body.amount,
             },
           ],
+          canEdit: true,
+          canDelete: true,
         },
       ];
       await route.fulfill({
@@ -126,6 +132,23 @@ test('authenticated member uses authenticated navigation without seeing login or
       status: 200,
       contentType: 'application/json',
       body: JSON.stringify({ expenses: persistedExpenses, nextCursor: null }),
+    });
+  });
+  await page.route('**/api/members', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        members: [
+          {
+            userId: 'usr_member',
+            displayName: 'Member User',
+            role: 'member',
+            status: 'active',
+            joinedAt: '2026-06-16 09:00:00',
+          },
+        ],
+      }),
     });
   });
   await page.route('**/api/settlements/summary', async (route) => {
@@ -171,7 +194,9 @@ test('authenticated member uses authenticated navigation without seeing login or
     amount: 9600,
     category: 'lodging',
     expenseDate: '2026-06-13',
+    paidByUserId: 'usr_member',
     splitMethod: 'equal',
+    participants: [{ userId: 'usr_member' }],
   });
   await expect(page.getByText('E2E Hotel')).toBeVisible();
   await expect(page.getByText('住宿')).toBeVisible();

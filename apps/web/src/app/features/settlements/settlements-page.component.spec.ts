@@ -140,6 +140,41 @@ describe('SettlementsPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('已記錄並確認付款');
   });
 
+  it('records suggested transfers as any joined member with a balance row', () => {
+    currentUserState.set({
+      id: 'usr_carol',
+      email: 'carol@example.com',
+      displayName: 'Carol',
+      role: 'member',
+      status: 'active',
+    });
+    fixture.detectChanges();
+    http.expectOne('/api/settlements/summary').flush(
+      createSummary({
+        balances: [
+          { userId: 'usr_alice', displayName: 'Alice', net: 300 },
+          { userId: 'usr_bob', displayName: 'Bob', net: -300 },
+          { userId: 'usr_carol', displayName: 'Carol', net: 0 },
+        ],
+      }),
+    );
+    fixture.detectChanges();
+
+    clickButton('記錄付款');
+
+    const post = http.expectOne('/api/payments');
+    expect(post.request.body).toEqual({
+      fromUserId: 'usr_bob',
+      toUserId: 'usr_alice',
+      amount: 300,
+    });
+    post.flush({ payment: { id: 'pay_1', status: 'pending' } });
+    http.expectOne('/api/settlements/summary').flush(createSummary());
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('已記錄付款');
+  });
+
   it('confirms pending payments when the current user is the receiver', () => {
     currentUserState.set({
       id: 'usr_alice',

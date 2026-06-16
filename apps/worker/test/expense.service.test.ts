@@ -16,6 +16,7 @@ import type { SessionUser } from '../src/types';
 
 type FakeExpenseDeleteRow = {
   readonly group_id: string;
+  readonly paid_by_user_id?: string;
   readonly created_by: string;
   readonly title: string;
   readonly amount: number;
@@ -24,8 +25,10 @@ type FakeExpenseDeleteRow = {
 
 type FakeExpenseUpdateRow = {
   readonly group_id: string;
+  readonly paid_by_user_id?: string;
   readonly created_by: string;
   readonly amount: number;
+  readonly split_method?: 'equal' | 'custom' | 'ratio';
 };
 
 class FakeD1Database {
@@ -56,7 +59,9 @@ class FakeD1Database {
     readonly user_id: string;
     readonly display_name: string;
     readonly share_amount: number;
+    readonly share_ratio?: number | null;
   }[] = [];
+  activeMemberIds: readonly string[] = ['usr_alice'];
 
   prepare(sql: string) {
     return new FakeD1PreparedStatement(this, sql);
@@ -102,17 +107,26 @@ class FakeD1PreparedStatement {
         return null;
       }
 
-      return this.db.expenseDeleteRow as T;
+      return {
+        ...this.db.expenseDeleteRow,
+        paid_by_user_id:
+          this.db.expenseDeleteRow.paid_by_user_id ?? this.db.expenseDeleteRow.created_by,
+      } as T;
     }
     if (
-      this.sql.includes('SELECT group_id, created_by, amount') &&
+      this.sql.includes('SELECT group_id, paid_by_user_id, amount, split_method') &&
       this.sql.includes('FROM expenses')
     ) {
       if (!this.db.expenseOwnerRow || this.db.expenseOwnerRow.group_id !== this.values[1]) {
         return null;
       }
 
-      return this.db.expenseOwnerRow as T;
+      return {
+        ...this.db.expenseOwnerRow,
+        paid_by_user_id:
+          this.db.expenseOwnerRow.paid_by_user_id ?? this.db.expenseOwnerRow.created_by,
+        split_method: this.db.expenseOwnerRow.split_method ?? 'equal',
+      } as T;
     }
     return null;
   }
@@ -126,8 +140,29 @@ class FakeD1PreparedStatement {
       return { results: this.db.expenseRows as readonly T[] };
     }
 
+    if (
+      this.sql.includes('SELECT user_id, share_amount, share_ratio') &&
+      this.sql.includes('FROM expense_participants')
+    ) {
+      return {
+        results: this.db.participantRows.map((row) => ({
+          user_id: row.user_id,
+          share_amount: row.share_amount,
+          share_ratio: row.share_ratio ?? null,
+        })) as unknown as readonly T[],
+      };
+    }
+
     if (this.sql.includes('FROM expense_participants ep')) {
       return { results: this.db.participantRows as readonly T[] };
+    }
+
+    if (this.sql.includes('FROM group_members')) {
+      return {
+        results: this.db.activeMemberIds.map((userId) => ({
+          user_id: userId,
+        })) as unknown as readonly T[],
+      };
     }
 
     return { results: [] };
@@ -181,6 +216,19 @@ test('createExpense persists group, membership, expense, shares, and audit log',
   assert.match(String(db.statements[0]?.[4]?.[0]), /INSERT INTO audit_logs/u);
   assert.equal(db.statements[0]?.[2]?.[3], 'Lab ingredients');
   assert.equal(db.statements[0]?.[3]?.[3], 'usr_alice');
+});
+
+test('createExpense stores a null description when no note is provided', async () => {
+  const db = new FakeD1Database();
+
+  await createExpense(
+    db as unknown as D1Database,
+    sessionUser,
+    { ...expenseInput, description: undefined },
+    shares,
+  );
+
+  assert.equal(db.statements[0]?.[2]?.[4], null);
 });
 
 test('listExpenses reads persisted expenses with payer and participant data', async () => {
@@ -327,9 +375,14 @@ test('updateExpense rejects unknown expenses', async () => {
   );
 });
 
-test('updateExpense rejects non-creators before D1 writes', async () => {
+test('updateExpense rejects non-payers before D1 writes', async () => {
   const db = new FakeD1Database();
-  db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_bob', amount: 500 };
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
+    created_by: 'usr_bob',
+    amount: 500,
+  };
 
   await assert.rejects(
     () =>
@@ -339,6 +392,24 @@ test('updateExpense rejects non-creators before D1 writes', async () => {
     ExpenseForbiddenError,
   );
   assert.equal(db.statements.length, 0);
+});
+
+test('updateExpense allows the payer even when another member created the record', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_bob',
+    amount: 500,
+  };
+
+  await updateExpense(db as unknown as D1Database, sessionUser, 'exp_recorded_by_bob', {
+    title: 'Payer-owned update',
+  });
+
+  assert.equal(db.statements.length, 1);
+  assert.match(String(db.statements[0]?.[0]?.[0]), /paid_by_user_id = \?/u);
+  assert.equal(db.statements[0]?.[0]?.[9], 'usr_alice');
 });
 
 test('updateExpense ignores expenses outside the default group', async () => {
@@ -381,17 +452,33 @@ test('updateExpense persists field updates and audit log without touching shares
 test('updateExpense rewrites participant shares when the amount changes', async () => {
   const db = new FakeD1Database();
   db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_alice', amount: 1000 };
+  db.participantRows = [
+    {
+      expense_id: 'exp_alice',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 500,
+    },
+    {
+      expense_id: 'exp_alice',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 500,
+    },
+  ];
 
   await updateExpense(db as unknown as D1Database, sessionUser, 'exp_alice', {
-    amount: 2500,
+    amount: 2501,
   });
 
   const batch = db.statements[0];
-  assert.equal(batch?.length, 3);
+  assert.equal(batch?.length, 4);
   assert.match(String(batch?.[0]?.[0]), /UPDATE expenses/u);
   assert.match(String(batch?.[1]?.[0]), /UPDATE expense_participants/u);
-  assert.equal(batch?.[1]?.[1], 2500);
-  assert.match(String(batch?.[2]?.[0]), /INSERT INTO audit_logs/u);
+  assert.equal(batch?.[1]?.[1], 1251);
+  assert.equal(batch?.[2]?.[1], 1250);
+  assert.equal(Number(batch?.[1]?.[1]) + Number(batch?.[2]?.[1]), 2501);
+  assert.match(String(batch?.[3]?.[0]), /INSERT INTO audit_logs/u);
 });
 
 test('updateExpense passes through a null description so it clears the stored value', async () => {
@@ -428,10 +515,11 @@ test('deleteExpense rejects missing or already deleted expenses before D1 writes
   assert.equal(db.statements.length, 0);
 });
 
-test('deleteExpense rejects non-creators before D1 writes', async () => {
+test('deleteExpense rejects non-payers before D1 writes', async () => {
   const db = new FakeD1Database();
   db.expenseDeleteRow = {
     group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
     created_by: 'usr_bob',
     title: 'Lab ingredients',
     amount: 1280,
@@ -445,7 +533,7 @@ test('deleteExpense rejects non-creators before D1 writes', async () => {
   assert.equal(db.statements.length, 0);
 });
 
-test('deleteExpense lets creators soft delete default-group expenses', async () => {
+test('deleteExpense lets payers soft delete default-group expenses', async () => {
   const db = new FakeD1Database();
 
   await deleteExpense(db as unknown as D1Database, sessionUser, 'exp_alice');
@@ -467,6 +555,7 @@ test('deleteExpense lets creators soft delete default-group expenses', async () 
       title: 'Lab ingredients',
       amount: 1280,
       currency: 'TWD',
+      paidByUserId: 'usr_alice',
       createdBy: 'usr_alice',
     }),
   );

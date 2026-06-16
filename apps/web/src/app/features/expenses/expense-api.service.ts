@@ -15,7 +15,7 @@ export type ExpenseCreateRequest = {
   readonly category: ExpenseCategory;
   readonly expenseDate: string;
   readonly splitMethod: 'equal';
-  readonly participants: readonly [{ readonly userId: string }];
+  readonly participants: readonly { readonly userId: string }[];
 };
 
 export type ExpenseCreateResponse = {
@@ -62,6 +62,18 @@ export type ExpenseDeleteResponse = {
   readonly ok: true;
 };
 
+export type MemberListItem = {
+  readonly userId: string;
+  readonly displayName: string;
+  readonly role: 'member' | 'admin';
+  readonly status: 'active' | 'disabled' | 'pending';
+  readonly joinedAt: string | null;
+};
+
+export type MemberListResponse = {
+  readonly members: readonly MemberListItem[];
+};
+
 @Injectable({ providedIn: 'root' })
 export class ExpenseApiService {
   private readonly http = inject(HttpClient);
@@ -87,5 +99,9 @@ export class ExpenseApiService {
 
   deleteExpense(expenseId: string): Observable<ExpenseDeleteResponse> {
     return this.http.delete<ExpenseDeleteResponse>(`${this.apiBaseUrl}/expenses/${expenseId}`);
+  }
+
+  listMembers(): Observable<MemberListResponse> {
+    return this.http.get<MemberListResponse>(`${this.apiBaseUrl}/members`);
   }
 }

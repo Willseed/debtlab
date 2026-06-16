@@ -68,22 +68,24 @@
   align-items: center;
   border: 1px solid;
   border-radius: var(--radius-md);
+  box-sizing: border-box;
   cursor: pointer;
   display: inline-flex;
-  font-family: Arial, 'Helvetica Neue', sans-serif;
-  font-size: 0.875rem;
+  font: inherit;
+  font-size: 1rem;
   font-weight: 700;
-  gap: 0;
   justify-content: center;
-  line-height: 1.25rem;
-  min-height: 44px;
-  min-width: 44px;
-  padding: 0;
+  line-height: 1.25;
+  min-height: 3.5rem;
+  min-width: min(100%, 17rem);
+  padding: 0 var(--space-5);
   text-decoration: none;
   transition:
+    background-color 140ms ease,
     border-color 140ms ease,
     box-shadow 140ms ease,
     transform 140ms ease;
+  width: 100%;
 }
 
 .oauth-button:hover {
@@ -108,31 +110,18 @@
 }
 
 .oauth-button--apple {
-  background: #fff;
-  border-color: #000;
-  color: #000;
+  background: #000;
+  border-color: #fff;
+  color: #fff;
 }
 
 .oauth-button--apple:hover {
-  background: #f5f5f7;
-  border-color: #000;
+  background: #1d1d1f;
+  border-color: #fff;
 }
 
-.oauth-button__icon {
-  align-items: center;
-  display: inline-flex;
-  flex: 0 0 auto;
-  justify-content: center;
-}
-
-.oauth-button__logo--google {
-  height: 18px;
-  width: 18px;
-}
-
-.oauth-button__logo--apple {
-  height: 20px;
-  width: 20px;
+.oauth-button__text {
+  display: inline-block;
 }
 
 .action-group {

@@ -1,9 +1,11 @@
+import {
+  createDefaultGroupMembershipStatements,
+  DEFAULT_GROUP_ID,
+  listActiveDefaultGroupMemberIdsForUsers,
+} from './default-group.service';
 import { CalculatedShare } from './split.service';
 import { SessionUser } from '../types';
 import { ExpenseCreateInput, ExpenseUpdateInput } from '../validation/schemas';
-
-const DEFAULT_GROUP_ID = 'grp_default';
-const DEFAULT_GROUP_NAME = 'Default Lab';
 
 export class ExpenseNotFoundError extends Error {
   constructor() {
@@ -14,19 +16,28 @@ export class ExpenseNotFoundError extends Error {
 
 export class ExpenseForbiddenError extends Error {
   constructor() {
-    super('Only the expense creator may edit or delete this expense.');
+    super('Only the expense payer may edit or delete this expense.');
     this.name = 'ExpenseForbiddenError';
+  }
+}
+
+export class ExpenseInvalidParticipantsError extends Error {
+  constructor() {
+    super('Expense payer and participants must be active default-group members.');
+    this.name = 'ExpenseInvalidParticipantsError';
   }
 }
 
 type ExpenseUpdateRow = {
   readonly group_id: string;
-  readonly created_by: string;
+  readonly paid_by_user_id: string;
   readonly amount: number;
+  readonly split_method: ExpenseCreateInput['splitMethod'];
 };
 
 type ExpenseDeleteRow = {
   readonly group_id: string;
+  readonly paid_by_user_id: string;
   readonly created_by: string;
   readonly title: string;
   readonly amount: number;
@@ -53,6 +64,12 @@ type ExpenseParticipantRow = {
   readonly share_amount: number;
 };
 
+type ExpenseParticipantShareRow = {
+  readonly user_id: string;
+  readonly share_amount: number;
+  readonly share_ratio: number | null;
+};
+
 export type ExpenseListItem = {
   readonly id: string;
   readonly title: string;
@@ -73,6 +90,26 @@ export type ExpenseListItem = {
   readonly canEdit: boolean;
   readonly canDelete: boolean;
 };
+
+export async function validateExpenseMembers(
+  db: D1Database,
+  user: SessionUser,
+  input: ExpenseCreateInput,
+): Promise<void> {
+  const requestedUserIds = [
+    ...new Set([
+      input.paidByUserId,
+      ...input.participants.map((participant) => participant.userId),
+    ]),
+  ];
+  const validMemberIds = await listActiveDefaultGroupMemberIdsForUsers(db, requestedUserIds);
+  const allowedMemberIds = new Set(validMemberIds);
+  allowedMemberIds.add(user.id);
+
+  if (requestedUserIds.some((userId) => !allowedMemberIds.has(userId))) {
+    throw new ExpenseInvalidParticipantsError();
+  }
+}
 
 export async function createExpense(
   db: D1Database,
@@ -98,18 +135,7 @@ export async function createExpense(
   );
 
   await db.batch([
-    db
-      .prepare(
-        `INSERT OR IGNORE INTO groups (id, name, description, currency, created_by)
-         VALUES (?, ?, ?, 'TWD', ?)`,
-      )
-      .bind(DEFAULT_GROUP_ID, DEFAULT_GROUP_NAME, 'Default lab expense group', user.id),
-    db
-      .prepare(
-        `INSERT OR IGNORE INTO group_members (id, group_id, user_id, role, status)
-         VALUES (?, ?, ?, ?, 'active')`,
-      )
-      .bind(crypto.randomUUID(), DEFAULT_GROUP_ID, user.id, user.role),
+    ...createDefaultGroupMembershipStatements(db, user),
     db
       .prepare(
         `INSERT INTO expenses (
@@ -265,7 +291,7 @@ export async function updateExpense(
 ): Promise<void> {
   const expense = await db
     .prepare(
-      `SELECT group_id, created_by, amount
+      `SELECT group_id, paid_by_user_id, amount, split_method
        FROM expenses
        WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
     )
@@ -276,7 +302,7 @@ export async function updateExpense(
     throw new ExpenseNotFoundError();
   }
 
-  if (expense.created_by !== user.id) {
+  if (expense.paid_by_user_id !== user.id) {
     throw new ExpenseForbiddenError();
   }
 
@@ -291,7 +317,7 @@ export async function updateExpense(
              category = COALESCE(?, category),
              expense_date = COALESCE(?, expense_date),
              updated_at = datetime('now', '+8 hours')
-         WHERE id = ? AND group_id = ? AND created_by = ? AND deleted_at IS NULL`,
+         WHERE id = ? AND group_id = ? AND paid_by_user_id = ? AND deleted_at IS NULL`,
       )
       .bind(
         input.title ?? null,
@@ -307,14 +333,23 @@ export async function updateExpense(
   ];
 
   if (input.amount !== undefined && input.amount !== expense.amount) {
+    const participantShares = await listExpenseParticipantShares(db, expenseId);
+    const updatedShares = recalculateParticipantShares(
+      input.amount,
+      expense.split_method,
+      participantShares,
+    );
+
     statements.push(
-      db
-        .prepare(
-          `UPDATE expense_participants
-           SET share_amount = ?
-           WHERE expense_id = ?`,
-        )
-        .bind(input.amount, expenseId),
+      ...updatedShares.map((share) =>
+        db
+          .prepare(
+            `UPDATE expense_participants
+             SET share_amount = ?, share_ratio = ?
+             WHERE expense_id = ? AND user_id = ?`,
+          )
+          .bind(share.share_amount, share.share_ratio, expenseId, share.user_id),
+      ),
     );
   }
 
@@ -337,7 +372,7 @@ export async function deleteExpense(
 ): Promise<void> {
   const expense = await db
     .prepare(
-      `SELECT group_id, created_by, title, amount, currency
+      `SELECT group_id, paid_by_user_id, created_by, title, amount, currency
        FROM expenses
        WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
     )
@@ -348,7 +383,7 @@ export async function deleteExpense(
     throw new ExpenseNotFoundError();
   }
 
-  if (expense.created_by !== user.id) {
+  if (expense.paid_by_user_id !== user.id) {
     throw new ExpenseForbiddenError();
   }
 
@@ -357,6 +392,7 @@ export async function deleteExpense(
     title: expense.title,
     amount: expense.amount,
     currency: expense.currency,
+    paidByUserId: expense.paid_by_user_id,
     createdBy: expense.created_by,
   });
 
@@ -366,7 +402,7 @@ export async function deleteExpense(
         `UPDATE expenses
          SET deleted_at = datetime('now', '+8 hours'),
             updated_at = datetime('now', '+8 hours')
-         WHERE id = ? AND group_id = ? AND created_by = ? AND deleted_at IS NULL`,
+         WHERE id = ? AND group_id = ? AND paid_by_user_id = ? AND deleted_at IS NULL`,
       )
       .bind(expenseId, DEFAULT_GROUP_ID, user.id),
     db
@@ -388,7 +424,7 @@ function mapExpenseListItem(
   participantsByExpenseId: ReadonlyMap<string, ExpenseListItem['participants']>,
   user: SessionUser,
 ): ExpenseListItem {
-  const canManage = row.created_by === user.id;
+  const canManage = row.paid_by_user_id === user.id;
 
   return {
     id: row.id,
@@ -406,6 +442,132 @@ function mapExpenseListItem(
     canEdit: canManage,
     canDelete: canManage,
   };
+}
+
+async function listExpenseParticipantShares(
+  db: D1Database,
+  expenseId: string,
+): Promise<readonly ExpenseParticipantShareRow[]> {
+  const result = await db
+    .prepare(
+      `SELECT user_id, share_amount, share_ratio
+       FROM expense_participants
+       WHERE expense_id = ?
+       ORDER BY user_id ASC`,
+    )
+    .bind(expenseId)
+    .all<ExpenseParticipantShareRow>();
+
+  return result.results ?? [];
+}
+
+function recalculateParticipantShares(
+  amount: number,
+  splitMethod: ExpenseCreateInput['splitMethod'],
+  participants: readonly ExpenseParticipantShareRow[],
+): readonly ExpenseParticipantShareRow[] {
+  if (participants.length === 0) {
+    throw new Error('Existing expense participants are required for amount updates.');
+  }
+
+  if (splitMethod === 'ratio') {
+    return recalculateRatioParticipantShares(amount, participants);
+  }
+
+  if (splitMethod === 'custom') {
+    return recalculateCustomParticipantShares(amount, participants);
+  }
+
+  const baseShare = Math.floor(amount / participants.length);
+  const remainder = amount % participants.length;
+
+  return participants.map((participant, index) => ({
+    ...participant,
+    share_amount: baseShare + (index < remainder ? 1 : 0),
+  }));
+}
+
+function recalculateRatioParticipantShares(
+  amount: number,
+  participants: readonly ExpenseParticipantShareRow[],
+): readonly ExpenseParticipantShareRow[] {
+  const ratioParticipants = participants.map((participant, index) => {
+    const ratio = participant.share_ratio;
+
+    if (ratio === null || ratio <= 0 || !Number.isFinite(ratio)) {
+      throw new Error('Existing ratio split cannot be recalculated.');
+    }
+
+    return { ...participant, index, ratio };
+  });
+  const totalRatio = ratioParticipants.reduce((sum, participant) => sum + participant.ratio, 0);
+  const floors = ratioParticipants.map((participant) => {
+    const exactShare = (amount * participant.ratio) / totalRatio;
+    const floorShare = Math.floor(exactShare);
+
+    return {
+      ...participant,
+      share_amount: floorShare,
+      fractionalRemainder: exactShare - floorShare,
+    };
+  });
+  const floorTotal = floors.reduce((sum, participant) => sum + participant.share_amount, 0);
+  const remainder = amount - floorTotal;
+  const winners = new Set(
+    [...floors]
+      .sort((left, right) => {
+        const fractionDelta = right.fractionalRemainder - left.fractionalRemainder;
+        return fractionDelta === 0 ? left.index - right.index : fractionDelta;
+      })
+      .slice(0, remainder)
+      .map((participant) => participant.index),
+  );
+
+  return floors.map((participant) => ({
+    user_id: participant.user_id,
+    share_amount: participant.share_amount + (winners.has(participant.index) ? 1 : 0),
+    share_ratio: participant.share_ratio,
+  }));
+}
+
+function recalculateCustomParticipantShares(
+  amount: number,
+  participants: readonly ExpenseParticipantShareRow[],
+): readonly ExpenseParticipantShareRow[] {
+  const currentTotal = participants.reduce((sum, participant) => sum + participant.share_amount, 0);
+
+  if (currentTotal <= 0) {
+    throw new Error('Existing custom split cannot be recalculated.');
+  }
+
+  const floors = participants.map((participant, index) => {
+    const exactShare = (amount * participant.share_amount) / currentTotal;
+    const floorShare = Math.floor(exactShare);
+
+    return {
+      ...participant,
+      index,
+      share_amount: floorShare,
+      fractionalRemainder: exactShare - floorShare,
+    };
+  });
+  const floorTotal = floors.reduce((sum, participant) => sum + participant.share_amount, 0);
+  const remainder = amount - floorTotal;
+  const winners = new Set(
+    [...floors]
+      .sort((left, right) => {
+        const fractionDelta = right.fractionalRemainder - left.fractionalRemainder;
+        return fractionDelta === 0 ? left.index - right.index : fractionDelta;
+      })
+      .slice(0, remainder)
+      .map((participant) => participant.index),
+  );
+
+  return floors.map((participant) => ({
+    user_id: participant.user_id,
+    share_amount: participant.share_amount + (winners.has(participant.index) ? 1 : 0),
+    share_ratio: participant.share_ratio,
+  }));
 }
 
 async function listParticipantsByExpenseId(

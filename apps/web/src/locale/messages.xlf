@@ -762,7 +762,7 @@
         <source> 給任何人使用的共同支出拆帳儀表板。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">19,24</context>
+          <context context-type="linenumber">19,23</context>
         </context-group>
         <note priority="1" from="description">Landing hero subtitle</note>
       </trans-unit>
@@ -770,7 +770,7 @@
         <source>登入提供者</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">25,28</context>
+          <context context-type="linenumber">26,29</context>
         </context-group>
         <note priority="1" from="description">OAuth provider group</note>
       </trans-unit>
@@ -778,7 +778,7 @@
         <source> 使用 Google 繼續 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">57,61</context>
+          <context context-type="linenumber">39,43</context>
         </context-group>
         <note priority="1" from="description">Google login</note>
       </trans-unit>
@@ -786,7 +786,7 @@
         <source> 使用 Apple 繼續 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">78,82</context>
+          <context context-type="linenumber">53,57</context>
         </context-group>
         <note priority="1" from="description">Apple login</note>
       </trans-unit>
@@ -794,7 +794,7 @@
         <source> 登入未完成：你的帳號已停用，請聯絡管理員。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">88,93</context>
+          <context context-type="linenumber">63,68</context>
         </context-group>
         <note priority="1" from="description">OAuth login inactive user error</note>
       </trans-unit>
@@ -802,7 +802,7 @@
         <source> 登入未完成，請稍後再試或聯絡管理員。 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">96,102</context>
+          <context context-type="linenumber">71,77</context>
         </context-group>
         <note priority="1" from="description">OAuth login generic error</note>
       </trans-unit>
@@ -810,7 +810,7 @@
         <source> 前往儀表板 </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
-          <context context-type="linenumber">105,112</context>
+          <context context-type="linenumber">80,87</context>
         </context-group>
         <note priority="1" from="description">Dashboard CTA</note>
       </trans-unit>

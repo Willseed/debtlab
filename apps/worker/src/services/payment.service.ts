@@ -1,7 +1,7 @@
+import { DEFAULT_GROUP_ID, listActiveDefaultGroupMemberIds } from './default-group.service';
+import { calculateBalances, calculateSuggestedTransfers } from './settlement.service';
 import { SessionUser } from '../types';
 import { PaymentCreateInput } from '../validation/schemas';
-
-const DEFAULT_GROUP_ID = 'grp_default';
 
 export class PaymentNotFoundError extends Error {
   constructor() {
@@ -26,8 +26,15 @@ export class ForbiddenError extends Error {
 
 export class PaymentCreationForbiddenError extends Error {
   constructor() {
-    super('Only the payment sender, receiver, or an admin may record a payment.');
+    super('Only an active default-group member or an admin may record a payment.');
     this.name = 'PaymentCreationForbiddenError';
+  }
+}
+
+export class PaymentTransferNotRelevantError extends Error {
+  constructor() {
+    super('Payment must match an outstanding suggested transfer.');
+    this.name = 'PaymentTransferNotRelevantError';
   }
 }
 
@@ -131,11 +138,33 @@ export async function createPayment(
     throw new SelfPaymentError();
   }
 
-  const userCanRecordPayment =
-    input.fromUserId === user.id || input.toUserId === user.id || user.role === 'admin';
+  const [activeMemberIds, settlementData] = await Promise.all([
+    listActiveDefaultGroupMemberIds(db),
+    loadSettlementData(db),
+  ]);
+  const userCanRecordPayment = user.role === 'admin' || activeMemberIds.has(user.id);
+  const transferPartiesAreActive =
+    activeMemberIds.has(input.fromUserId) && activeMemberIds.has(input.toUserId);
 
-  if (!userCanRecordPayment) {
+  if (!userCanRecordPayment || !transferPartiesAreActive) {
     throw new PaymentCreationForbiddenError();
+  }
+
+  const settledPayments = settlementData.payments.map((payment) => ({
+    fromUserId: payment.fromUserId,
+    toUserId: payment.toUserId,
+    amount: payment.amount,
+    status: payment.status,
+  }));
+  const suggestedTransfers = calculateSuggestedTransfers(
+    calculateBalances(settlementData.members, settlementData.expenses, settledPayments),
+  );
+  const matchingTransfer = suggestedTransfers.find(
+    (transfer) => transfer.fromUserId === input.fromUserId && transfer.toUserId === input.toUserId,
+  );
+
+  if (!matchingTransfer || input.amount > matchingTransfer.amount) {
+    throw new PaymentTransferNotRelevantError();
   }
 
   const duplicatePendingPayment = await db

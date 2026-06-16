@@ -87,7 +87,8 @@ Supported roles:
 - Guest: can view the landing page and start OAuth login; cannot access
   authenticated data.
 - Active authenticated member: can view dashboard, expenses, settlements,
-  balances, create, edit, and soft-delete expenses, record payments, confirm
+  balances, create expenses for active default-group members, edit and
+  soft-delete expenses they paid, record suggested-transfer payments, confirm
   received payments, and unlock enabled Easter eggs.
 - Admin: can perform active member actions plus manage roles/status, view audit
   logs, export CSV, and configure Easter eggs.
@@ -227,9 +228,10 @@ Core API areas:
 
 - Auth: Google start/callback, Apple auth, logout, current user.
 - Members: list and admin status/role management.
-- Expenses: list/detail/create/update/soft-delete for authenticated active
-  members.
-- Settlements/payments: summary, payment create, receiver/admin confirmation.
+- Expenses: list/detail/create for authenticated active members; update and
+  soft-delete are payer-only.
+- Settlements/payments: summary, active-member suggested-transfer payment create,
+  receiver/admin confirmation.
 - Admin: audit log view, member administration, CSV export, Easter egg
   configuration.
 
