@@ -423,7 +423,6 @@ describe('SettlementsPageComponent', () => {
     request.flush(summary);
     fixture.detectChanges();
   }
-
 });
 
 function clickButton(label: string): void {
