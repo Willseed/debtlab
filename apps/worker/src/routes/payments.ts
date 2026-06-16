@@ -6,6 +6,7 @@ import {
   confirmPayment,
   createPayment,
   ForbiddenError,
+  PendingPaymentAlreadyExistsError,
   PaymentCreationForbiddenError,
   PaymentAlreadyConfirmedError,
   PaymentNotFoundError,
@@ -35,14 +36,17 @@ paymentRoutes.post('/', async (c) => {
   const user = c.get('currentUser');
 
   try {
-    const paymentId = await createPayment(c.env.DB, user, parsed.data);
-    return c.json({ payment: { id: paymentId } }, 201);
+    const payment = await createPayment(c.env.DB, user, parsed.data);
+    return c.json({ payment }, 201);
   } catch (err) {
     if (err instanceof SelfPaymentError) {
       return errorResponse(c, 422, 'VALIDATION_ERROR', err.message);
     }
     if (err instanceof PaymentCreationForbiddenError) {
       return errorResponse(c, 403, 'FORBIDDEN', err.message);
+    }
+    if (err instanceof PendingPaymentAlreadyExistsError) {
+      return errorResponse(c, 409, 'CONFLICT', err.message);
     }
     throw err;
   }

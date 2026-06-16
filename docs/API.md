@@ -108,7 +108,9 @@ Admin only. Updates role or status and writes audit logs for role/status changes
 
 ### GET `/api/expenses`
 
-Authenticated. Supports filters:
+Authenticated. Returns expenses the caller may view as creator, active group
+member, or participant. Each expense includes `canEdit` and `canDelete`
+permissions; only creators receive `true`. Supports filters:
 
 ```txt
 from
@@ -138,17 +140,18 @@ ratio
 
 ### GET `/api/expenses/:expenseId`
 
-Authenticated. Returns the expense detail with participant shares.
+Authenticated. Returns the expense detail with participant shares for callers
+authorized as creator, active group member, or participant.
 
 ### PATCH `/api/expenses/:expenseId`
 
-Any authenticated active member may edit default-group expenses. Deleted
-expenses cannot be edited.
+Only the expense creator may edit default-group expenses. Deleted expenses
+cannot be edited.
 
 ### DELETE `/api/expenses/:expenseId`
 
-Any authenticated active member may soft-delete default-group expenses by
-setting `deleted_at`.
+Only the expense creator may soft-delete default-group expenses by setting
+`deleted_at`.
 
 ## Settlements
 
@@ -190,8 +193,21 @@ Soft-deleted expenses are ignored. Pending payments do not reduce balances. Conf
 
 ### POST `/api/payments`
 
-Authenticated sender only. Records a pending payment and writes an audit log.
-The sender and receiver must be different users.
+Authenticated sender, receiver, or admin only. The sender and receiver must be
+different users. A sender-created payment is pending until the receiver or admin
+confirms it. A receiver-created or admin-created payment is recorded as
+confirmed immediately, because those roles are already authorized to confirm the
+payment. Duplicate pending payments for the same sender/receiver pair are
+rejected with `409 CONFLICT`. Payment creation writes an audit log; immediate
+confirmation also writes a confirmation audit log.
+
+Response (`status` is `pending` or `confirmed`):
+
+```json
+{
+  "payment": { "id": "pay_1", "status": "pending" }
+}
+```
 
 ### PATCH `/api/payments/:paymentId/confirm`
 

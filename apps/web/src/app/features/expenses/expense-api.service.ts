@@ -46,6 +46,8 @@ export type ExpenseListItem = {
     readonly displayName: string;
     readonly shareAmount: number;
   }[];
+  readonly canEdit: boolean;
+  readonly canDelete: boolean;
 };
 
 export type ExpenseUpdateRequest = {

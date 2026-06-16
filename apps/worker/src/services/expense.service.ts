@@ -12,7 +12,16 @@ export class ExpenseNotFoundError extends Error {
   }
 }
 
+export class ExpenseForbiddenError extends Error {
+  constructor() {
+    super('Only the expense creator may edit or delete this expense.');
+    this.name = 'ExpenseForbiddenError';
+  }
+}
+
 type ExpenseUpdateRow = {
+  readonly group_id: string;
+  readonly created_by: string;
   readonly amount: number;
 };
 
@@ -34,6 +43,7 @@ type ExpenseListRow = {
   readonly expense_date: string;
   readonly paid_by_user_id: string;
   readonly paid_by_display_name: string;
+  readonly created_by: string;
 };
 
 type ExpenseParticipantRow = {
@@ -60,6 +70,8 @@ export type ExpenseListItem = {
     readonly displayName: string;
     readonly shareAmount: number;
   }[];
+  readonly canEdit: boolean;
+  readonly canDelete: boolean;
 };
 
 export async function createExpense(
@@ -150,7 +162,10 @@ export async function createExpense(
   return expenseId;
 }
 
-export async function listExpenses(db: D1Database): Promise<readonly ExpenseListItem[]> {
+export async function listExpenses(
+  db: D1Database,
+  user: SessionUser,
+): Promise<readonly ExpenseListItem[]> {
   const result = await db
     .prepare(
       `SELECT
@@ -162,14 +177,28 @@ export async function listExpenses(db: D1Database): Promise<readonly ExpenseList
          e.category,
          e.expense_date,
          e.paid_by_user_id,
-         COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name
+        COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name,
+        e.created_by
        FROM expenses e
        INNER JOIN users payer ON payer.id = e.paid_by_user_id
        WHERE e.group_id = ? AND e.deleted_at IS NULL
+         AND (
+           e.created_by = ?
+           OR EXISTS (
+             SELECT 1
+             FROM group_members gm
+             WHERE gm.group_id = e.group_id AND gm.user_id = ? AND gm.status = 'active'
+           )
+           OR EXISTS (
+             SELECT 1
+             FROM expense_participants ep
+             WHERE ep.expense_id = e.id AND ep.user_id = ?
+           )
+         )
        ORDER BY e.expense_date DESC, e.created_at DESC, e.id DESC
        LIMIT 100`,
     )
-    .bind(DEFAULT_GROUP_ID)
+    .bind(DEFAULT_GROUP_ID, user.id, user.id, user.id)
     .all<ExpenseListRow>();
   const rows = result.results ?? [];
 
@@ -179,20 +208,53 @@ export async function listExpenses(db: D1Database): Promise<readonly ExpenseList
 
   const participantsByExpenseId = await listParticipantsByExpenseId(db);
 
-  return rows.map((row) => ({
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    amount: row.amount,
-    currency: row.currency,
-    category: row.category,
-    expenseDate: row.expense_date,
-    paidBy: {
-      id: row.paid_by_user_id,
-      displayName: row.paid_by_display_name,
-    },
-    participants: participantsByExpenseId.get(row.id) ?? [],
-  }));
+  return rows.map((row) => mapExpenseListItem(row, participantsByExpenseId, user));
+}
+
+export async function getExpense(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+): Promise<ExpenseListItem> {
+  const row = await db
+    .prepare(
+      `SELECT
+         e.id,
+         e.title,
+         e.description,
+         e.amount,
+         e.currency,
+         e.category,
+         e.expense_date,
+         e.paid_by_user_id,
+         COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name,
+         e.created_by
+       FROM expenses e
+       INNER JOIN users payer ON payer.id = e.paid_by_user_id
+       WHERE e.id = ? AND e.group_id = ? AND e.deleted_at IS NULL
+         AND (
+           e.created_by = ?
+           OR EXISTS (
+             SELECT 1
+             FROM group_members gm
+             WHERE gm.group_id = e.group_id AND gm.user_id = ? AND gm.status = 'active'
+           )
+           OR EXISTS (
+             SELECT 1
+             FROM expense_participants ep
+             WHERE ep.expense_id = e.id AND ep.user_id = ?
+           )
+         )`,
+    )
+    .bind(expenseId, DEFAULT_GROUP_ID, user.id, user.id, user.id)
+    .first<ExpenseListRow>();
+
+  if (!row) {
+    throw new ExpenseNotFoundError();
+  }
+
+  const participantsByExpenseId = await listParticipantsByExpenseId(db);
+  return mapExpenseListItem(row, participantsByExpenseId, user);
 }
 
 export async function updateExpense(
@@ -203,7 +265,7 @@ export async function updateExpense(
 ): Promise<void> {
   const expense = await db
     .prepare(
-      `SELECT amount
+      `SELECT group_id, created_by, amount
        FROM expenses
        WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
     )
@@ -212,6 +274,10 @@ export async function updateExpense(
 
   if (!expense) {
     throw new ExpenseNotFoundError();
+  }
+
+  if (expense.created_by !== user.id) {
+    throw new ExpenseForbiddenError();
   }
 
   const descriptionProvided = input.description === undefined ? 0 : 1;
@@ -225,7 +291,7 @@ export async function updateExpense(
              category = COALESCE(?, category),
              expense_date = COALESCE(?, expense_date),
              updated_at = datetime('now', '+8 hours')
-         WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
+         WHERE id = ? AND group_id = ? AND created_by = ? AND deleted_at IS NULL`,
       )
       .bind(
         input.title ?? null,
@@ -236,6 +302,7 @@ export async function updateExpense(
         input.expenseDate ?? null,
         expenseId,
         DEFAULT_GROUP_ID,
+        user.id,
       ),
   ];
 
@@ -281,6 +348,10 @@ export async function deleteExpense(
     throw new ExpenseNotFoundError();
   }
 
+  if (expense.created_by !== user.id) {
+    throw new ExpenseForbiddenError();
+  }
+
   const beforeJson = JSON.stringify({
     groupId: expense.group_id,
     title: expense.title,
@@ -295,9 +366,9 @@ export async function deleteExpense(
         `UPDATE expenses
          SET deleted_at = datetime('now', '+8 hours'),
             updated_at = datetime('now', '+8 hours')
-         WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
+         WHERE id = ? AND group_id = ? AND created_by = ? AND deleted_at IS NULL`,
       )
-      .bind(expenseId, DEFAULT_GROUP_ID),
+      .bind(expenseId, DEFAULT_GROUP_ID, user.id),
     db
       .prepare(
         `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, before_json)
@@ -310,6 +381,31 @@ export async function deleteExpense(
   if ((deleteResult?.meta?.changes ?? 0) === 0) {
     throw new ExpenseNotFoundError();
   }
+}
+
+function mapExpenseListItem(
+  row: ExpenseListRow,
+  participantsByExpenseId: ReadonlyMap<string, ExpenseListItem['participants']>,
+  user: SessionUser,
+): ExpenseListItem {
+  const canManage = row.created_by === user.id;
+
+  return {
+    id: row.id,
+    title: row.title,
+    description: row.description,
+    amount: row.amount,
+    currency: row.currency,
+    category: row.category,
+    expenseDate: row.expense_date,
+    paidBy: {
+      id: row.paid_by_user_id,
+      displayName: row.paid_by_display_name,
+    },
+    participants: participantsByExpenseId.get(row.id) ?? [],
+    canEdit: canManage,
+    canDelete: canManage,
+  };
 }
 
 async function listParticipantsByExpenseId(

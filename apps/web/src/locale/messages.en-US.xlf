@@ -50,6 +50,9 @@
       <trans-unit id="expenseModalEyebrow" datatype="html"><source>LabSplit Entry</source><target>LabSplit Entry</target></trans-unit>
       <trans-unit id="expenseEditTitle" datatype="html"><source>編輯支出</source><target>Edit Expense</target></trans-unit>
       <trans-unit id="expenseCreateTitle" datatype="html"><source>新增支出</source><target>Add Expense</target></trans-unit>
+      <trans-unit id="expenseDetailTitle" datatype="html"><source>支出明細</source><target>Expense Details</target></trans-unit>
+      <trans-unit id="expenseDetailCloseLabel" datatype="html"><source>關閉支出明細</source><target>Close expense details</target></trans-unit>
+      <trans-unit id="expenseEmptyDescription" datatype="html"><source>—</source><target>No description</target></trans-unit>
       <trans-unit id="expenseModalCloseLabel" datatype="html"><source>關閉新增支出視窗</source><target>Close add expense dialog</target></trans-unit>
       <trans-unit id="expenseFieldTitle" datatype="html"><source>標題</source><target>Title</target></trans-unit>
       <trans-unit id="expenseTitleError" datatype="html"><source>請輸入 1 到 120 個字的標題。</source><target>Enter a title between 1 and 120 characters.</target></trans-unit>
@@ -156,6 +159,7 @@
       <trans-unit id="settlementStatusPending" datatype="html"><source>待確認</source><target>Pending</target></trans-unit>
       <trans-unit id="settlementConfirmPayment" datatype="html"><source>確認付款</source><target>Confirm Payment</target></trans-unit>
       <trans-unit id="settlementPaymentRecorded" datatype="html"><source>已記錄付款，等待收款方確認。</source><target>Payment recorded. Waiting for the receiver to confirm.</target></trans-unit>
+      <trans-unit id="settlementPaymentRecordedConfirmed" datatype="html"><source>已記錄並確認付款。</source><target>Payment recorded and confirmed.</target></trans-unit>
       <trans-unit id="settlementPaymentRecordError" datatype="html"><source>無法記錄付款，請稍後再試。</source><target>Could not record payment. Please try again later.</target></trans-unit>
       <trans-unit id="settlementPaymentConfirmed" datatype="html"><source>已確認付款。</source><target>Payment confirmed.</target></trans-unit>
       <trans-unit id="settlementPaymentConfirmError" datatype="html"><source>無法確認付款，請稍後再試。</source><target>Could not confirm payment. Please try again later.</target></trans-unit>

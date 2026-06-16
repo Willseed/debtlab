@@ -26,8 +26,15 @@ export class ForbiddenError extends Error {
 
 export class PaymentCreationForbiddenError extends Error {
   constructor() {
-    super('Only the payment sender may record a payment.');
+    super('Only the payment sender, receiver, or an admin may record a payment.');
     this.name = 'PaymentCreationForbiddenError';
+  }
+}
+
+export class PendingPaymentAlreadyExistsError extends Error {
+  constructor() {
+    super('A pending payment already exists for this transfer.');
+    this.name = 'PendingPaymentAlreadyExistsError';
   }
 }
 
@@ -80,6 +87,11 @@ export type PaymentRecord = {
   readonly confirmedAt: string | null;
 };
 
+export type PaymentCreateResult = {
+  readonly id: string;
+  readonly status: 'pending' | 'confirmed';
+};
+
 type MemberRow = {
   readonly user_id: string;
   readonly display_name: string;
@@ -114,22 +126,55 @@ export async function createPayment(
   db: D1Database,
   user: SessionUser,
   input: PaymentCreateInput,
-): Promise<string> {
+): Promise<PaymentCreateResult> {
   if (input.fromUserId === input.toUserId) {
     throw new SelfPaymentError();
   }
 
-  if (input.fromUserId !== user.id) {
+  const userCanRecordPayment =
+    input.fromUserId === user.id || input.toUserId === user.id || user.role === 'admin';
+
+  if (!userCanRecordPayment) {
     throw new PaymentCreationForbiddenError();
   }
 
-  const paymentId = crypto.randomUUID();
+  const duplicatePendingPayment = await db
+    .prepare(
+      `SELECT id
+       FROM payments
+       WHERE group_id = ?
+         AND from_user_id = ?
+         AND to_user_id = ?
+         AND status = 'pending'
+       LIMIT 1`,
+    )
+    .bind(DEFAULT_GROUP_ID, input.fromUserId, input.toUserId)
+    .first<Pick<PaymentRow, 'id'>>();
 
-  await db.batch([
+  if (duplicatePendingPayment) {
+    throw new PendingPaymentAlreadyExistsError();
+  }
+
+  const paymentId = crypto.randomUUID();
+  const status: PaymentCreateResult['status'] =
+    input.toUserId === user.id || user.role === 'admin' ? 'confirmed' : 'pending';
+
+  const statements = [
     db
       .prepare(
-        `INSERT INTO payments (id, group_id, from_user_id, to_user_id, amount, currency, note, status, created_by)
-         VALUES (?, ?, ?, ?, ?, 'TWD', ?, 'pending', ?)`,
+        `INSERT INTO payments (
+           id,
+           group_id,
+           from_user_id,
+           to_user_id,
+           amount,
+           currency,
+           note,
+           status,
+           created_by,
+           confirmed_at
+         )
+         VALUES (?, ?, ?, ?, ?, 'TWD', ?, ?, ?, CASE WHEN ? = 'confirmed' THEN datetime('now', '+8 hours') END)`,
       )
       .bind(
         paymentId,
@@ -138,7 +183,9 @@ export async function createPayment(
         input.toUserId,
         input.amount,
         input.note ?? null,
+        status,
         user.id,
+        status,
       ),
     db
       .prepare(
@@ -154,11 +201,34 @@ export async function createPayment(
           toUserId: input.toUserId,
           amount: input.amount,
           note: input.note ?? null,
+          status,
         }),
       ),
-  ]);
+  ];
 
-  return paymentId;
+  if (status === 'confirmed') {
+    statements.push(
+      db
+        .prepare(
+          `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, after_json)
+           VALUES (?, ?, 'payment_confirmed', 'payment', ?, ?)`,
+        )
+        .bind(
+          crypto.randomUUID(),
+          user.id,
+          paymentId,
+          JSON.stringify({
+            fromUserId: input.fromUserId,
+            toUserId: input.toUserId,
+            amount: input.amount,
+          }),
+        ),
+    );
+  }
+
+  await db.batch(statements);
+
+  return { id: paymentId, status };
 }
 
 export async function confirmPayment(

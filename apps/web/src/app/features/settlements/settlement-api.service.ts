@@ -45,7 +45,7 @@ export type PaymentCreateRequest = {
 };
 
 export type PaymentCreateResponse = {
-  readonly payment: { readonly id: string };
+  readonly payment: { readonly id: string; readonly status: 'pending' | 'confirmed' };
 };
 
 export type PaymentConfirmResponse = {

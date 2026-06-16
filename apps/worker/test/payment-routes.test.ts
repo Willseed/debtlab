@@ -26,6 +26,14 @@ const bob: SessionUser = {
   status: 'active',
 };
 
+const carol: SessionUser = {
+  id: 'usr_carol',
+  email: 'carol@example.test',
+  displayName: 'Carol',
+  role: 'member',
+  status: 'active',
+};
+
 const adminUser: SessionUser = {
   id: 'usr_admin',
   email: 'admin@example.test',
@@ -65,17 +73,20 @@ const DEFAULT_PENDING_PAYMENT: PaymentRow = {
 class FakePaymentD1 {
   readonly batchStatements: [string, ...unknown[]][][] = [];
   readonly pendingPayment: PaymentRow | null;
+  readonly duplicatePendingPayment: Pick<PaymentRow, 'id'> | null;
 
   constructor(
     readonly currentUser: SessionUser = alice,
     pendingPayment: PaymentRow | null = DEFAULT_PENDING_PAYMENT,
     private readonly opts: {
+      duplicatePendingPayment?: Pick<PaymentRow, 'id'> | null;
       forceZeroChanges?: boolean;
       throwOnBatch?: boolean;
       forceNullMeta?: boolean;
     } = {},
   ) {
     this.pendingPayment = pendingPayment;
+    this.duplicatePendingPayment = opts.duplicatePendingPayment ?? null;
   }
 
   prepare(sql: string) {
@@ -126,6 +137,10 @@ class FakePaymentStatement {
       } as T;
     }
 
+    if (this.sql.includes("status = 'pending'") && this.sql.includes('LIMIT 1')) {
+      return this.db.duplicatePendingPayment as T | null;
+    }
+
     if (this.sql.includes('FROM payments')) {
       return this.db.pendingPayment as T | null;
     }
@@ -159,7 +174,7 @@ function env(db: FakePaymentD1) {
 
 // POST /api/payments
 
-test('POST /api/payments creates a pending payment and returns its id', async () => {
+test('POST /api/payments creates a pending payment and returns its id and status', async () => {
   const db = new FakePaymentD1(alice);
   const app = makeApp(db);
   const cookie = await authCookie(alice);
@@ -179,11 +194,70 @@ test('POST /api/payments creates a pending payment and returns its id', async ()
   );
 
   assert.equal(response.status, 201);
-  const body = (await response.json()) as { payment: { id: string } };
+  const body = (await response.json()) as { payment: { id: string; status: string } };
   assert.ok(typeof body.payment.id === 'string');
+  assert.equal(body.payment.status, 'pending');
   assert.ok(
     db.batchStatements.some((batch) => batch.some(([sql]) => sql.includes('INSERT INTO payments'))),
   );
+});
+
+test('POST /api/payments lets the receiver record and confirm a payment in one step', async () => {
+  const db = new FakePaymentD1(bob);
+  const app = makeApp(db);
+  const cookie = await authCookie(bob);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: alice.id, toUserId: bob.id, amount: 300 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 201);
+  const body = (await response.json()) as { payment: { id: string; status: string } };
+  assert.equal(body.payment.status, 'confirmed');
+  assert.ok(
+    db.batchStatements.some((batch) =>
+      batch.some(
+        ([sql, ...values]) => sql.includes('INSERT INTO payments') && values.includes('confirmed'),
+      ),
+    ),
+  );
+  assert.ok(
+    db.batchStatements.some((batch) => batch.some(([sql]) => sql.includes("'payment_confirmed'"))),
+  );
+});
+
+test('POST /api/payments lets an admin record and confirm a payment between other members', async () => {
+  const db = new FakePaymentD1(adminUser);
+  const app = makeApp(db);
+  const cookie = await authCookie(adminUser);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: alice.id, toUserId: bob.id, amount: 300 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 201);
+  const body = (await response.json()) as { payment: { id: string; status: string } };
+  assert.equal(body.payment.status, 'confirmed');
 });
 
 test('POST /api/payments rejects self-payment', async () => {
@@ -210,7 +284,7 @@ test('POST /api/payments rejects self-payment', async () => {
   assert.equal(body.error.code, 'VALIDATION_ERROR');
 });
 
-test('POST /api/payments rejects recording a payment for another sender', async () => {
+test('POST /api/payments rejects recording a payment for unrelated members', async () => {
   const db = new FakePaymentD1(alice);
   const app = makeApp(db);
   const cookie = await authCookie(alice);
@@ -224,7 +298,7 @@ test('POST /api/payments rejects recording a payment for another sender', async 
         Cookie: cookie,
         Origin: 'https://lab.buy2330.cc',
       },
-      body: JSON.stringify({ fromUserId: bob.id, toUserId: alice.id, amount: 300 }),
+      body: JSON.stringify({ fromUserId: bob.id, toUserId: carol.id, amount: 300 }),
     },
     env(db),
   );
@@ -232,6 +306,33 @@ test('POST /api/payments rejects recording a payment for another sender', async 
   assert.equal(response.status, 403);
   const body = (await response.json()) as { error: { code: string } };
   assert.equal(body.error.code, 'FORBIDDEN');
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('POST /api/payments rejects duplicate pending payments for the same transfer', async () => {
+  const db = new FakePaymentD1(alice, DEFAULT_PENDING_PAYMENT, {
+    duplicatePendingPayment: { id: 'pay_existing' },
+  });
+  const app = makeApp(db);
+  const cookie = await authCookie(alice);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: alice.id, toUserId: bob.id, amount: 300 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 409);
+  const body = (await response.json()) as { error: { code: string } };
+  assert.equal(body.error.code, 'CONFLICT');
   assert.equal(db.batchStatements.length, 0);
 });
 

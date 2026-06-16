@@ -187,7 +187,12 @@ export class SettlementsPageComponent implements OnInit {
 
   canRecordTransfer(t: SuggestedTransfer): boolean {
     const userId = this.authService.currentUser()?.id;
-    return userId === t.fromUserId && !this.hasPendingPaymentForTransfer(t);
+    const isAdmin = this.authService.isAdmin();
+    return (
+      !!userId &&
+      (userId === t.fromUserId || userId === t.toUserId || isAdmin) &&
+      !this.hasPendingPaymentForTransfer(t)
+    );
   }
 
   canConfirm(p: PendingPayment): boolean {
@@ -224,10 +229,12 @@ export class SettlementsPageComponent implements OnInit {
         amount: t.amount,
       })
       .subscribe({
-        next: () => {
+        next: (response) => {
           this.recordingTransferKey.set(null);
           this.statusMessage.set(
-            $localize`:Settlement payment recorded@@settlementPaymentRecorded:已記錄付款，等待收款方確認。`,
+            response.payment.status === 'confirmed'
+              ? $localize`:Settlement payment recorded and confirmed@@settlementPaymentRecordedConfirmed:已記錄並確認付款。`
+              : $localize`:Settlement payment recorded@@settlementPaymentRecorded:已記錄付款，等待收款方確認。`,
           );
           this.loadSummary();
         },

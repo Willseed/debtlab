@@ -4,7 +4,9 @@ import test from 'node:test';
 import {
   createExpense,
   deleteExpense,
+  ExpenseForbiddenError,
   ExpenseNotFoundError,
+  getExpense,
   listExpenses,
   updateExpense,
 } from '../src/services/expense.service';
@@ -47,6 +49,7 @@ class FakeD1Database {
     readonly expense_date: string;
     readonly paid_by_user_id: string;
     readonly paid_by_display_name: string;
+    readonly created_by: string;
   }[] = [];
   participantRows: readonly {
     readonly expense_id: string;
@@ -86,14 +89,25 @@ class FakeD1PreparedStatement {
     if (!this.db) {
       return null;
     }
-    if (this.sql.includes('SELECT group_id') && this.sql.includes('FROM expenses')) {
+    if (this.sql.includes('FROM expenses e')) {
+      const expenseId = this.values[0];
+      return (this.db.expenseRows.find((row) => row.id === expenseId) ?? null) as T | null;
+    }
+    if (
+      this.sql.includes('SELECT group_id') &&
+      this.sql.includes('title') &&
+      this.sql.includes('FROM expenses')
+    ) {
       if (!this.db.expenseDeleteRow || this.db.expenseDeleteRow.group_id !== this.values[1]) {
         return null;
       }
 
       return this.db.expenseDeleteRow as T;
     }
-    if (this.sql.includes('SELECT amount') && this.sql.includes('FROM expenses')) {
+    if (
+      this.sql.includes('SELECT group_id, created_by, amount') &&
+      this.sql.includes('FROM expenses')
+    ) {
       if (!this.db.expenseOwnerRow || this.db.expenseOwnerRow.group_id !== this.values[1]) {
         return null;
       }
@@ -133,6 +147,14 @@ const expenseInput: ExpenseCreateInput = {
 };
 
 const shares: readonly CalculatedShare[] = [{ userId: 'usr_alice', shareAmount: 1280 }];
+
+const sessionUser: SessionUser = {
+  id: 'usr_alice',
+  email: 'alice@example.test',
+  displayName: 'Alice',
+  role: 'member',
+  status: 'active',
+};
 
 test('createExpense persists group, membership, expense, shares, and audit log', async () => {
   const db = new FakeD1Database();
@@ -174,6 +196,7 @@ test('listExpenses reads persisted expenses with payer and participant data', as
       expense_date: '2026-06-13',
       paid_by_user_id: 'usr_alice',
       paid_by_display_name: 'Alice',
+      created_by: 'usr_alice',
     },
   ];
   db.participantRows = [
@@ -185,7 +208,7 @@ test('listExpenses reads persisted expenses with payer and participant data', as
     },
   ];
 
-  const expenses = await listExpenses(db as unknown as D1Database);
+  const expenses = await listExpenses(db as unknown as D1Database, sessionUser);
 
   assert.deepEqual(expenses, [
     {
@@ -207,6 +230,8 @@ test('listExpenses reads persisted expenses with payer and participant data', as
           shareAmount: 1280,
         },
       ],
+      canEdit: true,
+      canDelete: true,
     },
   ]);
 });
@@ -214,7 +239,7 @@ test('listExpenses reads persisted expenses with payer and participant data', as
 test('listExpenses returns an empty list without reading participants', async () => {
   const db = new FakeD1Database();
 
-  const expenses = await listExpenses(db as unknown as D1Database);
+  const expenses = await listExpenses(db as unknown as D1Database, sessionUser);
 
   assert.deepEqual(expenses, []);
 });
@@ -232,21 +257,62 @@ test('listExpenses falls back to no participants when none are returned', async 
       expense_date: '2026-06-13',
       paid_by_user_id: 'usr_alice',
       paid_by_display_name: 'Alice',
+      created_by: 'usr_alice',
     },
   ];
 
-  const expenses = await listExpenses(db as unknown as D1Database);
+  const expenses = await listExpenses(db as unknown as D1Database, sessionUser);
 
   assert.deepEqual(expenses[0]?.participants, []);
 });
 
-const sessionUser: SessionUser = {
-  id: 'usr_alice',
-  email: 'alice@example.test',
-  displayName: 'Alice',
-  role: 'member',
-  status: 'active',
-};
+test('getExpense returns authorized non-creator details without edit/delete permission', async () => {
+  const db = new FakeD1Database();
+  db.expenseRows = [
+    {
+      id: 'exp_bob',
+      title: 'Shared prize',
+      description: null,
+      amount: 900,
+      currency: 'TWD',
+      category: 'prize',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_bob',
+      paid_by_display_name: 'Bob',
+      created_by: 'usr_bob',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_bob',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 900,
+    },
+  ];
+
+  const expense = await getExpense(db as unknown as D1Database, sessionUser, 'exp_bob');
+
+  assert.equal(expense.id, 'exp_bob');
+  assert.equal(expense.canEdit, false);
+  assert.equal(expense.canDelete, false);
+  assert.deepEqual(expense.participants, [
+    {
+      userId: 'usr_alice',
+      displayName: 'Alice',
+      shareAmount: 900,
+    },
+  ]);
+});
+
+test('getExpense rejects unknown or unauthorized expenses', async () => {
+  const db = new FakeD1Database();
+
+  await assert.rejects(
+    () => getExpense(db as unknown as D1Database, sessionUser, 'exp_missing'),
+    ExpenseNotFoundError,
+  );
+});
 
 test('updateExpense rejects unknown expenses', async () => {
   const db = new FakeD1Database();
@@ -261,16 +327,18 @@ test('updateExpense rejects unknown expenses', async () => {
   );
 });
 
-test('updateExpense allows regular members to edit expenses created by other users', async () => {
+test('updateExpense rejects non-creators before D1 writes', async () => {
   const db = new FakeD1Database();
   db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_bob', amount: 500 };
 
-  await updateExpense(db as unknown as D1Database, sessionUser, 'exp_other', {
-    title: 'New',
-  } satisfies ExpenseUpdateInput);
-
-  assert.equal(db.statements.length, 1);
-  assert.match(String(db.statements[0]?.[0]?.[0]), /UPDATE expenses/u);
+  await assert.rejects(
+    () =>
+      updateExpense(db as unknown as D1Database, sessionUser, 'exp_other', {
+        title: 'New',
+      } satisfies ExpenseUpdateInput),
+    ExpenseForbiddenError,
+  );
+  assert.equal(db.statements.length, 0);
 });
 
 test('updateExpense ignores expenses outside the default group', async () => {
@@ -307,6 +375,7 @@ test('updateExpense persists field updates and audit log without touching shares
   assert.equal(batch?.[0]?.[3], 'Updated note');
   assert.equal(batch?.[0]?.[7], 'exp_alice');
   assert.equal(batch?.[0]?.[8], 'grp_default');
+  assert.equal(batch?.[0]?.[9], 'usr_alice');
 });
 
 test('updateExpense rewrites participant shares when the amount changes', async () => {
@@ -359,7 +428,7 @@ test('deleteExpense rejects missing or already deleted expenses before D1 writes
   assert.equal(db.statements.length, 0);
 });
 
-test('deleteExpense lets regular members soft delete non-creator default-group expenses', async () => {
+test('deleteExpense rejects non-creators before D1 writes', async () => {
   const db = new FakeD1Database();
   db.expenseDeleteRow = {
     group_id: 'grp_default',
@@ -368,6 +437,16 @@ test('deleteExpense lets regular members soft delete non-creator default-group e
     amount: 1280,
     currency: 'TWD',
   };
+
+  await assert.rejects(
+    () => deleteExpense(db as unknown as D1Database, sessionUser, 'exp_bob'),
+    ExpenseForbiddenError,
+  );
+  assert.equal(db.statements.length, 0);
+});
+
+test('deleteExpense lets creators soft delete default-group expenses', async () => {
+  const db = new FakeD1Database();
 
   await deleteExpense(db as unknown as D1Database, sessionUser, 'exp_alice');
 
@@ -378,6 +457,7 @@ test('deleteExpense lets regular members soft delete non-creator default-group e
   assert.match(String(batch?.[0]?.[0]), /group_id = \?/u);
   assert.equal(batch?.[0]?.[1], 'exp_alice');
   assert.equal(batch?.[0]?.[2], 'grp_default');
+  assert.equal(batch?.[0]?.[3], 'usr_alice');
   assert.match(String(batch?.[1]?.[0]), /expense_deleted/u);
   assert.match(String(batch?.[1]?.[0]), /before_json/u);
   assert.equal(
@@ -387,7 +467,7 @@ test('deleteExpense lets regular members soft delete non-creator default-group e
       title: 'Lab ingredients',
       amount: 1280,
       currency: 'TWD',
-      createdBy: 'usr_bob',
+      createdBy: 'usr_alice',
     }),
   );
 });

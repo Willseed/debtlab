@@ -151,6 +151,8 @@ function createExpense(overrides: Partial<ExpenseListItem> = {}): ExpenseListIte
       { userId: 'usr_alice', displayName: 'Alice', shareAmount: 300 },
       { userId: 'usr_bob', displayName: 'Bob', shareAmount: 300 },
     ],
+    canEdit: true,
+    canDelete: true,
     ...overrides,
   };
 }

@@ -176,7 +176,7 @@ describe('ExpenseListPageComponent', () => {
     ]);
   });
 
-  it('opens edit mode for regular members when a row is clicked and PATCHes the changes', () => {
+  it('opens edit mode for creators when a row is clicked and PATCHes the changes', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
@@ -187,10 +187,6 @@ describe('ExpenseListPageComponent', () => {
       createExpenseItem({
         id: 'exp_alice',
         description: 'Initial note',
-        paidBy: {
-          id: 'usr_other',
-          displayName: 'Other Member',
-        },
       }),
     ]);
     fixture.detectChanges();
@@ -233,10 +229,6 @@ describe('ExpenseListPageComponent', () => {
         amount: 1500,
         category: 'lodging',
         description: 'Initial note',
-        paidBy: {
-          id: 'usr_other',
-          displayName: 'Other Member',
-        },
       }),
     ]);
     fixture.detectChanges();
@@ -278,21 +270,13 @@ describe('ExpenseListPageComponent', () => {
     ]);
   });
 
-  it('renders pencil edit and trash delete icon actions for regular members', () => {
+  it('renders pencil edit and trash delete icon actions for creators', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
     clickButton('儲存');
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_icons' } });
-    flushExpenseList([
-      createExpenseItem({
-        id: 'exp_icons',
-        paidBy: {
-          id: 'usr_other',
-          displayName: 'Other Member',
-        },
-      }),
-    ]);
+    flushExpenseList([createExpenseItem({ id: 'exp_icons' })]);
     fixture.detectChanges();
 
     const editButton = fixture.nativeElement.querySelector(
@@ -306,21 +290,46 @@ describe('ExpenseListPageComponent', () => {
     expect(deleteButton?.querySelector('svg')).not.toBeNull();
   });
 
+  it('shows non-creator expenses as read-only without edit or delete actions', () => {
+    clickButton('新增支出');
+    fixture.detectChanges();
+    fillValidExpense();
+    clickButton('儲存');
+    http.expectOne('/api/expenses').flush({ expense: { id: 'exp_readonly' } });
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_readonly',
+        paidBy: {
+          id: 'usr_other',
+          displayName: 'Other Member',
+        },
+        canEdit: false,
+        canDelete: false,
+      }),
+    ]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('button[aria-label="編輯支出"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('button[aria-label="刪除支出"]')).toBeNull();
+
+    (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('支出明細');
+    expect(fixture.nativeElement.textContent).toContain('Coffee Beans');
+    expect(fixture.nativeElement.textContent).toContain('Other Member');
+    expect(fixture.nativeElement.textContent).not.toContain('編輯支出');
+    expect(fixture.nativeElement.textContent).not.toContain('儲存');
+    http.expectNone('/api/expenses/exp_readonly');
+  });
+
   it('opens a delete confirmation modal before soft deleting and reloading the list', () => {
     clickButton('新增支出');
     fixture.detectChanges();
     fillValidExpense();
     clickButton('儲存');
     http.expectOne('/api/expenses').flush({ expense: { id: 'exp_delete' } });
-    flushExpenseList([
-      createExpenseItem({
-        id: 'exp_delete',
-        paidBy: {
-          id: 'usr_other',
-          displayName: 'Other Member',
-        },
-      }),
-    ]);
+    flushExpenseList([createExpenseItem({ id: 'exp_delete' })]);
     fixture.detectChanges();
 
     clickDeleteIcon();
@@ -717,6 +726,8 @@ describe('ExpenseListPageComponent', () => {
           shareAmount: overrides.amount ?? 1280,
         },
       ],
+      canEdit: true,
+      canDelete: true,
       ...overrides,
     };
   }

@@ -1,11 +1,13 @@
 import { Hono } from 'hono';
 
-import { errorResponse, notImplemented } from '../http/error-response';
+import { errorResponse } from '../http/error-response';
 import { requireAuth } from '../middleware/require-auth';
 import {
   createExpense,
   deleteExpense,
+  ExpenseForbiddenError,
   ExpenseNotFoundError,
+  getExpense,
   listExpenses,
   updateExpense,
 } from '../services/expense.service';
@@ -18,7 +20,7 @@ export const expenseRoutes = new Hono<AppBindings>();
 expenseRoutes.use('*', requireAuth);
 
 expenseRoutes.get('/', async (c) => {
-  const expenses = await listExpenses(c.env.DB);
+  const expenses = await listExpenses(c.env.DB, c.get('currentUser'));
 
   return c.json({ expenses, nextCursor: null });
 });
@@ -68,8 +70,19 @@ expenseRoutes.post('/', async (c) => {
   return c.json({ expense: { id: expenseId } }, 201);
 });
 
-expenseRoutes.get('/:expenseId', (c) => {
-  return notImplemented(c, `Expense ${c.req.param('expenseId')} detail is not implemented yet.`);
+expenseRoutes.get('/:expenseId', async (c) => {
+  const currentUser = c.get('currentUser');
+  const expenseId = c.req.param('expenseId');
+
+  try {
+    const expense = await getExpense(c.env.DB, currentUser, expenseId);
+    return c.json({ expense });
+  } catch (error) {
+    if (error instanceof ExpenseNotFoundError) {
+      return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    throw error;
+  }
 });
 
 expenseRoutes.patch('/:expenseId', async (c) => {
@@ -92,6 +105,9 @@ expenseRoutes.patch('/:expenseId', async (c) => {
   try {
     await updateExpense(c.env.DB, currentUser, expenseId, parsed.data);
   } catch (error) {
+    if (error instanceof ExpenseForbiddenError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
+    }
     if (error instanceof ExpenseNotFoundError) {
       return errorResponse(c, 404, 'NOT_FOUND', error.message);
     }
@@ -108,6 +124,9 @@ expenseRoutes.delete('/:expenseId', async (c) => {
   try {
     await deleteExpense(c.env.DB, currentUser, expenseId);
   } catch (error) {
+    if (error instanceof ExpenseForbiddenError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
+    }
     if (error instanceof ExpenseNotFoundError) {
       return errorResponse(c, 404, 'NOT_FOUND', error.message);
     }

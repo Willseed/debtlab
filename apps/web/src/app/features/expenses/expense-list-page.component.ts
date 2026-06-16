@@ -37,6 +37,8 @@ type ExpenseRow = {
   readonly paidBy: string;
   readonly participantsLabel: string;
   readonly description: string;
+  readonly canEdit: boolean;
+  readonly canDelete: boolean;
 };
 
 type ExpenseForm = {
@@ -94,7 +96,7 @@ type ExpenseForm = {
                 </tr>
               } @else {
                 @for (expense of expenses(); track expense.id) {
-                  <tr class="expense-row" (click)="openEditModal(expense)">
+                  <tr class="expense-row" (click)="openExpense(expense)">
                     <td>{{ expense.expenseDate }}</td>
                     <td>{{ expense.title }}</td>
                     <td>{{ expense.categoryLabel }}</td>
@@ -103,82 +105,86 @@ type ExpenseForm = {
                     <td>{{ expense.participantsLabel }}</td>
                     <td>
                       <div class="action-group">
-                        <button
-                          type="button"
-                          class="button button--secondary button--icon"
-                          (click)="openEditModal(expense); $event.stopPropagation()"
-                          [disabled]="isExpenseActionDisabled(expense.id)"
-                          aria-label="編輯支出"
-                          title="編輯支出"
-                          i18n-aria-label="Edit expense action label@@expensesEditActionLabel"
-                          i18n-title="Edit expense action title@@expensesEditActionTitle"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            focusable="false"
-                            viewBox="0 0 24 24"
-                            width="20"
-                            height="20"
+                        @if (expense.canEdit) {
+                          <button
+                            type="button"
+                            class="button button--secondary button--icon"
+                            (click)="openEditModal(expense); $event.stopPropagation()"
+                            [disabled]="isExpenseActionDisabled(expense.id)"
+                            aria-label="編輯支出"
+                            title="編輯支出"
+                            i18n-aria-label="Edit expense action label@@expensesEditActionLabel"
+                            i18n-title="Edit expense action title@@expensesEditActionTitle"
                           >
-                            <path
-                              d="M4 20h4.2L18.6 9.6a2 2 0 0 0 0-2.8l-1.4-1.4a2 2 0 0 0-2.8 0L4 15.8V20Z"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="1.8"
-                            />
-                            <path
-                              d="m13.5 6.5 4 4"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-linecap="round"
-                              stroke-width="1.8"
-                            />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          class="button button--secondary button--icon"
-                          (click)="openDeleteModal(expense); $event.stopPropagation()"
-                          [disabled]="isExpenseActionDisabled(expense.id)"
-                          aria-label="刪除支出"
-                          title="刪除支出"
-                          i18n-aria-label="Delete expense action label@@expensesDeleteActionLabel"
-                          i18n-title="Delete expense action title@@expensesDeleteActionTitle"
-                        >
-                          <svg
-                            aria-hidden="true"
-                            focusable="false"
-                            viewBox="0 0 24 24"
-                            width="20"
-                            height="20"
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              viewBox="0 0 24 24"
+                              width="20"
+                              height="20"
+                            >
+                              <path
+                                d="M4 20h4.2L18.6 9.6a2 2 0 0 0 0-2.8l-1.4-1.4a2 2 0 0 0-2.8 0L4 15.8V20Z"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="m13.5 6.5 4 4"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                            </svg>
+                          </button>
+                        }
+                        @if (expense.canDelete) {
+                          <button
+                            type="button"
+                            class="button button--secondary button--icon"
+                            (click)="openDeleteModal(expense); $event.stopPropagation()"
+                            [disabled]="isExpenseActionDisabled(expense.id)"
+                            aria-label="刪除支出"
+                            title="刪除支出"
+                            i18n-aria-label="Delete expense action label@@expensesDeleteActionLabel"
+                            i18n-title="Delete expense action title@@expensesDeleteActionTitle"
                           >
-                            <path
-                              d="M5 7h14"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-linecap="round"
-                              stroke-width="1.8"
-                            />
-                            <path
-                              d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="1.8"
-                            />
-                            <path
-                              d="m8 10 .6 8.2A2 2 0 0 0 10.6 20h2.8a2 2 0 0 0 2-1.8L16 10"
-                              fill="none"
-                              stroke="currentColor"
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="1.8"
-                            />
-                          </svg>
-                        </button>
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              viewBox="0 0 24 24"
+                              width="20"
+                              height="20"
+                            >
+                              <path
+                                d="M5 7h14"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M9 7V5.5A1.5 1.5 0 0 1 10.5 4h3A1.5 1.5 0 0 1 15 5.5V7"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="m8 10 .6 8.2A2 2 0 0 0 10.6 20h2.8a2 2 0 0 0 2-1.8L16 10"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                            </svg>
+                          </button>
+                        }
                       </div>
                     </td>
                   </tr>
@@ -321,6 +327,74 @@ type ExpenseForm = {
       </section>
     }
 
+    @if (viewingExpense(); as expense) {
+      <div class="modal-backdrop" (click)="closeViewModal()" aria-hidden="true"></div>
+      <section
+        class="modal-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="expense-view-title"
+        tabindex="-1"
+        (keydown)="handleViewModalKeydown($event)"
+      >
+        <div class="expense-form">
+          <div class="modal-panel__header">
+            <div>
+              <p class="eyebrow" i18n="Expense modal eyebrow@@expenseModalEyebrow">
+                LabSplit Entry
+              </p>
+              <h2
+                id="expense-view-title"
+                class="heading-section"
+                i18n="Expense detail modal title@@expenseDetailTitle"
+              >
+                支出明細
+              </h2>
+            </div>
+            <button
+              #viewCloseButton
+              class="button button--secondary"
+              type="button"
+              (click)="closeViewModal()"
+              aria-label="關閉支出明細"
+              i18n-aria-label="Close expense detail modal label@@expenseDetailCloseLabel"
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="expense-modal__summary">
+            <span i18n="Expense title field@@expenseFieldTitle">標題</span>
+            <strong>{{ expense.title }}</strong>
+          </div>
+          <div class="expense-modal__summary">
+            <span i18n="Expense amount field@@expenseFieldAmount">金額</span>
+            <strong>NT&#36;{{ expense.amount }}</strong>
+          </div>
+          <div class="expense-modal__summary">
+            <span i18n="Expense category field@@expenseFieldCategory">分類</span>
+            <strong>{{ expense.categoryLabel }}</strong>
+          </div>
+          <div class="expense-modal__summary">
+            <span i18n="Expense date field@@expenseFieldDate">日期</span>
+            <strong>{{ expense.expenseDate }}</strong>
+          </div>
+          <div class="expense-modal__summary">
+            <span i18n="Expense payer summary@@expensePayerSummary">付款人</span>
+            <strong>{{ expense.paidBy }}</strong>
+          </div>
+          <div class="expense-modal__summary">
+            <span i18n="Expense participants column@@expensesParticipants">參與者</span>
+            <strong>{{ expense.participantsLabel }}</strong>
+          </div>
+          <div class="expense-modal__summary">
+            <span i18n="Expense description field@@expenseFieldDescription">備註</span>
+            <strong>{{ expense.description || emptyDescriptionLabel }}</strong>
+          </div>
+        </div>
+      </section>
+    }
+
     @if (pendingDeleteExpense(); as deleteExpense) {
       <div class="modal-backdrop" (click)="closeDeleteModal()" aria-hidden="true"></div>
       <section
@@ -390,6 +464,7 @@ type ExpenseForm = {
 })
 export class ExpenseListPageComponent implements OnInit {
   @ViewChild('firstExpenseField') private readonly firstExpenseField?: ElementRef<HTMLInputElement>;
+  @ViewChild('viewCloseButton') private readonly viewCloseButton?: ElementRef<HTMLButtonElement>;
   @ViewChild('deleteCancelButton')
   private readonly deleteCancelButton?: ElementRef<HTMLButtonElement>;
 
@@ -402,6 +477,7 @@ export class ExpenseListPageComponent implements OnInit {
     lodging: $localize`:Expense category lodging@@expenseCategoryLodging:住宿`,
     other: $localize`:Expense category other@@expenseCategoryOther:其他`,
   };
+  protected readonly emptyDescriptionLabel = $localize`:Expense empty description@@expenseEmptyDescription:—`;
   protected readonly categories: readonly {
     readonly value: ExpenseCategory;
     readonly label: string;
@@ -416,6 +492,7 @@ export class ExpenseListPageComponent implements OnInit {
   protected readonly isSubmitting = signal(false);
   protected readonly deletingExpenseIds = signal<ReadonlySet<string>>(new Set());
   protected readonly pendingDeleteExpense = signal<ExpenseRow | null>(null);
+  protected readonly viewingExpense = signal<ExpenseRow | null>(null);
   protected readonly listStatusMessage = signal('');
   protected readonly statusMessage = signal('');
   protected readonly editingExpenseId = signal<string | null>(null);
@@ -454,6 +531,7 @@ export class ExpenseListPageComponent implements OnInit {
   }
 
   protected openCreateModal(): void {
+    this.viewingExpense.set(null);
     this.editingExpenseId.set(null);
     this.statusMessage.set('');
     this.form.reset({
@@ -468,10 +546,11 @@ export class ExpenseListPageComponent implements OnInit {
   }
 
   protected openEditModal(expense: ExpenseRow): void {
-    if (this.hasDeleteFlowPending()) {
+    if (!expense.canEdit || this.hasDeleteFlowPending()) {
       return;
     }
 
+    this.viewingExpense.set(null);
     this.editingExpenseId.set(expense.id);
     this.statusMessage.set('');
     this.form.reset({
@@ -499,6 +578,28 @@ export class ExpenseListPageComponent implements OnInit {
       expenseDate: new Date().toISOString().slice(0, 10),
       description: '',
     });
+  }
+
+  protected openExpense(expense: ExpenseRow): void {
+    if (expense.canEdit) {
+      this.openEditModal(expense);
+      return;
+    }
+
+    this.openViewModal(expense);
+  }
+
+  protected openViewModal(expense: ExpenseRow): void {
+    if (this.isCreateModalOpen() || this.hasDeleteFlowPending()) {
+      return;
+    }
+
+    this.viewingExpense.set(expense);
+    queueMicrotask(() => this.viewCloseButton?.nativeElement.focus());
+  }
+
+  protected closeViewModal(): void {
+    this.viewingExpense.set(null);
   }
 
   protected submitExpense(): void {
@@ -564,8 +665,22 @@ export class ExpenseListPageComponent implements OnInit {
     this.trapModalFocus(event);
   }
 
+  protected handleViewModalKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      this.closeViewModal();
+      return;
+    }
+
+    this.trapModalFocus(event);
+  }
+
   protected openDeleteModal(expense: ExpenseRow): void {
-    if (this.isCreateModalOpen() || this.hasDeleteFlowPending()) {
+    if (
+      !expense.canDelete ||
+      this.isCreateModalOpen() ||
+      this.viewingExpense() ||
+      this.hasDeleteFlowPending()
+    ) {
       return;
     }
 
@@ -701,6 +816,8 @@ export class ExpenseListPageComponent implements OnInit {
         .map((participant) => participant.displayName)
         .join(', '),
       description: expense.description ?? '',
+      canEdit: expense.canEdit,
+      canDelete: expense.canDelete,
     };
   }
 

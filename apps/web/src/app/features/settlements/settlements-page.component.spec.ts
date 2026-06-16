@@ -61,7 +61,7 @@ describe('SettlementsPageComponent', () => {
       toUserId: 'usr_alice',
       amount: 300,
     });
-    post.flush({ payment: { id: 'pay_1' } });
+    post.flush({ payment: { id: 'pay_1', status: 'pending' } });
     http.expectOne('/api/settlements/summary').flush(
       createSummary({
         pendingPayments: [
@@ -83,6 +83,61 @@ describe('SettlementsPageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('已記錄付款');
     expect(fixture.nativeElement.textContent).toContain('等待確認');
+  });
+
+  it('records and confirms a suggested transfer when the current user is the receiver', () => {
+    currentUserState.set({
+      id: 'usr_alice',
+      email: 'alice@example.com',
+      displayName: 'Alice',
+      role: 'member',
+      status: 'active',
+    });
+    fixture.detectChanges();
+    http.expectOne('/api/settlements/summary').flush(createSummary());
+    fixture.detectChanges();
+
+    clickButton('記錄付款');
+
+    const post = http.expectOne('/api/payments');
+    expect(post.request.method).toBe('POST');
+    expect(post.request.body).toEqual({
+      fromUserId: 'usr_bob',
+      toUserId: 'usr_alice',
+      amount: 300,
+    });
+    post.flush({ payment: { id: 'pay_1', status: 'confirmed' } });
+    http.expectOne('/api/settlements/summary').flush(createSummary({ suggestedTransfers: [] }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('已記錄並確認付款');
+  });
+
+  it('records and confirms suggested transfers as an admin even when not a payment party', () => {
+    currentUserState.set({
+      id: 'usr_admin',
+      email: 'admin@example.com',
+      displayName: 'Admin',
+      role: 'admin',
+      status: 'active',
+    });
+    fixture.detectChanges();
+    http.expectOne('/api/settlements/summary').flush(createSummary());
+    fixture.detectChanges();
+
+    clickButton('記錄付款');
+
+    const post = http.expectOne('/api/payments');
+    expect(post.request.body).toEqual({
+      fromUserId: 'usr_bob',
+      toUserId: 'usr_alice',
+      amount: 300,
+    });
+    post.flush({ payment: { id: 'pay_1', status: 'confirmed' } });
+    http.expectOne('/api/settlements/summary').flush(createSummary({ suggestedTransfers: [] }));
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('已記錄並確認付款');
   });
 
   it('confirms pending payments when the current user is the receiver', () => {

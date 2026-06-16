@@ -1,7 +1,9 @@
 # Repository Agent Instructions
 
-Applies to all AI coding agents in `debtlab`. Keep `AGENTS.md` and
-`.github/copilot-instructions.md` synchronized in substance.
+Public guidance for AI coding agents working in `debtlab`. Keep `AGENTS.md`
+and `.github/copilot-instructions.md` synchronized in substance, and keep
+`CLAUDE.md` aligned with these repo rules while preserving Claude-specific
+command guidance.
 
 ## Context and source of truth
 
@@ -30,6 +32,32 @@ shadcn/ui, Cypress, heavy UI kits, large MVP charting libraries, unapproved CSS
 frameworks, external fonts that break Lighthouse, or client-side secret
 handling.
 
+## Commands
+
+```bash
+# Setup
+corepack enable && corepack prepare pnpm@10.14.0 --activate
+pnpm install
+
+# Development
+pnpm dev
+
+# Quality gates
+pnpm lint
+pnpm typecheck
+pnpm test:coverage
+pnpm e2e
+pnpm build
+pnpm lhci
+pnpm sonar:open-issues
+
+# Targeted checks
+pnpm --dir apps/web exec ng test --watch=false --include='**/auth.service.spec.ts'
+pnpm --dir apps/worker test
+pnpm --dir apps/web extract-i18n
+pnpm format:check
+```
+
 ## Design, i18n, and assets
 
 - Follow `docs/DESIGN.md`; do not invent visual tokens, component variants,
@@ -51,25 +79,41 @@ handling.
   real tokens, or production secrets. `.env.example` may contain placeholders.
 - Backend must verify OAuth tokens; never trust frontend OAuth claims.
 - User identity is `provider + provider_subject`, never email alone.
+- Google and Apple OAuth are enabled for active public users; Apple OAuth must
+  verify Apple identity tokens and keep `APPLE_TEAM_ID`, `APPLE_CLIENT_ID`,
+  `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` only in GitHub Secrets / Worker
+  secrets.
+- The first verified user in an empty reset database bootstraps as active admin;
+  later unknown verified users become active members. Existing pending users
+  activate on next verified login.
 - Disabled users cannot create new sessions. Private APIs require auth; admin
-  APIs require admin middleware.
+  APIs require admin middleware and current D1 role/status checks.
 - Session cookies must be `HttpOnly`, `Secure`, `SameSite=Lax`, and `Path=/`.
   Mutation APIs must validate `Origin` because sessions are cookie-based.
 - Do not expose stack traces, unsafe debug endpoints, private user data to
   guests, or client-side role claims as authority.
-- Sign in with Apple is enabled; backend Apple auth must verify Apple identity
-  tokens and requires `APPLE_TEAM_ID`, `APPLE_CLIENT_ID`, `APPLE_KEY_ID`, and
-  `APPLE_PRIVATE_KEY` in GitHub Secrets / Worker secrets.
 
-## Money, API, D1, and audit invariants
+## Money, expenses, payments, API, D1, and audit invariants
 
 - Store money as integers. For TWD, `1280` means `NT$1,280`; never use floating
   point for money.
 - Every split must satisfy
   `sum(expense_participants.share_amount) === expenses.amount`. Equal/ratio
   remainders are assigned deterministically.
+- Reject empty participant lists, duplicate participants, zero/negative amounts,
+  invalid users, and custom splits whose total does not equal the expense amount.
+- Expense list/detail access is limited to creators, active group members, or
+  participants. Any active authenticated member may create their own expenses;
+  direct API calls cannot create expenses on behalf of other users.
+- Only the expense creator may edit or soft-delete default-group expenses;
+  deleted expenses cannot be edited.
 - Soft-deleted expenses are ignored in active settlement calculations. Pending
-  payments do not reduce balances; confirmed payments do.
+  payments do not reduce balances; confirmed payments do. Disabled users remain
+  in historical settlement data but cannot create new expenses.
+- Payments may be created by the authenticated sender, receiver, or admin. A
+  sender-created payment stays pending until receiver/admin confirmation;
+  receiver/admin-created payments are confirmed immediately. Reject duplicate
+  pending payments for the same sender/receiver pair.
 - Easter eggs must never affect accounting correctness.
 - All API routes live under `/api`, request bodies use Zod validation, and
   errors use `{ error: { code, message, details } }`.
@@ -89,6 +133,7 @@ deployment readiness, the applicable gates must pass:
 
 ```bash
 pnpm lint
+pnpm typecheck
 pnpm test:coverage
 pnpm e2e
 pnpm build
@@ -113,6 +158,7 @@ Non-negotiables:
 - Keep TypeScript strict; avoid `any` and unnecessary casts.
 - Add or update tests when behavior changes; update docs when behavior,
   contracts, design, i18n, testing, or deployment rules change.
+- Use existing formatting/linting tools; do not add new tools for routine checks.
 - Do not rewrite unrelated code, commit generated secrets, or implement UI
   outside `docs/DESIGN.md`.
 - Default repository workflow is a single `main` branch unless a human
