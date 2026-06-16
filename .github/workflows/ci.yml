@@ -148,6 +148,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd
+        with:
+          fetch-depth: 0
 
       - name: Setup Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444
@@ -180,95 +182,20 @@ jobs:
             exit 1
           fi
 
+      - name: Run SonarCloud analysis
+        uses: SonarSource/sonarqube-scan-action@713881670b6b3676cda39549040e2d88c70d582e
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Block on SonarCloud open issues
         run: pnpm sonar:open-issues
 
-  require-sonarcloud-analysis:
-    needs: sonar
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    permissions:
-      checks: read
-      contents: read
-    steps:
-      - name: Require SonarCloud Code Analysis success
-        env:
-          CHECK_NAME: SonarCloud Code Analysis
-          COMMIT_SHA: ${{ github.sha }}
-          GITHUB_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-        run: |
-          node <<'NODE'
-          const {
-            CHECK_NAME: checkName,
-            COMMIT_SHA: commitSha,
-            GITHUB_TOKEN: githubToken,
-            REPOSITORY: repository,
-          } = process.env;
-          const deadline = Date.now() + 10 * 60 * 1000;
-          const pollIntervalMs = 15 * 1000;
-
-          if (!checkName || !commitSha || !githubToken || !repository) {
-            throw new Error('SonarCloud check validation is not configured.');
-          }
-
-          while (true) {
-            const checkRuns = await readCheckRuns();
-            const checkRun = checkRuns.find((run) => run.name === checkName);
-
-            if (checkRun?.status === 'completed') {
-              if (checkRun.conclusion === 'success') {
-                console.log(`${checkName} completed successfully.`);
-                break;
-              }
-
-              throw new Error(
-                `${checkName} concluded with ${checkRun.conclusion ?? 'unknown'}; stopping CI.`,
-              );
-            }
-
-            if (Date.now() >= deadline) {
-              throw new Error(`${checkName} did not complete before the timeout; stopping CI.`);
-            }
-
-            console.log(
-              checkRun
-                ? `${checkName} is ${checkRun.status}; waiting...`
-                : `${checkName} check run has not appeared yet; waiting...`,
-            );
-            await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-          }
-
-          async function readCheckRuns() {
-            const url = new URL(
-              `https://api.github.com/repos/${repository}/commits/${commitSha}/check-runs`,
-            );
-            url.searchParams.set('check_name', checkName);
-
-            const response = await fetch(url, {
-              headers: {
-                Accept: 'application/vnd.github+json',
-                Authorization: `Bearer ${githubToken}`,
-                'X-GitHub-Api-Version': '2022-11-28',
-              },
-            });
-
-            if (!response.ok) {
-              throw new Error(`GitHub check-run lookup failed with HTTP ${response.status}`);
-            }
-
-            const payload = await response.json();
-            return Array.isArray(payload.check_runs) ? payload.check_runs : [];
-          }
-          NODE
-
   deploy-pages:
     needs:
       - sonar
-      - require-sonarcloud-analysis
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -346,7 +273,6 @@ jobs:
   deploy-worker:
     needs:
       - sonar
-      - require-sonarcloud-analysis
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-worker.yml
     with:
