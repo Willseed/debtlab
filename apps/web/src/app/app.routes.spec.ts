@@ -26,7 +26,6 @@ describe('app routes', () => {
       if (!route.loadComponent) continue;
       await route.loadComponent();
       loadedPaths.push(route.path);
-      loadedPaths.push(route.path);
     }
     expect(loadedPaths).toContain('activate');
     expect(loadedPaths).toContain('join');

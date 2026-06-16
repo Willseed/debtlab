@@ -187,18 +187,18 @@
         <note priority="1" from="description">Activation OAuth provider group</note>
       </trans-unit>
       <trans-unit id="activateGoogleLogin" datatype="html">
-        <source> 使用 Google 登入 </source>
+        <source>Google</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">106,109</context>
+          <context context-type="linenumber">105,107</context>
         </context-group>
         <note priority="1" from="description">Activation Google login</note>
       </trans-unit>
       <trans-unit id="activateAppleLogin" datatype="html">
-        <source> 使用 Apple 登入 </source>
+        <source>Apple</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">114,120</context>
+          <context context-type="linenumber">133,135</context>
         </context-group>
         <note priority="1" from="description">Activation Apple login</note>
       </trans-unit>
@@ -206,7 +206,7 @@
         <source>嘗試次數太多，請等待 <x id="seconds" equiv-text="seconds"/> 秒後再試。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">171</context>
+          <context context-type="linenumber">199</context>
         </context-group>
         <note priority="1" from="description">Activation rate limit with seconds</note>
       </trans-unit>
@@ -214,7 +214,7 @@
         <source>請先輸入邀請碼。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">211</context>
+          <context context-type="linenumber">239</context>
         </context-group>
         <note priority="1" from="description">Activation empty invite error</note>
       </trans-unit>
@@ -222,7 +222,7 @@
         <source>請先登入後再啟用邀請。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">249</context>
+          <context context-type="linenumber">277</context>
         </context-group>
         <note priority="1" from="description">Activation auth required</note>
       </trans-unit>
@@ -230,7 +230,7 @@
         <source>嘗試次數太多，請稍後再試。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">264</context>
+          <context context-type="linenumber">292</context>
         </context-group>
         <note priority="1" from="description">Activation rate limit generic</note>
       </trans-unit>
@@ -238,7 +238,7 @@
         <source>邀請碼不正確或已失效。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">271</context>
+          <context context-type="linenumber">299</context>
         </context-group>
         <note priority="1" from="description">Activation invalid invite</note>
       </trans-unit>
@@ -246,7 +246,7 @@
         <source>無法啟用邀請，請稍後再試。</source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/activation/activate-page.component.ts</context>
-          <context context-type="linenumber">277</context>
+          <context context-type="linenumber">305</context>
         </context-group>
         <note priority="1" from="description">Activation generic error</note>
       </trans-unit>

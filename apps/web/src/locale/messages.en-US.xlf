@@ -25,8 +25,8 @@
       <trans-unit id="activateSubmit" datatype="html"><source>啟用邀請</source><target>Activate invitation</target></trans-unit>
       <trans-unit id="activateLoginPrompt" datatype="html"><source>登入後會回到這個頁面，邀請碼只暫存在本次瀏覽工作階段。</source><target>After signing in, you will return to this page. The invite code is stored only for this browser session.</target></trans-unit>
       <trans-unit id="activateOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
-      <trans-unit id="activateGoogleLogin" datatype="html"><source>使用 Google 登入</source><target>Sign in with Google</target></trans-unit>
-      <trans-unit id="activateAppleLogin" datatype="html"><source>使用 Apple 登入</source><target>Sign in with Apple</target></trans-unit>
+      <trans-unit id="activateGoogleLogin" datatype="html"><source>Google</source><target>Google</target></trans-unit>
+      <trans-unit id="activateAppleLogin" datatype="html"><source>Apple</source><target>Apple</target></trans-unit>
       <trans-unit id="activateRateLimitWithSeconds" datatype="html"><source>嘗試次數太多，請等待 <x id="seconds" equiv-text="seconds"/> 秒後再試。</source><target>Too many attempts. Wait <x id="seconds" equiv-text="seconds"/> seconds before trying again.</target></trans-unit>
       <trans-unit id="activateEmptyInviteError" datatype="html"><source>請先輸入邀請碼。</source><target>Enter the invite code first.</target></trans-unit>
       <trans-unit id="activateAuthRequired" datatype="html"><source>請先登入後再啟用邀請。</source><target>Sign in before activating the invitation.</target></trans-unit>
