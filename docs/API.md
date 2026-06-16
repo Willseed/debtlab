@@ -279,8 +279,8 @@ Only the expense payer may soft-delete default-group expenses by setting
 
 ### GET `/api/settlements/summary`
 
-Authenticated. Returns balances, simplified suggested transfers, and pending
-payments:
+Authenticated active default-group member or admin only. Returns balances,
+simplified suggested transfers, and pending payments:
 
 ```json
 {
