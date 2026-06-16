@@ -182,7 +182,7 @@ function createThrowingD1(): D1Database {
 }
 
 function readStyleNonce(body: string): string {
-  const match = body.match(/<style nonce="([^"]+)">/u);
+  const match = /<style nonce="([^"]+)">/u.exec(body);
   assert.ok(match?.[1]);
   return match[1];
 }
