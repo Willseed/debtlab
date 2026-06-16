@@ -185,7 +185,8 @@ for legacy sessions.
 
 ### PATCH `/api/members/:userId`
 
-Admin only. Updates role or status and writes audit logs for role/status changes.
+Admin only. Reserved for role/status updates and audit logs. Until implemented,
+auth/admin checks still run, then the route returns a generic `404 NOT_FOUND`.
 
 ## Expenses
 
@@ -384,12 +385,17 @@ defined in Error Codes. After the first solve exists, all submissions return
 
 ### GET `/api/admin/audit-logs`
 
-Admin only.
+Admin only. Reserved for audit-log browsing. Until implemented, auth/admin
+checks still run, then the route returns a generic `404 NOT_FOUND`.
 
 ### GET `/api/admin/export.csv`
 
-Admin only. Must write an `admin_csv_export` audit log.
+Admin only. Reserved for CSV export and the `admin_csv_export` audit log. Until
+implemented, auth/admin checks still run, then the route returns a generic
+`404 NOT_FOUND`.
 
 ### PATCH `/api/admin/easter-eggs/:eggId`
 
-Admin only. Enables or disables an Easter egg and writes an audit log.
+Admin only. Reserved for enabling/disabling Easter eggs and audit logs. Until
+implemented, auth/admin checks still run, then the route returns a generic
+`404 NOT_FOUND`.

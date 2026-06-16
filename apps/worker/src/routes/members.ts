@@ -1,14 +1,15 @@
-import { Hono } from 'hono';
+import { Handler, Hono } from 'hono';
 
-import { errorResponse, notImplemented } from '../http/error-response';
+import { errorResponse } from '../http/error-response';
 import { requireDefaultGroupMember } from '../middleware/require-default-group-member';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
 import { listDefaultGroupMembers } from '../services/default-group.service';
 import { AppBindings } from '../types';
-import { memberPatchSchema } from '../validation/schemas';
 
 export const memberRoutes = new Hono<AppBindings>();
+const unfinishedMemberAdminEndpoint: Handler<AppBindings> = (c) =>
+  errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
 
 memberRoutes.use('*', requireAuth);
 memberRoutes.use('*', requireDefaultGroupMember);
@@ -19,22 +20,4 @@ memberRoutes.get('/', async (c) => {
   return c.json({ members });
 });
 
-memberRoutes.patch('/:userId', requireAdmin, async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const parsed = memberPatchSchema.safeParse(body);
-
-  if (!parsed.success) {
-    return errorResponse(
-      c,
-      422,
-      'VALIDATION_ERROR',
-      'Member update is invalid.',
-      parsed.error.flatten(),
-    );
-  }
-
-  return notImplemented(
-    c,
-    `Member ${c.req.param('userId')} update persistence is not implemented yet.`,
-  );
-});
+memberRoutes.patch('/:userId', requireAdmin, unfinishedMemberAdminEndpoint);

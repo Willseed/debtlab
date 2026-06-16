@@ -1,22 +1,18 @@
-import { Hono } from 'hono';
+import { Handler, Hono } from 'hono';
 
-import { notImplemented } from '../http/error-response';
+import { errorResponse } from '../http/error-response';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
 import { AppBindings } from '../types';
 
 export const adminRoutes = new Hono<AppBindings>();
+const unfinishedAdminEndpoint: Handler<AppBindings> = (c) =>
+  errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
 
 adminRoutes.use('*', requireAuth, requireAdmin);
 
-adminRoutes.get('/audit-logs', (c) => {
-  return c.json({ auditLogs: [] });
-});
+adminRoutes.get('/audit-logs', unfinishedAdminEndpoint);
 
-adminRoutes.get('/export.csv', (c) => {
-  return notImplemented(c, 'Admin CSV export is not implemented yet.');
-});
+adminRoutes.get('/export.csv', unfinishedAdminEndpoint);
 
-adminRoutes.patch('/easter-eggs/:eggId', (c) => {
-  return notImplemented(c, `Easter egg ${c.req.param('eggId')} settings are not implemented yet.`);
-});
+adminRoutes.patch('/easter-eggs/:eggId', unfinishedAdminEndpoint);
