@@ -27,6 +27,7 @@ class FakeMemberD1 {
       readonly status: 'active' | 'disabled' | 'pending';
       readonly joined_at: string | null;
     }[] = [],
+    private readonly activeMemberIds: readonly string[] = [currentUser.id],
   ) {}
 
   prepare(sql: string) {
@@ -39,6 +40,10 @@ class FakeMemberD1 {
 
   getMembers() {
     return this.memberRows;
+  }
+
+  getActiveMemberIds() {
+    return this.activeMemberIds;
   }
 }
 
@@ -70,6 +75,12 @@ class FakeMemberStatement {
   }
 
   async all<T>(): Promise<{ readonly results: readonly T[] }> {
+    if (this.sql.includes('FROM group_members') && this.sql.includes('gm.user_id IN')) {
+      return {
+        results: this.db.getActiveMemberIds().map((userId) => ({ user_id: userId })) as T[],
+      };
+    }
+
     if (this.sql.includes('FROM group_members')) {
       return { results: this.db.getMembers() as readonly T[] };
     }

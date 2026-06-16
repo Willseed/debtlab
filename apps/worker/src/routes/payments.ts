@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { errorResponse } from '../http/error-response';
+import { requireDefaultGroupMember } from '../middleware/require-default-group-member';
 import { requireAuth } from '../middleware/require-auth';
 import {
   confirmPayment,
@@ -19,6 +20,7 @@ import { paymentCreateSchema } from '../validation/schemas';
 export const paymentRoutes = new Hono<AppBindings>();
 
 paymentRoutes.use('*', requireAuth);
+paymentRoutes.use('*', requireDefaultGroupMember);
 
 paymentRoutes.post('/', async (c) => {
   const body: unknown = await c.req.json().catch(() => null);

@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { errorResponse } from '../http/error-response';
+import { requireDefaultGroupMember } from '../middleware/require-default-group-member';
 import { requireAuth } from '../middleware/require-auth';
 import {
   createExpense,
@@ -26,6 +27,7 @@ import { expenseCreateSchema, expenseUpdateSchema } from '../validation/schemas'
 export const expenseRoutes = new Hono<AppBindings>();
 
 expenseRoutes.use('*', requireAuth);
+expenseRoutes.use('*', requireDefaultGroupMember);
 
 expenseRoutes.get('/', async (c) => {
   const expenses = await listExpenses(c.env.DB, c.get('currentUser'));

@@ -401,13 +401,13 @@ test('POST /api/payments rejects a third-party member recording another sender p
   assert.equal(db.batchStatements.length, 0);
 });
 
-test('POST /api/payments rejects account B when B is not an active default-group member', async () => {
-  const db = new FakePaymentD1(bob, null, {
+test('POST /api/payments rejects transfer parties that are not active default-group members', async () => {
+  const db = new FakePaymentD1(alice, null, {
     activeMemberIds: [alice.id],
     settlementExpensePayerId: alice.id,
   });
   const app = makeApp(db);
-  const cookie = await authCookie(bob);
+  const cookie = await authCookie(alice);
 
   const response = await app.request(
     '/api/payments',

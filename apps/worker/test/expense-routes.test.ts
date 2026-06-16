@@ -4,6 +4,7 @@ import test from 'node:test';
 import { Hono } from 'hono';
 
 import { validateOrigin } from '../src/middleware/validate-origin';
+import { DEFAULT_GROUP_ACCESS_MESSAGE } from '../src/middleware/require-default-group-member';
 import { expenseRoutes } from '../src/routes/expenses';
 import { createSessionToken, SESSION_COOKIE_NAME } from '../src/services/auth.service';
 import { AppBindings, ApiErrorCode, SessionUser } from '../src/types';
@@ -59,6 +60,8 @@ class FakeExpenseRouteD1 {
   readonly batchStatements: [string, ...unknown[]][][] = [];
   readonly expenseRows: readonly FakeExpenseListRow[];
   participantRows: FakeExpenseParticipantRow[];
+  throwOnExpenseDetailLookup = false;
+  throwOnExpenseUpdateLookup = false;
   readonly expenseDeleteRow: FakeExpenseDeleteRow | null;
   readonly activeMemberIds: readonly string[];
 
@@ -257,6 +260,10 @@ class FakeExpenseRouteStatement {
   }
 
   private expenseListRow() {
+    if (this.db.throwOnExpenseDetailLookup) {
+      throw new Error('Simulated D1 failure');
+    }
+
     const expenseId = this.values[0];
     return this.db.expenseRows.find((row) => row.id === expenseId) ?? null;
   }
@@ -290,6 +297,10 @@ class FakeExpenseRouteStatement {
   }
 
   private expenseUpdateRow() {
+    if (this.db.throwOnExpenseUpdateLookup) {
+      throw new Error('Simulated D1 failure');
+    }
+
     const row = this.db.expenseOwnerRow;
 
     if (!row || (row.group_id ?? 'grp_default') !== this.values[1]) {
@@ -530,6 +541,15 @@ test('GET /api/expenses/:expenseId returns authorized non-creator details as rea
   });
 });
 
+test('GET /api/expenses/:expenseId propagates unexpected errors as 500', async () => {
+  const db = new FakeExpenseRouteD1();
+  db.throwOnExpenseDetailLookup = true;
+
+  const response = await requestExpenseRoute('/api/expenses/exp_route', db);
+
+  assert.equal(response.status, 500);
+});
+
 test('PUT /api/expenses/:expenseId/participants/me joins the current member', async () => {
   const bob: SessionUser = {
     id: 'usr_bob',
@@ -661,12 +681,7 @@ test('PUT /api/expenses/:expenseId/participants/me rejects non-member callers', 
     bob,
   );
 
-  await assertApiError(
-    response,
-    403,
-    'FORBIDDEN',
-    'Only an active default-group member or an admin may join or leave expense participants.',
-  );
+  await assertApiError(response, 403, 'FORBIDDEN', DEFAULT_GROUP_ACCESS_MESSAGE);
   assert.equal(db.batchStatements.length, 0);
 });
 
@@ -862,12 +877,7 @@ test('DELETE /api/expenses/:expenseId/participants/me rejects non-members and cu
     },
   );
 
-  await assertApiError(
-    nonMemberResponse,
-    403,
-    'FORBIDDEN',
-    'Only an active default-group member or an admin may join or leave expense participants.',
-  );
+  await assertApiError(nonMemberResponse, 403, 'FORBIDDEN', DEFAULT_GROUP_ACCESS_MESSAGE);
   assert.equal(nonMemberDb.batchStatements.length, 0);
 
   const customSplitDb = new FakeExpenseRouteD1(
@@ -937,6 +947,22 @@ test('PATCH /api/expenses/:expenseId persists member updates', async () => {
   assert.deepEqual(await response.json(), { expense: { id: 'exp_route' } });
   assert.equal(db.batchStatements.length, 1);
   assert.equal(db.batchStatements[0]?.[0]?.[5], 'lodging');
+});
+
+test('PATCH /api/expenses/:expenseId propagates unexpected errors as 500', async () => {
+  const db = new FakeExpenseRouteD1();
+  db.throwOnExpenseUpdateLookup = true;
+
+  const response = await requestExpenseRoute('/api/expenses/exp_route', db, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title: 'Updated route coffee' }),
+  });
+
+  assert.equal(response.status, 500);
+  assert.equal(db.batchStatements.length, 0);
 });
 
 test('PATCH /api/expenses/:expenseId requires authentication', async () => {

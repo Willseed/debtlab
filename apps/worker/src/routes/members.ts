@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 
 import { errorResponse, notImplemented } from '../http/error-response';
+import { requireDefaultGroupMember } from '../middleware/require-default-group-member';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
 import { listDefaultGroupMembers } from '../services/default-group.service';
@@ -10,6 +11,7 @@ import { memberPatchSchema } from '../validation/schemas';
 export const memberRoutes = new Hono<AppBindings>();
 
 memberRoutes.use('*', requireAuth);
+memberRoutes.use('*', requireDefaultGroupMember);
 
 memberRoutes.get('/', async (c) => {
   const members = await listDefaultGroupMembers(c.env.DB, c.get('currentUser'));

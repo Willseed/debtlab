@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 
+import { requireDefaultGroupMember } from '../middleware/require-default-group-member';
 import { requireAuth } from '../middleware/require-auth';
 import { loadSettlementData } from '../services/payment.service';
 import { calculateBalances, calculateSuggestedTransfers } from '../services/settlement.service';
@@ -8,6 +9,7 @@ import { AppBindings } from '../types';
 export const settlementRoutes = new Hono<AppBindings>();
 
 settlementRoutes.use('*', requireAuth);
+settlementRoutes.use('*', requireDefaultGroupMember);
 
 settlementRoutes.get('/summary', async (c) => {
   const db = c.env.DB;
