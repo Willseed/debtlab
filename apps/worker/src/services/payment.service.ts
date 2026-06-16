@@ -231,10 +231,7 @@ export async function createPayment(
         user.id,
         paymentId,
         JSON.stringify({
-          fromUserId: input.fromUserId,
-          toUserId: input.toUserId,
-          amount: input.amount,
-          note: input.note ?? null,
+          ...createPaymentCreatedAuditPayload(input),
           status,
         }),
       ),
@@ -251,11 +248,7 @@ export async function createPayment(
           crypto.randomUUID(),
           user.id,
           paymentId,
-          JSON.stringify({
-            fromUserId: input.fromUserId,
-            toUserId: input.toUserId,
-            amount: input.amount,
-          }),
+          JSON.stringify(createPaymentCreatedAuditPayload(input)),
         ),
     );
   }
@@ -317,13 +310,27 @@ export async function confirmPayment(
         crypto.randomUUID(),
         user.id,
         paymentId,
-        JSON.stringify({
-          fromUserId: payment.from_user_id,
-          toUserId: payment.to_user_id,
-          amount: payment.amount,
-        }),
+        JSON.stringify(createPaymentConfirmedAuditPayload(payment)),
       ),
   ]);
+}
+
+function createPaymentCreatedAuditPayload(input: PaymentCreateInput) {
+  return {
+    fromUserId: input.fromUserId,
+    toUserId: input.toUserId,
+    amount: input.amount,
+  };
+}
+
+function createPaymentConfirmedAuditPayload(
+  payment: Pick<PaymentRow, 'from_user_id' | 'to_user_id' | 'amount'>,
+) {
+  return {
+    fromUserId: payment.from_user_id,
+    toUserId: payment.to_user_id,
+    amount: payment.amount,
+  };
 }
 
 export async function loadSettlementData(db: D1Database): Promise<SettlementData> {

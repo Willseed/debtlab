@@ -71,9 +71,17 @@ type ExpenseDeleteRow = {
   readonly group_id: string;
   readonly paid_by_user_id: string;
   readonly created_by: string;
-  readonly title: string;
   readonly amount: number;
   readonly currency: 'TWD';
+};
+
+type ExpenseUpdateAuditField = 'title' | 'description' | 'amount' | 'category' | 'expenseDate';
+
+type ExpenseUpdateAuditPayload = {
+  readonly updatedFields: readonly ExpenseUpdateAuditField[];
+  readonly amount?: number;
+  readonly category?: ExpenseCreateInput['category'];
+  readonly expenseDate?: string;
 };
 
 type ExpenseListRow = {
@@ -208,16 +216,66 @@ export async function createExpense(
         auditLogId,
         user.id,
         expenseId,
-        JSON.stringify({
-          title: input.title,
-          amount: input.amount,
-          currency: input.currency,
-          splitMethod: input.splitMethod,
-        }),
+        JSON.stringify(createExpenseCreatedAuditPayload(input)),
       ),
   ]);
 
   return expenseId;
+}
+
+function createExpenseCreatedAuditPayload(input: ExpenseCreateInput) {
+  return {
+    amount: input.amount,
+    currency: input.currency,
+    category: input.category,
+    expenseDate: input.expenseDate,
+    splitMethod: input.splitMethod,
+    paidByUserId: input.paidByUserId,
+    participantCount: input.participants.length,
+  };
+}
+
+function createExpenseUpdatedAuditPayload(input: ExpenseUpdateInput): ExpenseUpdateAuditPayload {
+  const payload: {
+    updatedFields: ExpenseUpdateAuditField[];
+    amount?: number;
+    category?: ExpenseCreateInput['category'];
+    expenseDate?: string;
+  } = { updatedFields: [] };
+  if (input.title !== undefined) {
+    payload.updatedFields.push('title');
+  }
+
+  if (input.description !== undefined) {
+    payload.updatedFields.push('description');
+  }
+
+  if (input.amount !== undefined) {
+    payload.updatedFields.push('amount');
+    payload.amount = input.amount;
+  }
+
+  if (input.category !== undefined) {
+    payload.updatedFields.push('category');
+    payload.category = input.category;
+  }
+
+  if (input.expenseDate !== undefined) {
+    payload.updatedFields.push('expenseDate');
+    payload.expenseDate = input.expenseDate;
+  }
+
+  return payload;
+}
+
+function createExpenseDeletedAuditPayload(expense: ExpenseDeleteRow) {
+  return {
+    groupId: expense.group_id,
+    amount: expense.amount,
+    currency: expense.currency,
+    paidByUserId: expense.paid_by_user_id,
+    createdBy: expense.created_by,
+  };
 }
 
 export async function listExpenses(
@@ -484,7 +542,12 @@ export async function updateExpense(
         `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, after_json)
          VALUES (?, ?, 'expense_updated', 'expense', ?, ?)`,
       )
-      .bind(crypto.randomUUID(), user.id, expenseId, JSON.stringify(input)),
+      .bind(
+        crypto.randomUUID(),
+        user.id,
+        expenseId,
+        JSON.stringify(createExpenseUpdatedAuditPayload(input)),
+      ),
   );
 
   await db.batch(statements);
@@ -497,7 +560,7 @@ export async function deleteExpense(
 ): Promise<void> {
   const expense = await db
     .prepare(
-      `SELECT group_id, paid_by_user_id, created_by, title, amount, currency
+      `SELECT group_id, paid_by_user_id, created_by, amount, currency
        FROM expenses
        WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
     )
@@ -512,14 +575,7 @@ export async function deleteExpense(
     throw new ExpenseForbiddenError();
   }
 
-  const beforeJson = JSON.stringify({
-    groupId: expense.group_id,
-    title: expense.title,
-    amount: expense.amount,
-    currency: expense.currency,
-    paidByUserId: expense.paid_by_user_id,
-    createdBy: expense.created_by,
-  });
+  const beforeJson = JSON.stringify(createExpenseDeletedAuditPayload(expense));
 
   const [deleteResult] = await db.batch([
     db

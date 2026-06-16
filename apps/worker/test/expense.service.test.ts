@@ -24,7 +24,6 @@ type FakeExpenseDeleteRow = {
   readonly group_id: string;
   readonly paid_by_user_id?: string;
   readonly created_by: string;
-  readonly title: string;
   readonly amount: number;
   readonly currency: 'TWD';
 };
@@ -43,7 +42,6 @@ class FakeD1Database {
   expenseDeleteRow: FakeExpenseDeleteRow | null = {
     group_id: 'grp_default',
     created_by: 'usr_alice',
-    title: 'Lab ingredients',
     amount: 1280,
     currency: 'TWD',
   };
@@ -178,7 +176,8 @@ class FakeD1PreparedStatement {
     }
     if (
       this.sql.includes('SELECT group_id') &&
-      this.sql.includes('title') &&
+      this.sql.includes('created_by') &&
+      this.sql.includes('currency') &&
       this.sql.includes('FROM expenses')
     ) {
       if (!this.db.expenseDeleteRow || this.db.expenseDeleteRow.group_id !== this.values[1]) {
@@ -277,6 +276,43 @@ function readBoundNumber(value: unknown): number | null {
   return typeof value === 'number' ? value : null;
 }
 
+function readBoundJsonObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'string') {
+    assert.fail('Expected a JSON string.');
+  }
+
+  const parsed: unknown = JSON.parse(value);
+  assert.equal(typeof parsed, 'object');
+  assert.notEqual(parsed, null);
+  assert.equal(Array.isArray(parsed), false);
+  return parsed as Record<string, unknown>;
+}
+
+function assertAuditPayloadOmitsSensitiveData(payload: Record<string, unknown>): void {
+  const serializedPayload = JSON.stringify(payload);
+  const sensitiveFragments = [
+    'password',
+    'hunter2',
+    'authorizationCode',
+    'oauth-code-secret',
+    'accessToken',
+    'access-token-secret',
+    'sessionToken',
+    'session-token-secret',
+    'headers',
+    'cookie',
+    'labsplit_session=secret',
+    'clientSecret',
+    'client-secret',
+    'privateKey',
+    'BEGIN PRIVATE KEY',
+  ];
+
+  for (const fragment of sensitiveFragments) {
+    assert.equal(serializedPayload.includes(fragment), false);
+  }
+}
+
 function displayNameForUser(userId: string): string {
   if (userId === 'usr_alice') return 'Alice';
   if (userId === 'usr_bob') return 'Bob';
@@ -309,6 +345,49 @@ test('createExpense persists group, membership, expense, shares, and audit log',
   assert.match(String(db.statements[0]?.[4]?.[0]), /INSERT INTO audit_logs/u);
   assert.equal(db.statements[0]?.[2]?.[3], 'Lab ingredients');
   assert.equal(db.statements[0]?.[3]?.[3], 'usr_alice');
+  assert.deepEqual(readBoundJsonObject(db.statements[0]?.[4]?.[4]), {
+    amount: 1280,
+    currency: 'TWD',
+    category: 'ingredients',
+    expenseDate: '2026-06-13',
+    splitMethod: 'equal',
+    paidByUserId: 'usr_alice',
+    participantCount: 1,
+  });
+});
+
+test('createExpense audit payload ignores sensitive extraneous fields', async () => {
+  const db = new FakeD1Database();
+  const input = Object.assign(
+    { ...expenseInput },
+    {
+      password: 'hunter2',
+      authorizationCode: 'oauth-code-secret',
+      accessToken: 'access-token-secret',
+      sessionToken: 'session-token-secret',
+      headers: {
+        authorization: 'Bearer access-token-secret',
+        cookie: 'labsplit_session=secret',
+      },
+      clientSecret: 'client-secret',
+      privateKey: '-----BEGIN PRIVATE KEY-----',
+    },
+  );
+
+  await createExpense(db as unknown as D1Database, sessionUser, input, shares);
+
+  const auditPayload = readBoundJsonObject(db.statements[0]?.[4]?.[4]);
+  assert.deepEqual(auditPayload, {
+    amount: 1280,
+    currency: 'TWD',
+    category: 'ingredients',
+    expenseDate: '2026-06-13',
+    splitMethod: 'equal',
+    paidByUserId: 'usr_alice',
+    participantCount: 1,
+  });
+  assert.equal(JSON.stringify(auditPayload).includes('Lab ingredients'), false);
+  assertAuditPayloadOmitsSensitiveData(auditPayload);
 });
 
 test('createExpense stores a null description when no note is provided', async () => {
@@ -895,6 +974,50 @@ test('updateExpense persists field updates and audit log without touching shares
   assert.equal(batch?.[0]?.[7], 'exp_alice');
   assert.equal(batch?.[0]?.[8], 'grp_default');
   assert.equal(batch?.[0]?.[9], 'usr_alice');
+  assert.deepEqual(readBoundJsonObject(batch?.[1]?.[4]), {
+    updatedFields: ['title', 'description', 'category'],
+    category: 'prize',
+  });
+});
+
+test('updateExpense audit payload allowlists safe fields and omits sensitive data', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_alice', amount: 1280 };
+  const input = Object.assign(
+    {
+      title: 'Renamed expense',
+      description: 'password=hunter2 should stay out',
+      amount: 1280,
+      category: 'prize',
+      expenseDate: '2026-06-14',
+    } satisfies ExpenseUpdateInput,
+    {
+      password: 'hunter2',
+      authorizationCode: 'oauth-code-secret',
+      accessToken: 'access-token-secret',
+      sessionToken: 'session-token-secret',
+      headers: {
+        authorization: 'Bearer access-token-secret',
+        cookie: 'labsplit_session=secret',
+      },
+      clientSecret: 'client-secret',
+      privateKey: '-----BEGIN PRIVATE KEY-----',
+    },
+  );
+
+  await updateExpense(db as unknown as D1Database, sessionUser, 'exp_alice', input);
+
+  const batch = db.statements[0];
+  assert.equal(batch?.length, 2);
+  const auditPayload = readBoundJsonObject(batch?.[1]?.[4]);
+  assert.deepEqual(auditPayload, {
+    updatedFields: ['title', 'description', 'amount', 'category', 'expenseDate'],
+    amount: 1280,
+    category: 'prize',
+    expenseDate: '2026-06-14',
+  });
+  assert.equal(JSON.stringify(auditPayload).includes('Renamed expense'), false);
+  assertAuditPayloadOmitsSensitiveData(auditPayload);
 });
 
 test('updateExpense rewrites participant shares when the amount changes', async () => {
@@ -1099,7 +1222,6 @@ test('deleteExpense rejects non-payers before D1 writes', async () => {
     group_id: 'grp_default',
     paid_by_user_id: 'usr_bob',
     created_by: 'usr_bob',
-    title: 'Lab ingredients',
     amount: 1280,
     currency: 'TWD',
   };
@@ -1126,17 +1248,15 @@ test('deleteExpense lets payers soft delete default-group expenses', async () =>
   assert.equal(batch?.[0]?.[3], 'usr_alice');
   assert.match(String(batch?.[1]?.[0]), /expense_deleted/u);
   assert.match(String(batch?.[1]?.[0]), /before_json/u);
-  assert.equal(
-    batch?.[1]?.[4],
-    JSON.stringify({
-      groupId: 'grp_default',
-      title: 'Lab ingredients',
-      amount: 1280,
-      currency: 'TWD',
-      paidByUserId: 'usr_alice',
-      createdBy: 'usr_alice',
-    }),
-  );
+  const auditPayload = readBoundJsonObject(batch?.[1]?.[4]);
+  assert.deepEqual(auditPayload, {
+    groupId: 'grp_default',
+    amount: 1280,
+    currency: 'TWD',
+    paidByUserId: 'usr_alice',
+    createdBy: 'usr_alice',
+  });
+  assert.equal(JSON.stringify(auditPayload).includes('Lab ingredients'), false);
 });
 
 test('deleteExpense ignores expenses outside the default group', async () => {
@@ -1144,7 +1264,6 @@ test('deleteExpense ignores expenses outside the default group', async () => {
   db.expenseDeleteRow = {
     group_id: 'grp_other',
     created_by: 'usr_alice',
-    title: 'Lab ingredients',
     amount: 1280,
     currency: 'TWD',
   };

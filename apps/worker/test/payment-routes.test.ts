@@ -260,6 +260,41 @@ function env(db: FakePaymentD1) {
   return { DB: db as unknown as D1Database, SESSION_SECRET };
 }
 
+function readAuditPayload(db: FakePaymentD1, action: string): Record<string, unknown> {
+  const statement = db.batchStatements.flat().find(([sql]) => sql.includes(`'${action}'`));
+  assert.ok(statement);
+  return readJsonObject(statement[4]);
+}
+
+function readJsonObject(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'string') {
+    assert.fail('Expected a JSON string.');
+  }
+
+  const parsed: unknown = JSON.parse(value);
+  assert.equal(typeof parsed, 'object');
+  assert.notEqual(parsed, null);
+  assert.equal(Array.isArray(parsed), false);
+  return parsed as Record<string, unknown>;
+}
+
+function assertPaymentAuditPayloadOmitsSensitiveData(payload: Record<string, unknown>): void {
+  const serializedPayload = JSON.stringify(payload);
+  const sensitiveFragments = [
+    'note',
+    'password',
+    'hunter2',
+    'access_token',
+    'access-token-secret',
+    'Cookie',
+    'labsplit_session=secret',
+  ];
+
+  for (const fragment of sensitiveFragments) {
+    assert.equal(serializedPayload.includes(fragment), false);
+  }
+}
+
 // POST /api/payments
 
 test('POST /api/payments creates a pending payment and returns its id and status', async () => {
@@ -288,6 +323,47 @@ test('POST /api/payments creates a pending payment and returns its id and status
   assert.ok(
     db.batchStatements.some((batch) => batch.some(([sql]) => sql.includes('INSERT INTO payments'))),
   );
+  assert.deepEqual(readAuditPayload(db, 'payment_created'), {
+    fromUserId: alice.id,
+    toUserId: bob.id,
+    amount: 300,
+    status: 'pending',
+  });
+});
+
+test('POST /api/payments audit log omits free-form notes and sensitive-looking values', async () => {
+  const db = new FakePaymentD1(alice);
+  const app = makeApp(db);
+  const cookie = await authCookie(alice);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({
+        fromUserId: alice.id,
+        toUserId: bob.id,
+        amount: 300,
+        note: 'password=hunter2 access_token=access-token-secret Cookie=labsplit_session=secret',
+      }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 201);
+  const auditPayload = readAuditPayload(db, 'payment_created');
+  assert.deepEqual(auditPayload, {
+    fromUserId: alice.id,
+    toUserId: bob.id,
+    amount: 300,
+    status: 'pending',
+  });
+  assertPaymentAuditPayloadOmitsSensitiveData(auditPayload);
 });
 
 test('POST /api/payments lets account B record a suggested transfer from an account A expense', async () => {

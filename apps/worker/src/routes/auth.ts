@@ -7,6 +7,7 @@ import {
   productionSafeAuthErrorCode,
 } from '../http/configuration-error-response';
 import { errorResponse } from '../http/error-response';
+import { logWorkerError } from '../logging/safe-log';
 import { requireAuth } from '../middleware/require-auth';
 import {
   AppleOAuthConfigurationError,
@@ -428,7 +429,7 @@ function handleAppleOAuthCallbackError(c: AuthContext, error: unknown): Response
     return redirectAppleCallbackError(c, 'apple_verification_failed');
   }
 
-  console.error('Apple OAuth callback failed', error);
+  logWorkerError('Apple OAuth callback failed', error);
   return redirectAppleCallbackError(c, 'apple_callback_failed');
 }
 

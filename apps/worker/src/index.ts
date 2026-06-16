@@ -11,6 +11,7 @@ import { paymentRoutes } from './routes/payments';
 import { settlementRoutes } from './routes/settlements';
 import { configurationErrorResponse } from './http/configuration-error-response';
 import { errorResponse } from './http/error-response';
+import { logWorkerError } from './logging/safe-log';
 import { securityHeaders } from './middleware/security-headers';
 import { validateOrigin } from './middleware/validate-origin';
 import { AppBindings } from './types';
@@ -58,7 +59,7 @@ app.all('*', async (c) => {
 });
 
 app.onError((error, c) => {
-  console.error('Unhandled worker error', error);
+  logWorkerError('Unhandled worker error', error);
   return errorResponse(c, 500, 'INTERNAL_ERROR', 'Unexpected server error.');
 });
 

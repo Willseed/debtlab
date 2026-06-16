@@ -271,7 +271,8 @@ class FakeExpenseRouteStatement {
   private isExpenseDeleteLookup(): boolean {
     return (
       this.sql.includes('SELECT group_id') &&
-      this.sql.includes('title') &&
+      this.sql.includes('created_by') &&
+      this.sql.includes('currency') &&
       this.sql.includes('FROM expenses')
     );
   }
