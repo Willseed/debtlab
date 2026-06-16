@@ -171,4 +171,12 @@ class FakeCurrentUserStatement {
       status: this.currentUser.status,
     } as T;
   }
+
+  async all<T>(): Promise<{ results: T[] }> {
+    if (!this.currentUser) {
+      return { results: [] };
+    }
+
+    return { results: [{ user_id: this.currentUser.id }] as T[] };
+  }
 }

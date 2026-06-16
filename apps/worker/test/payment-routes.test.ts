@@ -494,7 +494,7 @@ test('POST /api/payments rejects transfer parties that are not active default-gr
         Cookie: cookie,
         Origin: 'https://lab.buy2330.cc',
       },
-      body: JSON.stringify({ fromUserId: bob.id, toUserId: alice.id, amount: 300 }),
+      body: JSON.stringify({ fromUserId: alice.id, toUserId: bob.id, amount: 300 }),
     },
     env(db),
   );
