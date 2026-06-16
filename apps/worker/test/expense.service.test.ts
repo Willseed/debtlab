@@ -358,21 +358,19 @@ test('createExpense persists group, membership, expense, shares, and audit log',
 
 test('createExpense audit payload ignores sensitive extraneous fields', async () => {
   const db = new FakeD1Database();
-  const input = Object.assign(
-    { ...expenseInput },
-    {
-      password: 'hunter2',
-      authorizationCode: 'oauth-code-secret',
-      accessToken: 'access-token-secret',
-      sessionToken: 'session-token-secret',
-      headers: {
-        authorization: 'Bearer access-token-secret',
-        cookie: 'labsplit_session=secret',
-      },
-      clientSecret: 'client-secret',
-      privateKey: '-----BEGIN PRIVATE KEY-----',
+  const input = {
+    ...expenseInput,
+    password: 'hunter2',
+    authorizationCode: 'oauth-code-secret',
+    accessToken: 'access-token-secret',
+    sessionToken: 'session-token-secret',
+    headers: {
+      authorization: 'Bearer access-token-secret',
+      cookie: 'labsplit_session=secret',
     },
-  );
+    clientSecret: 'client-secret',
+    privateKey: '-----BEGIN PRIVATE KEY-----',
+  };
 
   await createExpense(db as unknown as D1Database, sessionUser, input, shares);
 

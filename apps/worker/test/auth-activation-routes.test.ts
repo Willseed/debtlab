@@ -224,6 +224,19 @@ class FakeAuthActivationStatement {
   }
 
   async run() {
+    return (
+      this.insertRateLimit() ??
+      this.resetRateLimit() ??
+      this.incrementRateLimit() ??
+      this.deleteRateLimit() ??
+      this.activatePendingUser() ??
+      this.insertDefaultGroup() ??
+      this.upsertDefaultGroupMember() ??
+      this.unsupported()
+    );
+  }
+
+  private insertRateLimit() {
     if (this.sql.includes('INSERT INTO rate_limits')) {
       const [keyValue, resetAtValue, updatedAtValue] = this.values;
       this.db.rateLimits.set(String(keyValue), {
@@ -233,7 +246,10 @@ class FakeAuthActivationStatement {
       });
       return { meta: { changes: 1 } };
     }
+    return null;
+  }
 
+  private resetRateLimit() {
     if (this.sql.includes('SET attempts = 1')) {
       const [resetAtValue, updatedAtValue, keyValue] = this.values;
       this.db.rateLimits.set(String(keyValue), {
@@ -243,7 +259,10 @@ class FakeAuthActivationStatement {
       });
       return { meta: { changes: 1 } };
     }
+    return null;
+  }
 
+  private incrementRateLimit() {
     if (this.sql.includes('SET attempts = attempts + 1')) {
       const [updatedAtValue, keyValue] = this.values;
       const key = String(keyValue);
@@ -259,12 +278,18 @@ class FakeAuthActivationStatement {
 
       return { meta: { changes: row ? 1 : 0 } };
     }
+    return null;
+  }
 
+  private deleteRateLimit() {
     if (this.sql.includes('DELETE FROM rate_limits')) {
       const deleted = this.db.rateLimits.delete(String(this.values[0]));
       return { meta: { changes: deleted ? 1 : 0 } };
     }
+    return null;
+  }
 
+  private activatePendingUser() {
     if (this.sql.includes("SET status = 'active'")) {
       const [userId] = this.values;
       const user = this.db.users.get(String(userId));
@@ -278,12 +303,18 @@ class FakeAuthActivationStatement {
 
       return { meta: { changes: user?.status === 'pending' ? 1 : 0 } };
     }
+    return null;
+  }
 
+  private insertDefaultGroup() {
     if (this.sql.includes('INSERT OR IGNORE INTO groups')) {
       this.db.groups.add(String(this.values[0]));
       return { meta: { changes: 1 } };
     }
+    return null;
+  }
 
+  private upsertDefaultGroupMember() {
     if (this.sql.includes('INSERT INTO group_members')) {
       const [, groupId, userId, role] = this.values;
       this.db.groupMembers.set(groupMemberKey(String(groupId), String(userId)), {
@@ -294,7 +325,10 @@ class FakeAuthActivationStatement {
       });
       return { meta: { changes: 1 } };
     }
+    return null;
+  }
 
+  private unsupported(): never {
     throw new Error(`Unsupported auth activation SQL: ${this.sql}`);
   }
 }
@@ -323,7 +357,9 @@ async function requestActivate(
 }
 
 function readSessionCookieValue(response: Response): string {
-  const match = new RegExp(`${SESSION_COOKIE_NAME}=([^;\\n]+)`).exec(readSetCookie(response));
+  const match = new RegExp(String.raw`${SESSION_COOKIE_NAME}=([^;\n]+)`).exec(
+    readSetCookie(response),
+  );
   assert.ok(match);
 
   return match[1];

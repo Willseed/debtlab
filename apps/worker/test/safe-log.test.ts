@@ -40,7 +40,7 @@ test('toSafeLogError does not stringify non-error objects', () => {
 });
 
 test('toSafeLogError normalizes empty and long messages', () => {
-  const emptyError = new Error('');
+  const emptyError = new Error();
   emptyError.name = '';
   const longError = new Error('x'.repeat(205));
 

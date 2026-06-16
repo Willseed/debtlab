@@ -247,5 +247,5 @@ function parseAllowedEmails(allowedEmails: string | undefined): ReadonlySet<stri
 function normalizeEmail(email: string | undefined): string | null {
   const normalizedEmail = email?.trim().toLowerCase();
 
-  return normalizedEmail ? normalizedEmail : null;
+  return normalizedEmail || null;
 }

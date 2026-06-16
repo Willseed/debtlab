@@ -91,6 +91,18 @@ class FakeD1PreparedStatement {
   }
 
   async run() {
+    this.insertUser();
+    this.insertIdentity();
+    this.insertDefaultGroup();
+    this.insertDefaultGroupMember();
+    this.upsertActiveDefaultGroupMember();
+    this.activatePendingUser();
+    this.updateUserProfile();
+
+    return { success: true };
+  }
+
+  private insertUser(): void {
     if (this.sql.includes('INSERT INTO users')) {
       const [id, email, displayName, avatarUrl, role, status] = this.values;
       this.db.users.set(String(id), {
@@ -102,17 +114,23 @@ class FakeD1PreparedStatement {
         status: readUserStatus(status),
       });
     }
+  }
 
+  private insertIdentity(): void {
     if (this.sql.includes('INSERT INTO user_identities')) {
       const [, userId, provider, subject] = this.values;
       this.db.identities.set(identityKey(String(provider), String(subject)), String(userId));
     }
+  }
 
+  private insertDefaultGroup(): void {
     if (this.sql.includes('INSERT OR IGNORE INTO groups')) {
       const [groupId] = this.values;
       this.db.groups.add(String(groupId));
     }
+  }
 
+  private insertDefaultGroupMember(): void {
     if (this.sql.includes('INSERT OR IGNORE INTO group_members')) {
       const [, groupId, userId, role, status] = this.values;
       this.db.groupMemberInsertUserIds.push(String(userId));
@@ -127,7 +145,9 @@ class FakeD1PreparedStatement {
         groupMember,
       );
     }
+  }
 
+  private upsertActiveDefaultGroupMember(): void {
     if (this.sql.includes('INSERT INTO group_members')) {
       const [, groupId, userId, role] = this.values;
       this.db.groupMemberInsertUserIds.push(String(userId));
@@ -142,7 +162,9 @@ class FakeD1PreparedStatement {
         groupMember,
       );
     }
+  }
 
+  private activatePendingUser(): void {
     if (this.sql.includes("SET status = 'active'")) {
       const [userId] = this.values;
       const existing = this.db.users.get(String(userId));
@@ -153,21 +175,25 @@ class FakeD1PreparedStatement {
           status: 'active',
         });
       }
-    } else if (this.sql.includes('UPDATE users')) {
-      const [email, displayName, avatarUrl, userId] = this.values;
-      const existing = this.db.users.get(String(userId));
+    }
+  }
 
-      if (existing) {
-        this.db.users.set(existing.id, {
-          ...existing,
-          email: readNullableString(email) ?? existing.email,
-          display_name: readNullableString(displayName) ?? existing.display_name,
-          avatar_url: readNullableString(avatarUrl) ?? existing.avatar_url,
-        });
-      }
+  private updateUserProfile(): void {
+    if (this.sql.includes("SET status = 'active'") || !this.sql.includes('UPDATE users')) {
+      return;
     }
 
-    return { success: true };
+    const [email, displayName, avatarUrl, userId] = this.values;
+    const existing = this.db.users.get(String(userId));
+
+    if (existing) {
+      this.db.users.set(existing.id, {
+        ...existing,
+        email: readNullableString(email) ?? existing.email,
+        display_name: readNullableString(displayName) ?? existing.display_name,
+        avatar_url: readNullableString(avatarUrl) ?? existing.avatar_url,
+      });
+    }
   }
 }
 
