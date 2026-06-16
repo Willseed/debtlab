@@ -41,6 +41,11 @@ type ExpenseRow = {
   readonly participantIds: readonly string[];
   readonly participantsLabel: string;
   readonly description: string;
+  readonly participantLocked: boolean;
+  readonly canLockParticipants: boolean | null;
+  readonly canUnlockParticipants: boolean | null;
+  readonly canJoinParticipants: boolean | null;
+  readonly canLeaveParticipants: boolean | null;
   readonly canEdit: boolean;
   readonly canDelete: boolean;
 };
@@ -108,9 +113,112 @@ type ExpenseForm = {
                     <td>{{ expense.categoryLabel }}</td>
                     <td>{{ expense.paidBy }}</td>
                     <td class="money">NT&#36;{{ expense.amount }}</td>
-                    <td>{{ expense.participantsLabel }}</td>
+                    <td>
+                      <span>{{ expense.participantsLabel }}</span>
+                      @if (expense.participantLocked) {
+                        <span
+                          class="muted"
+                          i18n="Expense join locked status@@expenseJoinLockedStatus"
+                          >加入已關閉</span
+                        >
+                      }
+                    </td>
                     <td>
                       <div class="action-group">
+                        @if (canCurrentUserLockParticipants(expense)) {
+                          <button
+                            type="button"
+                            class="button button--secondary button--icon"
+                            (click)="lockExpenseParticipants(expense, $event)"
+                            [disabled]="isExpenseActionDisabled(expense.id)"
+                            aria-label="鎖定參與者"
+                            title="鎖定參與者"
+                            i18n-aria-label="@@expensesLockParticipantsActionLabel"
+                            i18n-title="@@expensesLockParticipantsActionTitle"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              viewBox="0 0 24 24"
+                              width="20"
+                              height="20"
+                            >
+                              <rect
+                                x="6"
+                                y="10"
+                                width="12"
+                                height="9"
+                                rx="2"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M8.5 10V7.5a3.5 3.5 0 0 1 7 0V10"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M12 14v1.5"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                            </svg>
+                          </button>
+                        }
+                        @if (canCurrentUserUnlockParticipants(expense)) {
+                          <button
+                            type="button"
+                            class="button button--secondary button--icon"
+                            (click)="unlockExpenseParticipants(expense, $event)"
+                            [disabled]="isExpenseActionDisabled(expense.id)"
+                            aria-label="解除參與者鎖定"
+                            title="解除參與者鎖定"
+                            i18n-aria-label="@@expensesUnlockParticipantsActionLabel"
+                            i18n-title="@@expensesUnlockParticipantsActionTitle"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              viewBox="0 0 24 24"
+                              width="20"
+                              height="20"
+                            >
+                              <rect
+                                x="6"
+                                y="10"
+                                width="12"
+                                height="9"
+                                rx="2"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M8.5 10V7.5a3.5 3.5 0 0 1 6.5-1.8"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M12 14v1.5"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                            </svg>
+                          </button>
+                        }
                         @if (expense.canEdit) {
                           <button
                             type="button"
@@ -191,101 +299,99 @@ type ExpenseForm = {
                             </svg>
                           </button>
                         }
-                        @if (canCurrentUserChangeParticipation()) {
-                          @if (isCurrentUserParticipant(expense)) {
-                            <button
-                              type="button"
-                              class="button button--secondary button--icon"
-                              (click)="leaveExpenseParticipant(expense, $event)"
-                              [disabled]="isExpenseActionDisabled(expense.id)"
-                              aria-label="退出支出"
-                              title="退出支出"
-                              i18n-aria-label="Leave expense action label@@expensesLeaveActionLabel"
-                              i18n-title="Leave expense action title@@expensesLeaveActionTitle"
+                        @if (canCurrentUserLeaveExpense(expense)) {
+                          <button
+                            type="button"
+                            class="button button--secondary button--icon"
+                            (click)="leaveExpenseParticipant(expense, $event)"
+                            [disabled]="isExpenseActionDisabled(expense.id)"
+                            aria-label="退出支出"
+                            title="退出支出"
+                            i18n-aria-label="Leave expense action label@@expensesLeaveActionLabel"
+                            i18n-title="Leave expense action title@@expensesLeaveActionTitle"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              viewBox="0 0 24 24"
+                              width="20"
+                              height="20"
                             >
-                              <svg
-                                aria-hidden="true"
-                                focusable="false"
-                                viewBox="0 0 24 24"
-                                width="20"
-                                height="20"
-                              >
-                                <path
-                                  d="M7 4h7a2 2 0 0 1 2 2v3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="1.8"
-                                />
-                                <path
-                                  d="M16 15v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="1.8"
-                                />
-                                <path
-                                  d="M10 12h9"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-linecap="round"
-                                  stroke-width="1.8"
-                                />
-                                <path
-                                  d="m16 9 3 3-3 3"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-width="1.8"
-                                />
-                              </svg>
-                            </button>
-                          } @else {
-                            <button
-                              type="button"
-                              class="button button--secondary button--icon"
-                              (click)="joinExpenseParticipant(expense, $event)"
-                              [disabled]="isExpenseActionDisabled(expense.id)"
-                              aria-label="加入支出"
-                              title="加入支出"
-                              i18n-aria-label="Join expense action label@@expensesJoinActionLabel"
-                              i18n-title="Join expense action title@@expensesJoinActionTitle"
+                              <path
+                                d="M7 4h7a2 2 0 0 1 2 2v3"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M16 15v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M10 12h9"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="m16 9 3 3-3 3"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="1.8"
+                              />
+                            </svg>
+                          </button>
+                        } @else if (canCurrentUserJoinExpense(expense)) {
+                          <button
+                            type="button"
+                            class="button button--secondary button--icon"
+                            (click)="joinExpenseParticipant(expense, $event)"
+                            [disabled]="isExpenseActionDisabled(expense.id)"
+                            aria-label="加入支出"
+                            title="加入支出"
+                            i18n-aria-label="Join expense action label@@expensesJoinActionLabel"
+                            i18n-title="Join expense action title@@expensesJoinActionTitle"
+                          >
+                            <svg
+                              aria-hidden="true"
+                              focusable="false"
+                              viewBox="0 0 24 24"
+                              width="20"
+                              height="20"
                             >
-                              <svg
-                                aria-hidden="true"
-                                focusable="false"
-                                viewBox="0 0 24 24"
-                                width="20"
-                                height="20"
-                              >
-                                <path
-                                  d="M8 12h8"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-linecap="round"
-                                  stroke-width="1.8"
-                                />
-                                <path
-                                  d="M12 8v8"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-linecap="round"
-                                  stroke-width="1.8"
-                                />
-                                <circle
-                                  cx="12"
-                                  cy="12"
-                                  r="8"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  stroke-width="1.8"
-                                />
-                              </svg>
-                            </button>
-                          }
+                              <path
+                                d="M8 12h8"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                              <path
+                                d="M12 8v8"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-linecap="round"
+                                stroke-width="1.8"
+                              />
+                              <circle
+                                cx="12"
+                                cy="12"
+                                r="8"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                              />
+                            </svg>
+                          </button>
                         }
                       </div>
                     </td>
@@ -534,6 +640,12 @@ type ExpenseForm = {
             <span i18n="Expense participants column@@expensesParticipants">參與者</span>
             <strong>{{ expense.participantsLabel }}</strong>
           </div>
+          @if (expense.participantLocked) {
+            <div class="expense-modal__summary">
+              <span i18n="Expense join status field@@expenseJoinStatusField">加入狀態</span>
+              <strong i18n="Expense join locked status@@expenseJoinLockedStatus">加入已關閉</strong>
+            </div>
+          }
           <div class="expense-modal__summary">
             <span i18n="Expense description field@@expenseFieldDescription">備註</span>
             <strong>{{ expense.description || emptyDescriptionLabel }}</strong>
@@ -640,6 +752,7 @@ export class ExpenseListPageComponent implements OnInit {
   protected readonly isSubmitting = signal(false);
   protected readonly deletingExpenseIds = signal<ReadonlySet<string>>(new Set());
   protected readonly participantActionExpenseIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly participantLockActionExpenseIds = signal<ReadonlySet<string>>(new Set());
   protected readonly pendingDeleteExpense = signal<ExpenseRow | null>(null);
   protected readonly viewingExpense = signal<ExpenseRow | null>(null);
   protected readonly listStatusMessage = signal('');
@@ -912,17 +1025,52 @@ export class ExpenseListPageComponent implements OnInit {
     return (
       this.hasDeleteFlowPending() ||
       this.deletingExpenseIds().has(expenseId) ||
-      this.participantActionExpenseIds().has(expenseId)
+      this.participantActionExpenseIds().has(expenseId) ||
+      this.participantLockActionExpenseIds().has(expenseId)
     );
-  }
-
-  protected canCurrentUserChangeParticipation(): boolean {
-    return this.activeCurrentUserId() !== null;
   }
 
   protected isCurrentUserParticipant(expense: ExpenseRow): boolean {
     const currentUserId = this.activeCurrentUserId();
     return currentUserId !== null && expense.participantIds.includes(currentUserId);
+  }
+
+  protected canCurrentUserJoinExpense(expense: ExpenseRow): boolean {
+    if (
+      this.activeCurrentUserId() === null ||
+      this.isCurrentUserParticipant(expense) ||
+      expense.participantLocked
+    ) {
+      return false;
+    }
+
+    return expense.canJoinParticipants ?? true;
+  }
+
+  protected canCurrentUserLeaveExpense(expense: ExpenseRow): boolean {
+    if (this.activeCurrentUserId() === null || !this.isCurrentUserParticipant(expense)) {
+      return false;
+    }
+
+    return expense.canLeaveParticipants ?? true;
+  }
+
+  protected canCurrentUserLockParticipants(expense: ExpenseRow): boolean {
+    const currentUserId = this.activeCurrentUserId();
+    if (currentUserId === null || expense.participantLocked) {
+      return false;
+    }
+
+    return expense.canLockParticipants ?? expense.paidById === currentUserId;
+  }
+
+  protected canCurrentUserUnlockParticipants(expense: ExpenseRow): boolean {
+    const currentUserId = this.activeCurrentUserId();
+    if (currentUserId === null || !expense.participantLocked) {
+      return false;
+    }
+
+    return expense.canUnlockParticipants ?? expense.paidById === currentUserId;
   }
 
   protected joinExpenseParticipant(expense: ExpenseRow, event: Event): void {
@@ -931,6 +1079,14 @@ export class ExpenseListPageComponent implements OnInit {
 
   protected leaveExpenseParticipant(expense: ExpenseRow, event: Event): void {
     this.updateExpenseParticipation(expense, 'leave', event);
+  }
+
+  protected lockExpenseParticipants(expense: ExpenseRow, event: Event): void {
+    this.updateExpenseParticipantLock(expense, 'lock', event);
+  }
+
+  protected unlockExpenseParticipants(expense: ExpenseRow, event: Event): void {
+    this.updateExpenseParticipantLock(expense, 'unlock', event);
   }
 
   private trapModalFocus(event: KeyboardEvent): void {
@@ -979,32 +1135,73 @@ export class ExpenseListPageComponent implements OnInit {
   ): void {
     event.stopPropagation();
 
-    const currentUserId = this.activeCurrentUserId();
-    if (!currentUserId || this.isExpenseActionDisabled(expense.id)) {
+    const currentExpense = this.currentExpenseRow(expense);
+    if (this.isExpenseActionDisabled(currentExpense.id)) {
       return;
     }
 
-    const isParticipant = expense.participantIds.includes(currentUserId);
-    if ((action === 'join' && isParticipant) || (action === 'leave' && !isParticipant)) {
+    if (
+      (action === 'join' && !this.canCurrentUserJoinExpense(currentExpense)) ||
+      (action === 'leave' && !this.canCurrentUserLeaveExpense(currentExpense))
+    ) {
       return;
     }
 
-    this.trackParticipantAction(expense.id);
+    this.trackParticipantAction(currentExpense.id);
     this.listStatusMessage.set('');
 
     const request$: Observable<ExpenseParticipantResponse> =
       action === 'join'
-        ? this.expenseApiService.joinExpenseParticipant(expense.id)
-        : this.expenseApiService.leaveExpenseParticipant(expense.id);
+        ? this.expenseApiService.joinExpenseParticipant(currentExpense.id)
+        : this.expenseApiService.leaveExpenseParticipant(currentExpense.id);
 
     request$.subscribe({
       next: (response) => {
         this.replaceExpenseRow(response.expense);
-        this.untrackParticipantAction(expense.id);
+        this.untrackParticipantAction(currentExpense.id);
       },
       error: (err: HttpErrorResponse) => {
-        this.untrackParticipantAction(expense.id);
+        this.untrackParticipantAction(currentExpense.id);
         this.listStatusMessage.set(this.formatParticipantActionError(err));
+      },
+    });
+  }
+
+  private updateExpenseParticipantLock(
+    expense: ExpenseRow,
+    action: 'lock' | 'unlock',
+    event: Event,
+  ): void {
+    event.stopPropagation();
+
+    const currentExpense = this.currentExpenseRow(expense);
+    if (this.isExpenseActionDisabled(currentExpense.id)) {
+      return;
+    }
+
+    if (
+      (action === 'lock' && !this.canCurrentUserLockParticipants(currentExpense)) ||
+      (action === 'unlock' && !this.canCurrentUserUnlockParticipants(currentExpense))
+    ) {
+      return;
+    }
+
+    this.trackParticipantLockAction(currentExpense.id);
+    this.listStatusMessage.set('');
+
+    const request$: Observable<ExpenseParticipantResponse> =
+      action === 'lock'
+        ? this.expenseApiService.lockExpenseParticipants(currentExpense.id)
+        : this.expenseApiService.unlockExpenseParticipants(currentExpense.id);
+
+    request$.subscribe({
+      next: (response) => {
+        this.replaceExpenseRow(response.expense);
+        this.untrackParticipantLockAction(currentExpense.id);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.untrackParticipantLockAction(currentExpense.id);
+        this.listStatusMessage.set(this.formatParticipantLockError(err));
       },
     });
   }
@@ -1015,6 +1212,18 @@ export class ExpenseListPageComponent implements OnInit {
 
   private untrackParticipantAction(expenseId: string): void {
     this.participantActionExpenseIds.update((ids) => {
+      const nextIds = new Set(ids);
+      nextIds.delete(expenseId);
+      return nextIds;
+    });
+  }
+
+  private trackParticipantLockAction(expenseId: string): void {
+    this.participantLockActionExpenseIds.update((ids) => new Set(ids).add(expenseId));
+  }
+
+  private untrackParticipantLockAction(expenseId: string): void {
+    this.participantLockActionExpenseIds.update((ids) => {
       const nextIds = new Set(ids);
       nextIds.delete(expenseId);
       return nextIds;
@@ -1035,6 +1244,12 @@ export class ExpenseListPageComponent implements OnInit {
 
   private formatParticipantActionError(error: HttpErrorResponse): string {
     const fallback = $localize`:Expense participation update failed@@expenseParticipationFailed:無法更新支出參與者，請稍後再試。`;
+    const apiError = (error.error as { error?: { message?: string } } | null)?.error;
+    return apiError?.message ?? fallback;
+  }
+
+  private formatParticipantLockError(error: HttpErrorResponse): string {
+    const fallback = $localize`:Expense participant lock failed@@expenseParticipantLockFailed:無法更新加入鎖定，請稍後再試。`;
     const apiError = (error.error as { error?: { message?: string } } | null)?.error;
     return apiError?.message ?? fallback;
   }
@@ -1078,9 +1293,18 @@ export class ExpenseListPageComponent implements OnInit {
         .map((participant) => participant.displayName)
         .join(', '),
       description: expense.description ?? '',
+      participantLocked: expense.participantLocked ?? false,
+      canLockParticipants: expense.canLockParticipants ?? null,
+      canUnlockParticipants: expense.canUnlockParticipants ?? null,
+      canJoinParticipants: expense.canJoinParticipants ?? null,
+      canLeaveParticipants: expense.canLeaveParticipants ?? null,
       canEdit: expense.canEdit,
       canDelete: expense.canDelete,
     };
+  }
+
+  private currentExpenseRow(expense: ExpenseRow): ExpenseRow {
+    return this.expenses().find((candidate) => candidate.id === expense.id) ?? expense;
   }
 
   private replaceExpenseRow(expense: ExpenseListItem): void {

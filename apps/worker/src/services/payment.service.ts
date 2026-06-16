@@ -255,6 +255,13 @@ export async function createPayment(
 
   await db.batch(statements);
 
+  if (status === 'confirmed') {
+    await markSettledExpenseParticipants(db, {
+      from_user_id: input.fromUserId,
+      to_user_id: input.toUserId,
+    });
+  }
+
   return { id: paymentId, status };
 }
 
@@ -300,6 +307,8 @@ export async function confirmPayment(
     throw new PaymentAlreadyConfirmedError();
   }
 
+  await markSettledExpenseParticipants(db, payment);
+
   await db.batch([
     db
       .prepare(
@@ -311,6 +320,73 @@ export async function confirmPayment(
         user.id,
         paymentId,
         JSON.stringify(createPaymentConfirmedAuditPayload(payment)),
+      ),
+  ]);
+}
+
+async function markSettledExpenseParticipants(
+  db: D1Database,
+  payment: Pick<PaymentRow, 'from_user_id' | 'to_user_id'>,
+): Promise<void> {
+  await db.batch([
+    db
+      .prepare(
+        `WITH
+           paid AS (
+             SELECT COALESCE(SUM(amount), 0) AS total_confirmed
+             FROM payments
+             WHERE group_id = ?
+               AND from_user_id = ?
+               AND to_user_id = ?
+               AND status = 'confirmed'
+           ),
+           already_settled AS (
+             SELECT COALESCE(SUM(ep.share_amount), 0) AS total_settled
+             FROM expense_participants ep
+             INNER JOIN expenses e ON e.id = ep.expense_id
+             WHERE e.group_id = ?
+               AND e.deleted_at IS NULL
+               AND e.paid_by_user_id = ?
+               AND ep.user_id = ?
+               AND ep.is_settled = 1
+           ),
+           unsettled AS (
+             SELECT
+               ep.id,
+               SUM(ep.share_amount) OVER (
+                 ORDER BY e.expense_date ASC, e.created_at ASC, e.id ASC
+                 ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+               ) AS cumulative_share
+             FROM expense_participants ep
+             INNER JOIN expenses e ON e.id = ep.expense_id
+             WHERE e.group_id = ?
+               AND e.deleted_at IS NULL
+               AND e.paid_by_user_id = ?
+               AND ep.user_id = ?
+               AND ep.is_settled = 0
+               AND ep.share_amount > 0
+           )
+         UPDATE expense_participants
+         SET is_settled = 1,
+             settled_at = COALESCE(settled_at, datetime('now', '+8 hours'))
+         WHERE id IN (
+           SELECT unsettled.id
+           FROM unsettled
+           CROSS JOIN paid
+           CROSS JOIN already_settled
+           WHERE unsettled.cumulative_share <= paid.total_confirmed - already_settled.total_settled
+         )`,
+      )
+      .bind(
+        DEFAULT_GROUP_ID,
+        payment.from_user_id,
+        payment.to_user_id,
+        DEFAULT_GROUP_ID,
+        payment.to_user_id,
+        payment.from_user_id,
+        DEFAULT_GROUP_ID,
+        payment.to_user_id,
+        payment.from_user_id,
       ),
   ]);
 }

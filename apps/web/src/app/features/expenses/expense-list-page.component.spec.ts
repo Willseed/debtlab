@@ -23,6 +23,11 @@ function createExpenseRow(expense: ExpenseListItem): unknown {
       .map((participant) => participant.displayName)
       .join(', '),
     description: expense.description ?? '',
+    participantLocked: expense.participantLocked ?? false,
+    canLockParticipants: expense.canLockParticipants ?? null,
+    canUnlockParticipants: expense.canUnlockParticipants ?? null,
+    canJoinParticipants: expense.canJoinParticipants ?? null,
+    canLeaveParticipants: expense.canLeaveParticipants ?? null,
     canEdit: expense.canEdit,
     canDelete: expense.canDelete,
   };
@@ -392,7 +397,7 @@ describe('ExpenseListPageComponent', () => {
     ]);
     fixture.detectChanges();
 
-    (fixture.nativeElement.querySelector('.expense-row button') as HTMLButtonElement).click();
+    findIconButton('編輯支出')?.click();
     fixture.detectChanges();
     setInputValue('textarea[formcontrolname="description"]', '');
     clickButton('儲存');
@@ -426,6 +431,249 @@ describe('ExpenseListPageComponent', () => {
 
     expect(editButton?.querySelector('svg')).not.toBeNull();
     expect(deleteButton?.querySelector('svg')).not.toBeNull();
+  });
+
+  it('renders localized participant lock controls for payers', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_lock_control',
+        canLockParticipants: true,
+      }),
+    ]);
+
+    const lockButton = findIconButton('鎖定參與者');
+
+    expect(lockButton?.querySelector('svg')).not.toBeNull();
+    expect(lockButton?.textContent?.trim()).toBe('');
+    expect(lockButton?.title).toBe('鎖定參與者');
+    expect(fixture.nativeElement.textContent).not.toContain('加入已關閉');
+  });
+
+  it('hides join and shows locked status for locked nonparticipant expenses', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_locked_join',
+        paidBy: {
+          id: 'usr_bob',
+          displayName: 'Bob',
+        },
+        participants: [
+          {
+            userId: 'usr_bob',
+            displayName: 'Bob',
+            shareAmount: 1280,
+          },
+        ],
+        participantLocked: true,
+        canJoinParticipants: false,
+        canEdit: false,
+        canDelete: false,
+      }),
+    ]);
+
+    expect(findIconButton('加入支出')).toBeNull();
+    expect(fixture.nativeElement.textContent).toContain('加入已關閉');
+
+    (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('加入狀態');
+    expect(fixture.nativeElement.textContent).toContain('加入已關閉');
+  });
+
+  it('hides join when the backend marks joining unavailable', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_settled_join_closed',
+        paidBy: {
+          id: 'usr_bob',
+          displayName: 'Bob',
+        },
+        participants: [
+          {
+            userId: 'usr_bob',
+            displayName: 'Bob',
+            shareAmount: 1280,
+          },
+        ],
+        canJoinParticipants: false,
+        canEdit: false,
+        canDelete: false,
+      }),
+    ]);
+
+    expect(findIconButton('加入支出')).toBeNull();
+    expect(fixture.nativeElement.textContent).not.toContain('加入已關閉');
+  });
+
+  it('hides exit when the backend marks leaving unavailable', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_settled_leave_closed',
+        canLeaveParticipants: false,
+      }),
+    ]);
+
+    expect(findIconButton('退出支出')).toBeNull();
+    expect(findIconButton('加入支出')).toBeNull();
+  });
+
+  it('locks and unlocks expense participants through row replacement', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_lock_flow',
+        canLockParticipants: true,
+        canUnlockParticipants: false,
+      }),
+    ]);
+
+    findIconButton('鎖定參與者')?.click();
+    fixture.detectChanges();
+
+    const lockRequest = http.expectOne('/api/expenses/exp_lock_flow/participant-lock');
+    expect(lockRequest.request.method).toBe('PUT');
+    expect(lockRequest.request.body).toBeNull();
+    expect(findIconButton('鎖定參與者')?.disabled).toBeTrue();
+    expect(findIconButton('編輯支出')?.disabled).toBeTrue();
+
+    lockRequest.flush({
+      expense: createExpenseItem({
+        id: 'exp_lock_flow',
+        participantLocked: true,
+        canLockParticipants: false,
+        canUnlockParticipants: true,
+        canJoinParticipants: false,
+      }),
+    });
+    fixture.detectChanges();
+
+    expect(findIconButton('鎖定參與者')).toBeNull();
+    expect(findIconButton('解除參與者鎖定')?.querySelector('svg')).not.toBeNull();
+    expect(participantsCellText()).toContain('加入已關閉');
+
+    findIconButton('解除參與者鎖定')?.click();
+    fixture.detectChanges();
+
+    const unlockRequest = http.expectOne('/api/expenses/exp_lock_flow/participant-lock');
+    expect(unlockRequest.request.method).toBe('DELETE');
+    expect(findIconButton('解除參與者鎖定')?.disabled).toBeTrue();
+
+    unlockRequest.flush({
+      expense: createExpenseItem({
+        id: 'exp_lock_flow',
+        participantLocked: false,
+        canLockParticipants: true,
+        canUnlockParticipants: false,
+        canJoinParticipants: true,
+      }),
+    });
+    fixture.detectChanges();
+
+    expect(findIconButton('解除參與者鎖定')).toBeNull();
+    expect(findIconButton('鎖定參與者')?.querySelector('svg')).not.toBeNull();
+    expect(participantsCellText()).not.toContain('加入已關閉');
+  });
+
+  it('surfaces participant lock API errors in the list status area', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_lock_error',
+        canLockParticipants: true,
+      }),
+    ]);
+
+    findIconButton('鎖定參與者')?.click();
+    http.expectOne('/api/expenses/exp_lock_error/participant-lock').flush(
+      {
+        error: {
+          code: 'EXPENSE_PARTICIPANT_LOCK_FAILED',
+          message: 'Locking participants failed.',
+          details: {},
+        },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Locking participants failed.');
+    expect(findIconButton('鎖定參與者')?.disabled).toBeFalse();
+  });
+
+  it('falls back to a generic message when participant lock updates fail without an API message', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_lock_network',
+        canLockParticipants: true,
+      }),
+    ]);
+
+    findIconButton('鎖定參與者')?.click();
+    http
+      .expectOne('/api/expenses/exp_lock_network/participant-lock')
+      .error(new ProgressEvent('error'), {
+        status: 0,
+        statusText: 'Network Error',
+      });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('無法更新加入鎖定，請稍後再試。');
+    expect(findIconButton('鎖定參與者')?.disabled).toBeFalse();
+  });
+
+  it('skips participant lock requests when the current row no longer matches the action', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_guard_locked',
+        participantLocked: true,
+        canLockParticipants: false,
+        canUnlockParticipants: true,
+      }),
+      createExpenseItem({
+        id: 'exp_guard_unlocked',
+        participantLocked: false,
+        canLockParticipants: true,
+        canUnlockParticipants: false,
+      }),
+    ]);
+
+    const staleUnlockedExpense = createExpenseRow(
+      createExpenseItem({
+        id: 'exp_guard_locked',
+        participantLocked: false,
+        canLockParticipants: true,
+        canUnlockParticipants: false,
+      }),
+    );
+    const staleLockedExpense = createExpenseRow(
+      createExpenseItem({
+        id: 'exp_guard_unlocked',
+        participantLocked: true,
+        canLockParticipants: false,
+        canUnlockParticipants: true,
+      }),
+    );
+
+    invokeComponentMethod('lockExpenseParticipants', staleUnlockedExpense, new Event('click'));
+    invokeComponentMethod('unlockExpenseParticipants', staleLockedExpense, new Event('click'));
+
+    http.expectNone('/api/expenses/exp_guard_locked/participant-lock');
+    http.expectNone('/api/expenses/exp_guard_unlocked/participant-lock');
   });
 
   it('renders an icon-only join action for active nonparticipants and updates the row', () => {

@@ -60,6 +60,27 @@ export class ExpenseLastParticipantError extends Error {
   }
 }
 
+export class ExpenseParticipantLockedError extends Error {
+  constructor() {
+    super('Participant joining is locked for this expense.');
+    this.name = 'ExpenseParticipantLockedError';
+  }
+}
+
+export class ExpenseParticipantSettledError extends Error {
+  constructor() {
+    super('Expense participants with pending or confirmed settlements cannot leave this expense.');
+    this.name = 'ExpenseParticipantSettledError';
+  }
+}
+
+export class ExpenseParticipantLockForbiddenError extends Error {
+  constructor() {
+    super('Only the expense payer or an admin may lock participant joining.');
+    this.name = 'ExpenseParticipantLockForbiddenError';
+  }
+}
+
 type ExpenseUpdateRow = {
   readonly group_id: string;
   readonly paid_by_user_id: string;
@@ -92,9 +113,12 @@ type ExpenseListRow = {
   readonly currency: 'TWD';
   readonly category: ExpenseCreateInput['category'];
   readonly expense_date: string;
+  readonly split_method: ExpenseCreateInput['splitMethod'];
   readonly paid_by_user_id: string;
   readonly paid_by_display_name: string;
   readonly created_by: string;
+  readonly participant_locked_at: string | null;
+  readonly participant_locked_by: string | null;
 };
 
 type ExpenseParticipantRow = {
@@ -102,12 +126,26 @@ type ExpenseParticipantRow = {
   readonly user_id: string;
   readonly display_name: string;
   readonly share_amount: number;
+  readonly is_settled: 0 | 1;
+  readonly settled_at: string | null;
+};
+
+type ExpenseParticipantListItem = ExpenseListItem['participants'][number] & {
+  readonly isSettled: boolean;
+  readonly settledAt: string | null;
 };
 
 type ExpenseParticipantShareRow = {
   readonly user_id: string;
   readonly share_amount: number;
   readonly share_ratio: number | null;
+  readonly is_settled: 0 | 1;
+  readonly settled_at: string | null;
+};
+
+type ExpenseParticipantMutationRow = ExpenseUpdateRow & {
+  readonly participant_locked_at: string | null;
+  readonly participant_locked_by: string | null;
 };
 
 export type ExpenseListItem = {
@@ -127,6 +165,11 @@ export type ExpenseListItem = {
     readonly displayName: string;
     readonly shareAmount: number;
   }[];
+  readonly participantLocked: boolean;
+  readonly canLockParticipants: boolean;
+  readonly canUnlockParticipants: boolean;
+  readonly canJoinParticipants: boolean;
+  readonly canLeaveParticipants: boolean;
   readonly canEdit: boolean;
   readonly canDelete: boolean;
 };
@@ -292,9 +335,12 @@ export async function listExpenses(
          e.currency,
          e.category,
          e.expense_date,
-         e.paid_by_user_id,
+        e.split_method,
+        e.paid_by_user_id,
         COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name,
-        e.created_by
+        e.created_by,
+        e.participant_locked_at,
+        e.participant_locked_by
        FROM expenses e
        INNER JOIN users payer ON payer.id = e.paid_by_user_id
        WHERE e.group_id = ? AND e.deleted_at IS NULL
@@ -322,9 +368,14 @@ export async function listExpenses(
     return [];
   }
 
-  const participantsByExpenseId = await listParticipantsByExpenseId(db);
+  const [participantsByExpenseId, pendingSettlementPayees] = await Promise.all([
+    listParticipantsByExpenseId(db),
+    listPendingSettlementPayees(db, user),
+  ]);
 
-  return rows.map((row) => mapExpenseListItem(row, participantsByExpenseId, user));
+  return rows.map((row) =>
+    mapExpenseListItem(row, participantsByExpenseId, user, pendingSettlementPayees),
+  );
 }
 
 export async function getExpense(
@@ -342,9 +393,12 @@ export async function getExpense(
          e.currency,
          e.category,
          e.expense_date,
+         e.split_method,
          e.paid_by_user_id,
          COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name,
-         e.created_by
+         e.created_by,
+         e.participant_locked_at,
+         e.participant_locked_by
        FROM expenses e
        INNER JOIN users payer ON payer.id = e.paid_by_user_id
        WHERE e.id = ? AND e.group_id = ? AND e.deleted_at IS NULL
@@ -369,8 +423,11 @@ export async function getExpense(
     throw new ExpenseNotFoundError();
   }
 
-  const participantsByExpenseId = await listParticipantsByExpenseId(db);
-  return mapExpenseListItem(row, participantsByExpenseId, user);
+  const [participantsByExpenseId, pendingSettlementPayees] = await Promise.all([
+    listParticipantsByExpenseId(db),
+    listPendingSettlementPayees(db, user),
+  ]);
+  return mapExpenseListItem(row, participantsByExpenseId, user, pendingSettlementPayees);
 }
 
 export async function joinExpenseParticipant(
@@ -387,6 +444,7 @@ export async function joinExpenseParticipant(
     return getExpenseAfterParticipantMutation(db, user, expenseId);
   }
 
+  assertExpenseAllowsParticipantJoin(expense, user);
   assertEqualParticipantMutationSplitMethod(expense.split_method);
 
   const updatedShares = recalculateParticipantShares(
@@ -394,7 +452,7 @@ export async function joinExpenseParticipant(
     expense.split_method,
     sortParticipantSharesByUserId([
       ...participantShares,
-      { user_id: user.id, share_amount: 0, share_ratio: null },
+      { user_id: user.id, share_amount: 0, share_ratio: null, is_settled: 0, settled_at: null },
     ]),
   );
 
@@ -428,12 +486,20 @@ export async function leaveExpenseParticipant(
   await assertUserCanMutateSelfParticipant(db, user);
 
   const participantShares = await listExpenseParticipantShares(db, expenseId);
+  const currentParticipant = participantShares.find(
+    (participant) => participant.user_id === user.id,
+  );
 
-  if (!participantShares.some((participant) => participant.user_id === user.id)) {
+  if (!currentParticipant) {
     throw new ExpenseParticipantNotFoundError();
   }
 
+  if (currentParticipant.is_settled === 1) {
+    throw new ExpenseParticipantSettledError();
+  }
+
   assertEqualParticipantMutationSplitMethod(expense.split_method);
+  await assertExpenseParticipantHasNoPendingSettlement(db, expense, user);
 
   if (participantShares.length === 1) {
     throw new ExpenseLastParticipantError();
@@ -460,6 +526,62 @@ export async function leaveExpenseParticipant(
       expenseId,
       'expense_participant_left',
       updatedShares.length,
+    ),
+  ]);
+
+  return getExpenseAfterParticipantMutation(db, user, expenseId);
+}
+
+export async function lockExpenseParticipants(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+): Promise<ExpenseListItem> {
+  const expense = await getExpenseParticipantMutationRow(db, expenseId);
+  assertUserCanManageParticipantLock(expense, user);
+
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE expenses
+         SET participant_locked_at = COALESCE(participant_locked_at, datetime('now', '+8 hours')),
+             participant_locked_by = COALESCE(participant_locked_by, ?),
+             updated_at = datetime('now', '+8 hours')
+         WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
+      )
+      .bind(user.id, expenseId, DEFAULT_GROUP_ID),
+    createExpenseParticipantLockAuditStatement(db, user, expenseId, 'expense_participants_locked', {
+      locked: true,
+    }),
+  ]);
+
+  return getExpenseAfterParticipantMutation(db, user, expenseId);
+}
+
+export async function unlockExpenseParticipants(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+): Promise<ExpenseListItem> {
+  const expense = await getExpenseParticipantMutationRow(db, expenseId);
+  assertUserCanManageParticipantLock(expense, user);
+
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE expenses
+         SET participant_locked_at = NULL,
+             participant_locked_by = NULL,
+             updated_at = datetime('now', '+8 hours')
+         WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
+      )
+      .bind(expenseId, DEFAULT_GROUP_ID),
+    createExpenseParticipantLockAuditStatement(
+      db,
+      user,
+      expenseId,
+      'expense_participants_unlocked',
+      { locked: false },
     ),
   ]);
 
@@ -603,21 +725,68 @@ export async function deleteExpense(
 async function getExpenseParticipantMutationRow(
   db: D1Database,
   expenseId: string,
-): Promise<ExpenseUpdateRow> {
+): Promise<ExpenseParticipantMutationRow> {
   const expense = await db
     .prepare(
-      `SELECT group_id, paid_by_user_id, amount, split_method
+      `SELECT
+         group_id,
+         paid_by_user_id,
+         amount,
+         split_method,
+         participant_locked_at,
+         participant_locked_by
        FROM expenses
        WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
     )
     .bind(expenseId, DEFAULT_GROUP_ID)
-    .first<ExpenseUpdateRow>();
+    .first<ExpenseParticipantMutationRow>();
 
   if (!expense) {
     throw new ExpenseNotFoundError();
   }
 
   return expense;
+}
+
+function assertExpenseAllowsParticipantJoin(
+  expense: ExpenseParticipantMutationRow,
+  user: SessionUser,
+): void {
+  if (expense.participant_locked_at !== null && expense.paid_by_user_id !== user.id) {
+    throw new ExpenseParticipantLockedError();
+  }
+}
+
+function assertUserCanManageParticipantLock(
+  expense: ExpenseParticipantMutationRow,
+  user: SessionUser,
+): void {
+  if (expense.paid_by_user_id !== user.id && user.role !== 'admin') {
+    throw new ExpenseParticipantLockForbiddenError();
+  }
+}
+
+async function assertExpenseParticipantHasNoPendingSettlement(
+  db: D1Database,
+  expense: ExpenseParticipantMutationRow,
+  user: SessionUser,
+): Promise<void> {
+  const pendingPayment = await db
+    .prepare(
+      `SELECT id
+       FROM payments
+       WHERE group_id = ?
+         AND from_user_id = ?
+         AND to_user_id = ?
+         AND status = 'pending'
+       LIMIT 1`,
+    )
+    .bind(DEFAULT_GROUP_ID, user.id, expense.paid_by_user_id)
+    .first<{ readonly id: string }>();
+
+  if (pendingPayment) {
+    throw new ExpenseParticipantSettledError();
+  }
 }
 
 async function assertUserCanMutateSelfParticipant(
@@ -662,9 +831,12 @@ async function getExpenseAfterParticipantMutation(
          e.currency,
          e.category,
          e.expense_date,
+         e.split_method,
          e.paid_by_user_id,
          COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name,
-         e.created_by
+         e.created_by,
+         e.participant_locked_at,
+         e.participant_locked_by
        FROM expenses e
        INNER JOIN users payer ON payer.id = e.paid_by_user_id
        WHERE e.id = ? AND e.group_id = ? AND e.deleted_at IS NULL`,
@@ -676,8 +848,11 @@ async function getExpenseAfterParticipantMutation(
     throw new ExpenseNotFoundError();
   }
 
-  const participantsByExpenseId = await listParticipantsByExpenseId(db);
-  return mapExpenseListItem(row, participantsByExpenseId, user);
+  const [participantsByExpenseId, pendingSettlementPayees] = await Promise.all([
+    listParticipantsByExpenseId(db),
+    listPendingSettlementPayees(db, user),
+  ]);
+  return mapExpenseListItem(row, participantsByExpenseId, user, pendingSettlementPayees);
 }
 
 function createParticipantShareUpdateStatements(
@@ -731,6 +906,21 @@ function createExpenseParticipantAuditStatement(
     );
 }
 
+function createExpenseParticipantLockAuditStatement(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+  action: 'expense_participants_locked' | 'expense_participants_unlocked',
+  afterJson: { readonly locked: boolean },
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, after_json)
+       VALUES (?, ?, ?, 'expense', ?, ?)`,
+    )
+    .bind(crypto.randomUUID(), user.id, action, expenseId, JSON.stringify(afterJson));
+}
+
 function sortParticipantSharesByUserId(
   participants: readonly ExpenseParticipantShareRow[],
 ): readonly ExpenseParticipantShareRow[] {
@@ -749,10 +939,29 @@ function sortParticipantSharesByUserId(
 
 function mapExpenseListItem(
   row: ExpenseListRow,
-  participantsByExpenseId: ReadonlyMap<string, ExpenseListItem['participants']>,
+  participantsByExpenseId: ReadonlyMap<string, readonly ExpenseParticipantListItem[]>,
   user: SessionUser,
+  pendingSettlementPayees: ReadonlySet<string>,
 ): ExpenseListItem {
   const canManage = row.paid_by_user_id === user.id;
+  const participantLocked = row.participant_locked_at !== null;
+  const canManageParticipantLock = canManage || user.role === 'admin';
+  const participants = participantsByExpenseId.get(row.id) ?? [];
+  const currentParticipant = participants.find((participant) => participant.userId === user.id);
+  const currentUserHasPendingSettlementToPayer = pendingSettlementPayees.has(row.paid_by_user_id);
+  const isEqualSplit = row.split_method === 'equal';
+  const canJoinParticipants =
+    user.status === 'active' &&
+    currentParticipant === undefined &&
+    isEqualSplit &&
+    (!participantLocked || canManage);
+  const canLeaveParticipants =
+    user.status === 'active' &&
+    currentParticipant !== undefined &&
+    isEqualSplit &&
+    participants.length > 1 &&
+    !currentParticipant.isSettled &&
+    !currentUserHasPendingSettlementToPayer;
 
   return {
     id: row.id,
@@ -766,7 +975,16 @@ function mapExpenseListItem(
       id: row.paid_by_user_id,
       displayName: row.paid_by_display_name,
     },
-    participants: participantsByExpenseId.get(row.id) ?? [],
+    participants: participants.map(({ userId, displayName, shareAmount }) => ({
+      userId,
+      displayName,
+      shareAmount,
+    })),
+    participantLocked,
+    canLockParticipants: canManageParticipantLock && !participantLocked,
+    canUnlockParticipants: canManageParticipantLock && participantLocked,
+    canJoinParticipants,
+    canLeaveParticipants,
     canEdit: canManage,
     canDelete: canManage,
   };
@@ -778,7 +996,7 @@ async function listExpenseParticipantShares(
 ): Promise<readonly ExpenseParticipantShareRow[]> {
   const result = await db
     .prepare(
-      `SELECT user_id, share_amount, share_ratio
+      `SELECT user_id, share_amount, share_ratio, is_settled, settled_at
        FROM expense_participants
        WHERE expense_id = ?
        ORDER BY user_id ASC`,
@@ -855,6 +1073,8 @@ function recalculateRatioParticipantShares(
     user_id: participant.user_id,
     share_amount: participant.share_amount + (winners.has(participant.index) ? 1 : 0),
     share_ratio: participant.share_ratio,
+    is_settled: participant.is_settled,
+    settled_at: participant.settled_at,
   }));
 }
 
@@ -895,19 +1115,23 @@ function recalculateCustomParticipantShares(
     user_id: participant.user_id,
     share_amount: participant.share_amount + (winners.has(participant.index) ? 1 : 0),
     share_ratio: participant.share_ratio,
+    is_settled: participant.is_settled,
+    settled_at: participant.settled_at,
   }));
 }
 
 async function listParticipantsByExpenseId(
   db: D1Database,
-): Promise<ReadonlyMap<string, ExpenseListItem['participants']>> {
+): Promise<ReadonlyMap<string, readonly ExpenseParticipantListItem[]>> {
   const result = await db
     .prepare(
       `SELECT
          ep.expense_id,
          ep.user_id,
          COALESCE(u.display_name, u.email, ep.user_id) AS display_name,
-         ep.share_amount
+        ep.share_amount,
+        ep.is_settled,
+        ep.settled_at
        FROM expense_participants ep
        INNER JOIN users u ON u.id = ep.user_id
        INNER JOIN expenses e ON e.id = ep.expense_id
@@ -916,7 +1140,7 @@ async function listParticipantsByExpenseId(
     )
     .bind(DEFAULT_GROUP_ID)
     .all<ExpenseParticipantRow>();
-  const participantsByExpenseId = new Map<string, ExpenseListItem['participants']>();
+  const participantsByExpenseId = new Map<string, readonly ExpenseParticipantListItem[]>();
 
   for (const row of result.results ?? []) {
     const participants = participantsByExpenseId.get(row.expense_id) ?? [];
@@ -926,9 +1150,29 @@ async function listParticipantsByExpenseId(
         userId: row.user_id,
         displayName: row.display_name,
         shareAmount: row.share_amount,
+        isSettled: row.is_settled === 1,
+        settledAt: row.settled_at,
       },
     ]);
   }
 
   return participantsByExpenseId;
+}
+
+async function listPendingSettlementPayees(
+  db: D1Database,
+  user: SessionUser,
+): Promise<ReadonlySet<string>> {
+  const result = await db
+    .prepare(
+      `SELECT to_user_id
+       FROM payments
+       WHERE group_id = ?
+         AND from_user_id = ?
+         AND status = 'pending'`,
+    )
+    .bind(DEFAULT_GROUP_ID, user.id)
+    .all<{ readonly to_user_id: string }>();
+
+  return new Set((result.results ?? []).map((payment) => payment.to_user_id));
 }

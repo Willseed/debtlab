@@ -66,6 +66,11 @@
       <trans-unit id="expensesEditActionTitle" datatype="html"><source>編輯支出</source><target>編輯支出</target></trans-unit>
       <trans-unit id="expensesDeleteActionLabel" datatype="html"><source>刪除支出</source><target>刪除支出</target></trans-unit>
       <trans-unit id="expensesDeleteActionTitle" datatype="html"><source>刪除支出</source><target>刪除支出</target></trans-unit>
+      <trans-unit id="expenseJoinLockedStatus" datatype="html"><source>加入已關閉</source><target>加入已關閉</target></trans-unit>
+      <trans-unit id="expensesLockParticipantsActionLabel" datatype="html"><source>鎖定參與者</source><target>鎖定參與者</target></trans-unit>
+      <trans-unit id="expensesLockParticipantsActionTitle" datatype="html"><source>鎖定參與者</source><target>鎖定參與者</target></trans-unit>
+      <trans-unit id="expensesUnlockParticipantsActionLabel" datatype="html"><source>解除參與者鎖定</source><target>解除參與者鎖定</target></trans-unit>
+      <trans-unit id="expensesUnlockParticipantsActionTitle" datatype="html"><source>解除參與者鎖定</source><target>解除參與者鎖定</target></trans-unit>
       <trans-unit id="expensesLeaveActionLabel" datatype="html"><source>退出支出</source><target>退出支出</target></trans-unit>
       <trans-unit id="expensesLeaveActionTitle" datatype="html"><source>退出支出</source><target>退出支出</target></trans-unit>
       <trans-unit id="expensesJoinActionLabel" datatype="html"><source>加入支出</source><target>加入支出</target></trans-unit>
@@ -76,6 +81,7 @@
       <trans-unit id="expenseDetailTitle" datatype="html"><source>支出明細</source><target>支出明細</target></trans-unit>
       <trans-unit id="expenseDetailCloseLabel" datatype="html"><source>關閉支出明細</source><target>關閉支出明細</target></trans-unit>
       <trans-unit id="expenseEmptyDescription" datatype="html"><source>—</source><target>—</target></trans-unit>
+      <trans-unit id="expenseJoinStatusField" datatype="html"><source>加入狀態</source><target>加入狀態</target></trans-unit>
       <trans-unit id="expenseModalCloseLabel" datatype="html"><source>關閉新增支出視窗</source><target>關閉新增支出視窗</target></trans-unit>
       <trans-unit id="expenseFieldTitle" datatype="html"><source>標題</source><target>標題</target></trans-unit>
       <trans-unit id="expenseTitleError" datatype="html"><source>請輸入 1 到 120 個字的標題。</source><target>請輸入 1 到 120 個字的標題。</target></trans-unit>
@@ -105,6 +111,7 @@
       <trans-unit id="expenseCreateFailed" datatype="html"><source>支出建立失敗，請稍後再試。</source><target>支出建立失敗，請稍後再試。</target></trans-unit>
       <trans-unit id="expenseDeleteFailed" datatype="html"><source>支出刪除失敗，請稍後再試。</source><target>支出刪除失敗，請稍後再試。</target></trans-unit>
       <trans-unit id="expenseParticipationFailed" datatype="html"><source>無法更新支出參與者，請稍後再試。</source><target>無法更新支出參與者，請稍後再試。</target></trans-unit>
+      <trans-unit id="expenseParticipantLockFailed" datatype="html"><source>無法更新加入鎖定，請稍後再試。</source><target>無法更新加入鎖定，請稍後再試。</target></trans-unit>
       <trans-unit id="garageTitle" datatype="html"><source>隱藏車庫</source><target>隱藏車庫</target></trans-unit>
       <trans-unit id="garageIntro" datatype="html"><source>你發現了隱藏車庫。這裡藏著一個謎題，找到密碼，成為第一位解鎖者。</source><target>你發現了隱藏車庫。這裡藏著一個謎題，找到密碼，成為第一位解鎖者。</target></trans-unit>
       <trans-unit id="garageLoadingStatus" datatype="html"><source>正在讀取車庫狀態…</source><target>正在讀取車庫狀態…</target></trans-unit>

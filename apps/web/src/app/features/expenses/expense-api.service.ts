@@ -46,6 +46,11 @@ export type ExpenseListItem = {
     readonly displayName: string;
     readonly shareAmount: number;
   }[];
+  readonly participantLocked?: boolean;
+  readonly canLockParticipants?: boolean;
+  readonly canUnlockParticipants?: boolean;
+  readonly canJoinParticipants?: boolean;
+  readonly canLeaveParticipants?: boolean;
   readonly canEdit: boolean;
   readonly canDelete: boolean;
 };
@@ -115,6 +120,19 @@ export class ExpenseApiService {
   leaveExpenseParticipant(expenseId: string): Observable<ExpenseParticipantResponse> {
     return this.http.delete<ExpenseParticipantResponse>(
       `${this.apiBaseUrl}/expenses/${expenseId}/participants/me`,
+    );
+  }
+
+  lockExpenseParticipants(expenseId: string): Observable<ExpenseParticipantResponse> {
+    return this.http.put<ExpenseParticipantResponse>(
+      `${this.apiBaseUrl}/expenses/${expenseId}/participant-lock`,
+      null,
+    );
+  }
+
+  unlockExpenseParticipants(expenseId: string): Observable<ExpenseParticipantResponse> {
+    return this.http.delete<ExpenseParticipantResponse>(
+      `${this.apiBaseUrl}/expenses/${expenseId}/participant-lock`,
     );
   }
 

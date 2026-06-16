@@ -24,6 +24,8 @@ type FakeExpenseUpdateRow = {
   readonly created_by: string;
   readonly amount: number;
   readonly split_method?: 'equal' | 'custom' | 'ratio';
+  readonly participant_locked_at?: string | null;
+  readonly participant_locked_by?: string | null;
 };
 
 type FakeExpenseDeleteRow = {
@@ -43,9 +45,12 @@ type FakeExpenseListRow = {
   readonly currency: 'TWD';
   readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
   readonly expense_date: string;
+  readonly split_method?: 'equal' | 'custom' | 'ratio';
   readonly paid_by_user_id: string;
   readonly paid_by_display_name: string;
   readonly created_by: string;
+  readonly participant_locked_at?: string | null;
+  readonly participant_locked_by?: string | null;
 };
 
 type FakeExpenseParticipantRow = {
@@ -54,14 +59,17 @@ type FakeExpenseParticipantRow = {
   readonly display_name: string;
   readonly share_amount: number;
   readonly share_ratio?: number | null;
+  readonly is_settled?: 0 | 1;
+  readonly settled_at?: string | null;
 };
 
 class FakeExpenseRouteD1 {
   readonly batchStatements: [string, ...unknown[]][][] = [];
-  readonly expenseRows: readonly FakeExpenseListRow[];
+  expenseRows: FakeExpenseListRow[];
   participantRows: FakeExpenseParticipantRow[];
   throwOnExpenseDetailLookup = false;
   throwOnExpenseUpdateLookup = false;
+  pendingSettlementPaymentId: string | null = null;
   readonly expenseDeleteRow: FakeExpenseDeleteRow | null;
   readonly activeMemberIds: readonly string[];
 
@@ -155,6 +163,16 @@ class FakeExpenseRouteD1 {
 
     if (statement.sql.includes('DELETE FROM expense_participants')) {
       this.deleteParticipant(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('participant_locked_at = COALESCE')) {
+      this.lockParticipants(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('participant_locked_at = NULL')) {
+      this.unlockParticipants(statement.values);
     }
   }
 
@@ -178,6 +196,8 @@ class FakeExpenseRouteD1 {
       display_name: displayNameForUser(userId),
       share_amount: readBoundNumber(values[3]) ?? 0,
       share_ratio: readBoundNumber(values[4]),
+      is_settled: 0,
+      settled_at: null,
     });
   }
 
@@ -208,6 +228,43 @@ class FakeExpenseRouteD1 {
 
     this.participantRows = this.participantRows.filter(
       (row) => row.expense_id !== expenseId || row.user_id !== userId,
+    );
+  }
+
+  private lockParticipants(values: readonly unknown[]): void {
+    const userId = readBoundString(values[0]);
+    const expenseId = readBoundString(values[1]);
+
+    if (!userId || !expenseId) {
+      return;
+    }
+
+    this.expenseRows = this.expenseRows.map((row) =>
+      row.id === expenseId
+        ? {
+            ...row,
+            participant_locked_at: row.participant_locked_at ?? '2026-06-17 01:34:00',
+            participant_locked_by: row.participant_locked_by ?? userId,
+          }
+        : row,
+    );
+  }
+
+  private unlockParticipants(values: readonly unknown[]): void {
+    const expenseId = readBoundString(values[0]);
+
+    if (!expenseId) {
+      return;
+    }
+
+    this.expenseRows = this.expenseRows.map((row) =>
+      row.id === expenseId
+        ? {
+            ...row,
+            participant_locked_at: null,
+            participant_locked_by: null,
+          }
+        : row,
     );
   }
 }
@@ -265,7 +322,8 @@ class FakeExpenseRouteStatement {
     }
 
     const expenseId = this.values[0];
-    return this.db.expenseRows.find((row) => row.id === expenseId) ?? null;
+    const row = this.db.expenseRows.find((expense) => expense.id === expenseId);
+    return row ? withExpenseLockDefaults(row) : null;
   }
 
   private isExpenseDeleteLookup(): boolean {
@@ -292,7 +350,9 @@ class FakeExpenseRouteStatement {
 
   private isExpenseUpdateLookup(): boolean {
     return (
-      this.sql.includes('SELECT group_id, paid_by_user_id, amount, split_method') &&
+      this.sql.includes('paid_by_user_id') &&
+      this.sql.includes('amount') &&
+      this.sql.includes('split_method') &&
       this.sql.includes('FROM expenses')
     );
   }
@@ -312,12 +372,16 @@ class FakeExpenseRouteStatement {
       ...row,
       paid_by_user_id: row.paid_by_user_id ?? row.created_by,
       split_method: row.split_method ?? 'equal',
+      participant_locked_at: row.participant_locked_at ?? null,
+      participant_locked_by: row.participant_locked_by ?? null,
     };
   }
 
   async all<T>(): Promise<{ readonly results: readonly T[] }> {
     if (this.sql.includes('FROM expenses e')) {
-      return { results: this.db.expenseRows as readonly T[] };
+      return {
+        results: this.db.expenseRows.map(withExpenseLockDefaults) as unknown as readonly T[],
+      };
     }
 
     if (
@@ -329,12 +393,22 @@ class FakeExpenseRouteStatement {
           user_id: row.user_id,
           share_amount: row.share_amount,
           share_ratio: row.share_ratio ?? null,
+          is_settled: row.is_settled ?? 0,
+          settled_at: row.settled_at ?? null,
         })) as unknown as readonly T[],
       };
     }
 
     if (this.sql.includes('FROM expense_participants ep')) {
       return { results: this.db.participantRows as unknown as readonly T[] };
+    }
+
+    if (this.sql.includes('FROM payments')) {
+      return {
+        results: this.db.pendingSettlementPaymentId
+          ? ([{ to_user_id: 'usr_bob' }] as unknown as readonly T[])
+          : [],
+      };
     }
 
     if (this.sql.includes('FROM group_members')) {
@@ -355,6 +429,15 @@ function displayNameForUser(userId: string): string {
   if (userId === 'usr_other') return 'Other Member';
   if (userId === 'usr_carol') return 'Carol';
   return userId;
+}
+
+function withExpenseLockDefaults(row: FakeExpenseListRow) {
+  return {
+    ...row,
+    split_method: row.split_method ?? 'equal',
+    participant_locked_at: row.participant_locked_at ?? null,
+    participant_locked_by: row.participant_locked_by ?? null,
+  };
 }
 
 function readBoundString(value: unknown): string | null {
@@ -390,6 +473,11 @@ test('GET /api/expenses returns persisted D1 expenses', async () => {
             shareAmount: 420,
           },
         ],
+        participantLocked: false,
+        canLockParticipants: true,
+        canUnlockParticipants: false,
+        canJoinParticipants: false,
+        canLeaveParticipants: false,
         canEdit: true,
         canDelete: true,
       },
@@ -536,6 +624,11 @@ test('GET /api/expenses/:expenseId returns authorized non-creator details as rea
           shareAmount: 420,
         },
       ],
+      participantLocked: false,
+      canLockParticipants: false,
+      canUnlockParticipants: false,
+      canJoinParticipants: false,
+      canLeaveParticipants: false,
       canEdit: false,
       canDelete: false,
     },
@@ -613,6 +706,11 @@ test('PUT /api/expenses/:expenseId/participants/me joins the current member', as
           shareAmount: 210,
         },
       ],
+      participantLocked: false,
+      canLockParticipants: false,
+      canUnlockParticipants: false,
+      canJoinParticipants: false,
+      canLeaveParticipants: true,
       canEdit: false,
       canDelete: false,
     },
@@ -642,6 +740,51 @@ test('PUT /api/expenses/:expenseId/participants/me is idempotent when already jo
         shareAmount: 420,
       },
     ],
+  );
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('PUT /api/expenses/:expenseId/participants/me rejects locked expenses', async () => {
+  const bob: SessionUser = {
+    id: 'usr_bob',
+    email: 'bob@example.test',
+    displayName: 'Bob',
+    role: 'member',
+    status: 'active',
+  };
+  const db = new FakeExpenseRouteD1(
+    bob,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: currentUser.id,
+      created_by: currentUser.id,
+      amount: 420,
+      participant_locked_at: '2026-06-17 01:34:00',
+      participant_locked_by: currentUser.id,
+    },
+    undefined,
+    ['usr_bob'],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 420,
+      },
+    ],
+  );
+  const response = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    db,
+    { method: 'PUT' },
+    bob,
+  );
+
+  await assertApiError(
+    response,
+    409,
+    'CONFLICT',
+    'Participant joining is locked for this expense.',
   );
   assert.equal(db.batchStatements.length, 0);
 });
@@ -844,6 +987,47 @@ test('DELETE /api/expenses/:expenseId/participants/me rejects non-participants a
   assert.equal(lastParticipantDb.batchStatements.length, 0);
 });
 
+test('DELETE /api/expenses/:expenseId/participants/me rejects settled participants', async () => {
+  const db = new FakeExpenseRouteD1(
+    currentUser,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: 'usr_bob',
+      created_by: 'usr_bob',
+      amount: 420,
+    },
+    undefined,
+    [currentUser.id],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 210,
+        is_settled: 1,
+        settled_at: '2026-06-17 01:34:00',
+      },
+      {
+        expense_id: 'exp_route',
+        user_id: 'usr_bob',
+        display_name: 'Bob',
+        share_amount: 210,
+      },
+    ],
+  );
+  const response = await requestExpenseRoute('/api/expenses/exp_route/participants/me', db, {
+    method: 'DELETE',
+  });
+
+  await assertApiError(
+    response,
+    409,
+    'CONFLICT',
+    'Expense participants with pending or confirmed settlements cannot leave this expense.',
+  );
+  assert.equal(db.batchStatements.length, 0);
+});
+
 test('DELETE /api/expenses/:expenseId/participants/me rejects non-members and custom splits', async () => {
   const nonMemberDb = new FakeExpenseRouteD1(
     currentUser,
@@ -932,6 +1116,174 @@ test('participant self-mutation routes map missing expenses to not found', async
 
   await assertApiError(response, 404, 'NOT_FOUND', 'Expense not found.');
   assert.equal(db.batchStatements.length, 0);
+});
+
+test('PUT /api/expenses/:expenseId/participant-lock lets payer lock joining', async () => {
+  const db = new FakeExpenseRouteD1();
+  const response = await requestExpenseRoute('/api/expenses/exp_route/participant-lock', db, {
+    method: 'PUT',
+  });
+
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as {
+    readonly expense: {
+      readonly participantLocked: boolean;
+      readonly canLockParticipants: boolean;
+      readonly canUnlockParticipants: boolean;
+    };
+  };
+  assert.equal(body.expense.participantLocked, true);
+  assert.equal(body.expense.canLockParticipants, false);
+  assert.equal(body.expense.canUnlockParticipants, true);
+  assert.match(db.batchStatements[0]?.[0]?.[0] ?? '', /participant_locked_at/u);
+  assert.equal(db.batchStatements[0]?.[1]?.[3], 'expense_participants_locked');
+});
+
+test('DELETE /api/expenses/:expenseId/participant-lock lets payer unlock joining', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, {
+    group_id: 'grp_default',
+    paid_by_user_id: currentUser.id,
+    created_by: currentUser.id,
+    amount: 420,
+    participant_locked_at: '2026-06-17 01:34:00',
+    participant_locked_by: currentUser.id,
+  });
+  db.expenseRows = db.expenseRows.map((row) => ({
+    ...row,
+    participant_locked_at: '2026-06-17 01:34:00',
+    participant_locked_by: currentUser.id,
+  }));
+
+  const response = await requestExpenseRoute('/api/expenses/exp_route/participant-lock', db, {
+    method: 'DELETE',
+  });
+
+  assert.equal(response.status, 200);
+  const body = (await response.json()) as {
+    readonly expense: {
+      readonly participantLocked: boolean;
+      readonly canLockParticipants: boolean;
+      readonly canUnlockParticipants: boolean;
+    };
+  };
+  assert.equal(body.expense.participantLocked, false);
+  assert.equal(body.expense.canLockParticipants, true);
+  assert.equal(body.expense.canUnlockParticipants, false);
+  assert.match(db.batchStatements[0]?.[0]?.[0] ?? '', /participant_locked_at = NULL/u);
+  assert.equal(db.batchStatements[0]?.[1]?.[3], 'expense_participants_unlocked');
+});
+
+test('participant lock routes reject non-payers and allow admins', async () => {
+  const nonPayerDb = new FakeExpenseRouteD1(currentUser, {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_other',
+    created_by: 'usr_other',
+    amount: 420,
+  });
+  const nonPayerResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participant-lock',
+    nonPayerDb,
+    { method: 'PUT' },
+  );
+
+  await assertApiError(
+    nonPayerResponse,
+    403,
+    'FORBIDDEN',
+    'Only the expense payer or an admin may lock participant joining.',
+  );
+  assert.equal(nonPayerDb.batchStatements.length, 0);
+
+  const admin: SessionUser = {
+    id: 'usr_carol',
+    email: 'carol@example.test',
+    displayName: 'Carol',
+    role: 'admin',
+    status: 'active',
+  };
+  const adminDb = new FakeExpenseRouteD1(admin, {
+    group_id: 'grp_default',
+    paid_by_user_id: currentUser.id,
+    created_by: currentUser.id,
+    amount: 420,
+  });
+  const adminResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participant-lock',
+    adminDb,
+    { method: 'PUT' },
+    admin,
+  );
+
+  assert.equal(adminResponse.status, 200);
+  assert.equal(adminDb.batchStatements.length, 1);
+});
+
+test('participant lock routes map missing expenses to not found', async () => {
+  const lockResponse = await requestExpenseRoute(
+    '/api/expenses/exp_missing/participant-lock',
+    new FakeExpenseRouteD1(currentUser, null),
+    { method: 'PUT' },
+  );
+
+  await assertApiError(lockResponse, 404, 'NOT_FOUND', 'Expense not found.');
+
+  const unlockResponse = await requestExpenseRoute(
+    '/api/expenses/exp_missing/participant-lock',
+    new FakeExpenseRouteD1(currentUser, null),
+    { method: 'DELETE' },
+  );
+
+  await assertApiError(unlockResponse, 404, 'NOT_FOUND', 'Expense not found.');
+});
+
+test('DELETE /api/expenses/:expenseId/participant-lock rejects non-payers', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_other',
+    created_by: 'usr_other',
+    amount: 420,
+    participant_locked_at: '2026-06-17 01:34:00',
+    participant_locked_by: 'usr_other',
+  });
+  const response = await requestExpenseRoute('/api/expenses/exp_route/participant-lock', db, {
+    method: 'DELETE',
+  });
+
+  await assertApiError(
+    response,
+    403,
+    'FORBIDDEN',
+    'Only the expense payer or an admin may lock participant joining.',
+  );
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('participant lock routes propagate unexpected errors as 500', async () => {
+  const lockDb = new FakeExpenseRouteD1();
+  lockDb.throwOnExpenseUpdateLookup = true;
+  const lockResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participant-lock',
+    lockDb,
+    {
+      method: 'PUT',
+    },
+  );
+
+  assert.equal(lockResponse.status, 500);
+  assert.equal(lockDb.batchStatements.length, 0);
+
+  const unlockDb = new FakeExpenseRouteD1();
+  unlockDb.throwOnExpenseUpdateLookup = true;
+  const unlockResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participant-lock',
+    unlockDb,
+    {
+      method: 'DELETE',
+    },
+  );
+
+  assert.equal(unlockResponse.status, 500);
+  assert.equal(unlockDb.batchStatements.length, 0);
 });
 
 test('PATCH /api/expenses/:expenseId persists member updates', async () => {

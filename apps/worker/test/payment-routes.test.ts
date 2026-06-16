@@ -56,6 +56,15 @@ type PaymentRow = {
   readonly confirmed_at: string | null;
 };
 
+type ExpenseParticipantRow = {
+  readonly id: string;
+  readonly expense_id: string;
+  readonly user_id: string;
+  readonly share_amount: number;
+  readonly is_settled: 0 | 1;
+  readonly settled_at: string | null;
+};
+
 const DEFAULT_PENDING_PAYMENT: PaymentRow = {
   id: 'pay_1',
   group_id: 'grp_default',
@@ -72,8 +81,26 @@ const DEFAULT_PENDING_PAYMENT: PaymentRow = {
 
 class FakePaymentD1 {
   readonly batchStatements: [string, ...unknown[]][][] = [];
-  readonly pendingPayment: PaymentRow | null;
+  pendingPayment: PaymentRow | null;
   readonly duplicatePendingPayment: Pick<PaymentRow, 'id'> | null;
+  participantRows: ExpenseParticipantRow[] = [
+    {
+      id: 'epp_alice',
+      expense_id: 'exp_settlement',
+      user_id: alice.id,
+      share_amount: 300,
+      is_settled: 0,
+      settled_at: null,
+    },
+    {
+      id: 'epp_bob',
+      expense_id: 'exp_settlement',
+      user_id: bob.id,
+      share_amount: 300,
+      is_settled: 0,
+      settled_at: null,
+    },
+  ];
 
   constructor(
     readonly currentUser: SessionUser = alice,
@@ -101,10 +128,14 @@ class FakePaymentD1 {
       throw new Error('Simulated D1 failure');
     }
     this.batchStatements.push(statements.map((s): [string, ...unknown[]] => [s.sql, ...s.values]));
-    return statements.map((s) => ({
+    const results = statements.map((s) => ({
       success: true,
       meta: { changes: this.opts.forceNullMeta ? undefined : this.changeCount(s.sql) },
     }));
+    for (const statement of statements) {
+      this.applyStatement(statement);
+    }
+    return results;
   }
 
   private changeCount(sql: string): number {
@@ -113,6 +144,47 @@ class FakePaymentD1 {
       return this.pendingPayment !== null && this.pendingPayment.status === 'pending' ? 1 : 0;
     }
     return 1;
+  }
+
+  private applyStatement(statement: FakePaymentStatement): void {
+    if (statement.sql.includes("SET status = 'confirmed'") && this.pendingPayment) {
+      this.pendingPayment = {
+        ...this.pendingPayment,
+        status: 'confirmed',
+        confirmed_at: '2026-06-17 01:34:00',
+      };
+      return;
+    }
+
+    if (statement.sql.includes('SET is_settled = 1')) {
+      this.markParticipantSettled(statement.values);
+    }
+  }
+
+  private markParticipantSettled(values: readonly unknown[]): void {
+    const fromUserId = values[1];
+    const toUserId = values[2];
+
+    const payment = this.pendingPayment;
+
+    if (typeof fromUserId !== 'string' || typeof toUserId !== 'string') {
+      return;
+    }
+
+    if (
+      !payment ||
+      payment.status !== 'confirmed' ||
+      payment.from_user_id !== fromUserId ||
+      payment.to_user_id !== toUserId
+    ) {
+      return;
+    }
+
+    this.participantRows = this.participantRows.map((participant) =>
+      participant.user_id === fromUserId && participant.share_amount <= payment.amount
+        ? { ...participant, is_settled: 1, settled_at: '2026-06-17 01:34:00' }
+        : participant,
+    );
   }
 
   readActiveMemberIds(): readonly string[] {
@@ -198,10 +270,11 @@ class FakePaymentStatement {
 
     if (this.sql.includes('FROM expense_participants')) {
       return {
-        results: [
-          { expense_id: 'exp_settlement', user_id: alice.id, share_amount: 300 },
-          { expense_id: 'exp_settlement', user_id: bob.id, share_amount: 300 },
-        ] as T[],
+        results: this.db.participantRows.map((participant) => ({
+          expense_id: participant.expense_id,
+          user_id: participant.user_id,
+          share_amount: participant.share_amount,
+        })) as T[],
       };
     }
 
@@ -704,6 +777,40 @@ test('PATCH /api/payments/:paymentId/confirm confirms pending payment as receive
   const body = (await response.json()) as { ok: boolean; payment: { id: string } };
   assert.equal(body.ok, true);
   assert.equal(body.payment.id, 'pay_1');
+});
+
+test('PATCH /api/payments/:paymentId/confirm marks matching expense participant settled', async () => {
+  const pendingPayment = {
+    id: 'pay_1',
+    group_id: 'grp_default',
+    from_user_id: alice.id,
+    to_user_id: bob.id,
+    amount: 300,
+    currency: 'TWD' as const,
+    note: null,
+    status: 'pending' as const,
+    created_by: alice.id,
+    created_at: '2026-06-15 10:00:00',
+    confirmed_at: null,
+  };
+  const db = new FakePaymentD1(bob, pendingPayment);
+  const app = makeApp(db);
+  const cookie = await authCookie(bob);
+
+  const response = await app.request(
+    '/api/payments/pay_1/confirm',
+    {
+      method: 'PATCH',
+      headers: { Cookie: cookie, Origin: 'https://lab.buy2330.cc' },
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(db.participantRows.find((row) => row.id === 'epp_alice')?.is_settled, 1);
+  assert.ok(
+    db.batchStatements.some((batch) => batch.some(([sql]) => sql.includes('SET is_settled = 1'))),
+  );
 });
 
 test('PATCH /api/payments/:paymentId/confirm allows admin to confirm any payment', async () => {

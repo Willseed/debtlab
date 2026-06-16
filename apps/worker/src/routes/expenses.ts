@@ -9,14 +9,19 @@ import {
   ExpenseForbiddenError,
   ExpenseInvalidParticipantsError,
   ExpenseLastParticipantError,
+  ExpenseParticipantLockForbiddenError,
+  ExpenseParticipantLockedError,
   ExpenseNotFoundError,
   ExpenseParticipantForbiddenError,
   ExpenseParticipantNotFoundError,
+  ExpenseParticipantSettledError,
   ExpenseParticipantSplitMethodError,
   getExpense,
   joinExpenseParticipant,
   leaveExpenseParticipant,
   listExpenses,
+  lockExpenseParticipants,
+  unlockExpenseParticipants,
   updateExpense,
   validateExpenseMembers,
 } from '../services/expense.service';
@@ -106,6 +111,9 @@ expenseRoutes.put('/:expenseId/participants/me', async (c) => {
     if (error instanceof ExpenseParticipantForbiddenError) {
       return errorResponse(c, 403, 'FORBIDDEN', error.message);
     }
+    if (error instanceof ExpenseParticipantLockedError) {
+      return errorResponse(c, 409, 'CONFLICT', error.message);
+    }
     if (error instanceof ExpenseParticipantSplitMethodError) {
       return errorResponse(c, 409, 'CONFLICT', error.message);
     }
@@ -130,9 +138,46 @@ expenseRoutes.delete('/:expenseId/participants/me', async (c) => {
     if (
       error instanceof ExpenseParticipantSplitMethodError ||
       error instanceof ExpenseParticipantNotFoundError ||
-      error instanceof ExpenseLastParticipantError
+      error instanceof ExpenseLastParticipantError ||
+      error instanceof ExpenseParticipantSettledError
     ) {
       return errorResponse(c, 409, 'CONFLICT', error.message);
+    }
+    throw error;
+  }
+});
+
+expenseRoutes.put('/:expenseId/participant-lock', async (c) => {
+  const currentUser = c.get('currentUser');
+  const expenseId = c.req.param('expenseId');
+
+  try {
+    const expense = await lockExpenseParticipants(c.env.DB, currentUser, expenseId);
+    return c.json({ expense });
+  } catch (error) {
+    if (error instanceof ExpenseNotFoundError) {
+      return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    if (error instanceof ExpenseParticipantLockForbiddenError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
+    }
+    throw error;
+  }
+});
+
+expenseRoutes.delete('/:expenseId/participant-lock', async (c) => {
+  const currentUser = c.get('currentUser');
+  const expenseId = c.req.param('expenseId');
+
+  try {
+    const expense = await unlockExpenseParticipants(c.env.DB, currentUser, expenseId);
+    return c.json({ expense });
+  } catch (error) {
+    if (error instanceof ExpenseNotFoundError) {
+      return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    if (error instanceof ExpenseParticipantLockForbiddenError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
     }
     throw error;
   }

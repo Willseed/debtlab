@@ -494,6 +494,50 @@
         </context-group>
         <note priority="1" from="description">Expenses empty state</note>
       </trans-unit>
+      <trans-unit id="expenseJoinLockedStatus" datatype="html">
+        <source>加入已關閉</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">119,121</context>
+        </context-group>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">644,646</context>
+        </context-group>
+        <note priority="1" from="description">Expense join locked status</note>
+      </trans-unit>
+      <trans-unit id="expensesLockParticipantsActionLabel" datatype="html">
+        <source>鎖定參與者</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">132,134</context>
+        </context-group>
+        <note priority="1" from="description">Lock expense participants action label</note>
+      </trans-unit>
+      <trans-unit id="expensesLockParticipantsActionTitle" datatype="html">
+        <source>鎖定參與者</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">133,135</context>
+        </context-group>
+        <note priority="1" from="description">Lock expense participants action title</note>
+      </trans-unit>
+      <trans-unit id="expensesUnlockParticipantsActionLabel" datatype="html">
+        <source>解除參與者鎖定</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">179,181</context>
+        </context-group>
+        <note priority="1" from="description">Unlock expense participants action label</note>
+      </trans-unit>
+      <trans-unit id="expensesUnlockParticipantsActionTitle" datatype="html">
+        <source>解除參與者鎖定</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">180,182</context>
+        </context-group>
+        <note priority="1" from="description">Unlock expense participants action title</note>
+      </trans-unit>
       <trans-unit id="expensesEditActionLabel" datatype="html">
         <source>編輯支出</source>
         <context-group purpose="location">
@@ -754,6 +798,14 @@
         </context-group>
         <note priority="1" from="description">Close expense detail modal label</note>
       </trans-unit>
+      <trans-unit id="expenseJoinStatusField" datatype="html">
+        <source>加入狀態</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">643,644</context>
+        </context-group>
+        <note priority="1" from="description">Expense join status field</note>
+      </trans-unit>
       <trans-unit id="expenseDeleteEyebrow" datatype="html">
         <source> LabSplit Delete </source>
         <context-group purpose="location">
@@ -873,6 +925,14 @@
           <context context-type="linenumber">1037</context>
         </context-group>
         <note priority="1" from="description">Expense participation update failed</note>
+      </trans-unit>
+      <trans-unit id="expenseParticipantLockFailed" datatype="html">
+        <source>無法更新加入鎖定，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/expenses/expense-list-page.component.ts</context>
+          <context context-type="linenumber">1239</context>
+        </context-group>
+        <note priority="1" from="description">Expense participant lock failed</note>
       </trans-unit>
       <trans-unit id="garageTitle" datatype="html">
         <source>隱藏車庫</source>

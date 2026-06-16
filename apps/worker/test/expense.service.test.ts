@@ -7,13 +7,18 @@ import {
   ExpenseForbiddenError,
   ExpenseLastParticipantError,
   ExpenseNotFoundError,
+  ExpenseParticipantLockForbiddenError,
+  ExpenseParticipantLockedError,
   ExpenseParticipantForbiddenError,
   ExpenseParticipantNotFoundError,
+  ExpenseParticipantSettledError,
   ExpenseParticipantSplitMethodError,
   getExpense,
   joinExpenseParticipant,
   leaveExpenseParticipant,
   listExpenses,
+  lockExpenseParticipants,
+  unlockExpenseParticipants,
   updateExpense,
 } from '../src/services/expense.service';
 import { CalculatedShare } from '../src/services/split.service';
@@ -34,6 +39,34 @@ type FakeExpenseUpdateRow = {
   readonly created_by: string;
   readonly amount: number;
   readonly split_method?: 'equal' | 'custom' | 'ratio';
+  readonly participant_locked_at?: string | null;
+  readonly participant_locked_by?: string | null;
+};
+
+type FakeExpenseListRow = {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string | null;
+  readonly amount: number;
+  readonly currency: 'TWD';
+  readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
+  readonly expense_date: string;
+  readonly split_method?: 'equal' | 'custom' | 'ratio';
+  readonly paid_by_user_id: string;
+  readonly paid_by_display_name: string;
+  readonly created_by: string;
+  readonly participant_locked_at?: string | null;
+  readonly participant_locked_by?: string | null;
+};
+
+type FakeExpenseParticipantRow = {
+  readonly expense_id: string;
+  readonly user_id: string;
+  readonly display_name: string;
+  readonly share_amount: number;
+  readonly share_ratio?: number | null;
+  readonly is_settled?: 0 | 1;
+  readonly settled_at?: string | null;
 };
 
 class FakeD1Database {
@@ -46,26 +79,10 @@ class FakeD1Database {
     currency: 'TWD',
   };
   deleteChanges = 1;
-  expenseRows: readonly {
-    readonly id: string;
-    readonly title: string;
-    readonly description: string | null;
-    readonly amount: number;
-    readonly currency: 'TWD';
-    readonly category: 'ingredients' | 'prize' | 'lodging' | 'other';
-    readonly expense_date: string;
-    readonly paid_by_user_id: string;
-    readonly paid_by_display_name: string;
-    readonly created_by: string;
-  }[] = [];
-  participantRows: {
-    readonly expense_id: string;
-    readonly user_id: string;
-    readonly display_name: string;
-    readonly share_amount: number;
-    readonly share_ratio?: number | null;
-  }[] = [];
+  expenseRows: FakeExpenseListRow[] = [];
+  participantRows: FakeExpenseParticipantRow[] = [];
   activeMemberIds: readonly string[] = ['usr_alice'];
+  pendingSettlementPaymentId: string | null = null;
 
   prepare(sql: string) {
     return new FakeD1PreparedStatement(this, sql);
@@ -97,6 +114,16 @@ class FakeD1Database {
 
     if (statement.sql.includes('DELETE FROM expense_participants')) {
       this.deleteParticipant(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('participant_locked_at = COALESCE')) {
+      this.lockParticipants(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('participant_locked_at = NULL')) {
+      this.unlockParticipants(statement.values);
     }
   }
 
@@ -120,6 +147,8 @@ class FakeD1Database {
       display_name: displayNameForUser(userId),
       share_amount: readBoundNumber(values[3]) ?? 0,
       share_ratio: readBoundNumber(values[4]),
+      is_settled: 0,
+      settled_at: null,
     });
   }
 
@@ -152,6 +181,43 @@ class FakeD1Database {
       (row) => row.expense_id !== expenseId || row.user_id !== userId,
     );
   }
+
+  private lockParticipants(values: readonly unknown[]): void {
+    const userId = readBoundString(values[0]);
+    const expenseId = readBoundString(values[1]);
+
+    if (!userId || !expenseId) {
+      return;
+    }
+
+    this.expenseRows = this.expenseRows.map((row) =>
+      row.id === expenseId
+        ? {
+            ...row,
+            participant_locked_at: row.participant_locked_at ?? '2026-06-17 01:34:00',
+            participant_locked_by: row.participant_locked_by ?? userId,
+          }
+        : row,
+    );
+  }
+
+  private unlockParticipants(values: readonly unknown[]): void {
+    const expenseId = readBoundString(values[0]);
+
+    if (!expenseId) {
+      return;
+    }
+
+    this.expenseRows = this.expenseRows.map((row) =>
+      row.id === expenseId
+        ? {
+            ...row,
+            participant_locked_at: null,
+            participant_locked_by: null,
+          }
+        : row,
+    );
+  }
 }
 
 class FakeD1PreparedStatement {
@@ -172,7 +238,8 @@ class FakeD1PreparedStatement {
     }
     if (this.sql.includes('FROM expenses e')) {
       const expenseId = this.values[0];
-      return (this.db.expenseRows.find((row) => row.id === expenseId) ?? null) as T | null;
+      const row = this.db.expenseRows.find((expense) => expense.id === expenseId);
+      return row ? (withExpenseLockDefaults(row) as T) : null;
     }
     if (
       this.sql.includes('SELECT group_id') &&
@@ -191,7 +258,9 @@ class FakeD1PreparedStatement {
       } as T;
     }
     if (
-      this.sql.includes('SELECT group_id, paid_by_user_id, amount, split_method') &&
+      this.sql.includes('paid_by_user_id') &&
+      this.sql.includes('amount') &&
+      this.sql.includes('split_method') &&
       this.sql.includes('FROM expenses')
     ) {
       if (!this.db.expenseOwnerRow || this.db.expenseOwnerRow.group_id !== this.values[1]) {
@@ -203,7 +272,14 @@ class FakeD1PreparedStatement {
         paid_by_user_id:
           this.db.expenseOwnerRow.paid_by_user_id ?? this.db.expenseOwnerRow.created_by,
         split_method: this.db.expenseOwnerRow.split_method ?? 'equal',
+        participant_locked_at: this.db.expenseOwnerRow.participant_locked_at ?? null,
+        participant_locked_by: this.db.expenseOwnerRow.participant_locked_by ?? null,
       } as T;
+    }
+    if (this.sql.includes('FROM payments')) {
+      return this.db.pendingSettlementPaymentId
+        ? ({ id: this.db.pendingSettlementPaymentId } as T)
+        : null;
     }
     return null;
   }
@@ -214,7 +290,9 @@ class FakeD1PreparedStatement {
     }
 
     if (this.sql.includes('FROM expenses e')) {
-      return { results: this.db.expenseRows as readonly T[] };
+      return {
+        results: this.db.expenseRows.map(withExpenseLockDefaults) as unknown as readonly T[],
+      };
     }
 
     if (
@@ -226,12 +304,22 @@ class FakeD1PreparedStatement {
           user_id: row.user_id,
           share_amount: row.share_amount,
           share_ratio: row.share_ratio ?? null,
+          is_settled: row.is_settled ?? 0,
+          settled_at: row.settled_at ?? null,
         })) as unknown as readonly T[],
       };
     }
 
     if (this.sql.includes('FROM expense_participants ep')) {
       return { results: this.db.participantRows as unknown as readonly T[] };
+    }
+
+    if (this.sql.includes('FROM payments')) {
+      return {
+        results: this.db.pendingSettlementPaymentId
+          ? ([{ to_user_id: 'usr_bob' }] as unknown as readonly T[])
+          : [],
+      };
     }
 
     if (this.sql.includes('FROM group_members')) {
@@ -318,6 +406,15 @@ function displayNameForUser(userId: string): string {
   if (userId === 'usr_bob') return 'Bob';
   if (userId === 'usr_carol') return 'Carol';
   return userId;
+}
+
+function withExpenseLockDefaults(row: FakeExpenseListRow) {
+  return {
+    ...row,
+    split_method: row.split_method ?? 'equal',
+    participant_locked_at: row.participant_locked_at ?? null,
+    participant_locked_by: row.participant_locked_by ?? null,
+  };
 }
 
 test('createExpense persists group, membership, expense, shares, and audit log', async () => {
@@ -448,6 +545,11 @@ test('listExpenses reads persisted expenses with payer and participant data', as
           shareAmount: 1280,
         },
       ],
+      participantLocked: false,
+      canLockParticipants: true,
+      canUnlockParticipants: false,
+      canJoinParticipants: false,
+      canLeaveParticipants: false,
       canEdit: true,
       canDelete: true,
     },
@@ -634,6 +736,86 @@ test('joinExpenseParticipant is idempotent for existing participants', async () 
     },
   ]);
   assert.equal(db.statements.length, 0);
+});
+
+test('joinExpenseParticipant rejects locked expenses for non-payers', async () => {
+  const db = new FakeD1Database();
+  const bob: SessionUser = {
+    id: 'usr_bob',
+    email: 'bob@example.test',
+    displayName: 'Bob',
+    role: 'member',
+    status: 'active',
+  };
+  db.activeMemberIds = ['usr_bob'];
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 420,
+    participant_locked_at: '2026-06-17 01:34:00',
+    participant_locked_by: 'usr_alice',
+  };
+  db.participantRows = [
+    {
+      expense_id: 'exp_locked',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 420,
+    },
+  ];
+
+  await assert.rejects(
+    () => joinExpenseParticipant(db as unknown as D1Database, bob, 'exp_locked'),
+    ExpenseParticipantLockedError,
+  );
+  assert.equal(db.statements.length, 0);
+});
+
+test('joinExpenseParticipant sorts newly added equal-split participants deterministically', async () => {
+  const db = new FakeD1Database();
+  const aaron: SessionUser = {
+    id: 'usr_aaron',
+    email: 'aaron@example.test',
+    displayName: 'Aaron',
+    role: 'member',
+    status: 'active',
+  };
+  db.activeMemberIds = ['usr_aaron'];
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
+    created_by: 'usr_bob',
+    amount: 421,
+  };
+  db.expenseRows = [
+    {
+      id: 'exp_sort_join',
+      title: 'Sorted join',
+      description: null,
+      amount: 421,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_bob',
+      paid_by_display_name: 'Bob',
+      created_by: 'usr_bob',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_sort_join',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 421,
+    },
+  ];
+
+  await joinExpenseParticipant(db as unknown as D1Database, aaron, 'exp_sort_join');
+
+  assert.equal(db.statements[0]?.[1]?.[4], 'usr_aaron');
+  assert.equal(db.statements[0]?.[2]?.[4], 'usr_bob');
+  assert.equal(Number(db.statements[0]?.[1]?.[1]) + Number(db.statements[0]?.[2]?.[1]), 421);
 });
 
 test('joinExpenseParticipant rejects custom splits that need explicit shares', async () => {
@@ -885,6 +1067,197 @@ test('leaveExpenseParticipant rejects non-participants and last-participant remo
     ExpenseLastParticipantError,
   );
   assert.equal(lastParticipantDb.statements.length, 0);
+});
+
+test('leaveExpenseParticipant rejects settled participants to prevent repeat joins', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
+    created_by: 'usr_bob',
+    amount: 420,
+  };
+  db.participantRows = [
+    {
+      expense_id: 'exp_settled',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 210,
+      is_settled: 1,
+      settled_at: '2026-06-17 01:34:00',
+    },
+    {
+      expense_id: 'exp_settled',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 210,
+    },
+  ];
+
+  await assert.rejects(
+    () => leaveExpenseParticipant(db as unknown as D1Database, sessionUser, 'exp_settled'),
+    ExpenseParticipantSettledError,
+  );
+  assert.equal(db.statements.length, 0);
+});
+
+test('leaveExpenseParticipant rejects participants with pending settlement payments', async () => {
+  const db = new FakeD1Database();
+  db.pendingSettlementPaymentId = 'pay_pending';
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
+    created_by: 'usr_bob',
+    amount: 420,
+  };
+  db.participantRows = [
+    {
+      expense_id: 'exp_pending_settlement',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 210,
+    },
+    {
+      expense_id: 'exp_pending_settlement',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 210,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      leaveExpenseParticipant(db as unknown as D1Database, sessionUser, 'exp_pending_settlement'),
+    ExpenseParticipantSettledError,
+  );
+  assert.equal(db.statements.length, 0);
+});
+
+test('lockExpenseParticipants lets payer lock and unlock participant joining', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_bob',
+    amount: 420,
+  };
+  db.expenseRows = [
+    {
+      id: 'exp_lock',
+      title: 'Lockable expense',
+      description: null,
+      amount: 420,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_alice',
+      paid_by_display_name: 'Alice',
+      created_by: 'usr_bob',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_lock',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 420,
+    },
+  ];
+
+  const lockedExpense = await lockExpenseParticipants(
+    db as unknown as D1Database,
+    sessionUser,
+    'exp_lock',
+  );
+
+  assert.equal(lockedExpense.participantLocked, true);
+  assert.equal(lockedExpense.canLockParticipants, false);
+  assert.equal(lockedExpense.canUnlockParticipants, true);
+  assert.match(String(db.statements[0]?.[0]?.[0]), /participant_locked_at/u);
+  assert.equal(db.statements[0]?.[1]?.[3], 'expense_participants_locked');
+
+  const unlockedExpense = await unlockExpenseParticipants(
+    db as unknown as D1Database,
+    sessionUser,
+    'exp_lock',
+  );
+
+  assert.equal(unlockedExpense.participantLocked, false);
+  assert.equal(unlockedExpense.canLockParticipants, true);
+  assert.equal(unlockedExpense.canUnlockParticipants, false);
+  assert.match(String(db.statements[1]?.[0]?.[0]), /participant_locked_at = NULL/u);
+  assert.equal(db.statements[1]?.[1]?.[3], 'expense_participants_unlocked');
+});
+
+test('lockExpenseParticipants lets admins lock non-owned expenses but rejects other members', async () => {
+  const admin: SessionUser = {
+    id: 'usr_carol',
+    email: 'carol@example.test',
+    displayName: 'Carol',
+    role: 'admin',
+    status: 'active',
+  };
+  const adminDb = new FakeD1Database();
+  adminDb.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 420,
+  };
+  adminDb.expenseRows = [
+    {
+      id: 'exp_admin_lock',
+      title: 'Admin lockable',
+      description: null,
+      amount: 420,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_alice',
+      paid_by_display_name: 'Alice',
+      created_by: 'usr_alice',
+    },
+  ];
+
+  const lockedExpense = await lockExpenseParticipants(
+    adminDb as unknown as D1Database,
+    admin,
+    'exp_admin_lock',
+  );
+
+  assert.equal(lockedExpense.participantLocked, true);
+  assert.equal(lockedExpense.canUnlockParticipants, true);
+
+  const memberDb = new FakeD1Database();
+  memberDb.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
+    created_by: 'usr_bob',
+    amount: 420,
+  };
+
+  await assert.rejects(
+    () => lockExpenseParticipants(memberDb as unknown as D1Database, sessionUser, 'exp_bob'),
+    ExpenseParticipantLockForbiddenError,
+  );
+  assert.equal(memberDb.statements.length, 0);
+});
+
+test('lockExpenseParticipants reports not found when the locked row cannot be reloaded', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 420,
+  };
+
+  await assert.rejects(
+    () =>
+      lockExpenseParticipants(db as unknown as D1Database, sessionUser, 'exp_missing_after_lock'),
+    ExpenseNotFoundError,
+  );
+  assert.equal(db.statements.length, 1);
 });
 
 test('updateExpense rejects unknown expenses', async () => {
