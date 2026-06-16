@@ -16,6 +16,7 @@ type DefaultGroupMemberRow = {
   readonly display_name: string;
   readonly role: UserRole;
   readonly status: UserStatus;
+  readonly user_status: UserStatus;
   readonly joined_at: string | null;
 };
 
@@ -77,6 +78,7 @@ export async function listDefaultGroupMembers(
          COALESCE(u.display_name, u.email, gm.user_id) AS display_name,
          gm.role,
          gm.status,
+         u.status AS user_status,
          gm.joined_at
        FROM group_members gm
        INNER JOIN users u ON u.id = gm.user_id
@@ -157,7 +159,19 @@ function mapDefaultGroupMemberRow(row: DefaultGroupMemberRow): DefaultGroupMembe
     userId: row.user_id,
     displayName: row.display_name,
     role: row.role,
-    status: row.status,
+    status: effectiveMemberStatus(row.status, row.user_status),
     joinedAt: row.joined_at,
   };
+}
+
+function effectiveMemberStatus(memberStatus: UserStatus, userStatus: UserStatus): UserStatus {
+  if (memberStatus === 'disabled' || userStatus === 'disabled') {
+    return 'disabled';
+  }
+
+  if (memberStatus === 'pending' || userStatus === 'pending') {
+    return 'pending';
+  }
+
+  return 'active';
 }

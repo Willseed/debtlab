@@ -27,6 +27,7 @@ class FakeDefaultGroupD1 {
             readonly display_name: string;
             readonly role: 'member' | 'admin';
             readonly status: 'active' | 'disabled' | 'pending';
+            readonly user_status?: 'active' | 'disabled' | 'pending';
             readonly joined_at: string | null;
           }[]
         | null;
@@ -82,6 +83,48 @@ test('listDefaultGroupMembers handles null D1 results and falls back to the curr
       role: sessionUser.role,
       status: sessionUser.status,
       joinedAt: null,
+    },
+  ]);
+});
+
+test('listDefaultGroupMembers exposes effective inactive status from users and memberships', async () => {
+  const db = new FakeDefaultGroupD1({
+    memberRows: [
+      {
+        user_id: 'usr_disabled_user',
+        display_name: 'Disabled User',
+        role: 'member',
+        status: 'active',
+        user_status: 'disabled',
+        joined_at: '2026-06-16 09:00:00',
+      },
+      {
+        user_id: 'usr_pending_member',
+        display_name: 'Pending Member',
+        role: 'member',
+        status: 'pending',
+        user_status: 'active',
+        joined_at: '2026-06-16 09:01:00',
+      },
+    ],
+  });
+
+  const members = await listDefaultGroupMembers(db as unknown as D1Database);
+
+  assert.deepEqual(members, [
+    {
+      userId: 'usr_disabled_user',
+      displayName: 'Disabled User',
+      role: 'member',
+      status: 'disabled',
+      joinedAt: '2026-06-16 09:00:00',
+    },
+    {
+      userId: 'usr_pending_member',
+      displayName: 'Pending Member',
+      role: 'member',
+      status: 'pending',
+      joinedAt: '2026-06-16 09:01:00',
     },
   ]);
 });

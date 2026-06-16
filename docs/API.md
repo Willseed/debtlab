@@ -204,10 +204,32 @@ Clears `labsplit_session`.
 
 ### GET `/api/members`
 
-Authenticated. Returns active and historical default-group members visible to
-the group. If the caller has not yet been persisted in `group_members`, the
-response includes the active caller as a selectable default-group member fallback
-for legacy sessions.
+Authenticated active default-group member or active admin. Pending, disabled,
+and non-member callers receive `403 FORBIDDEN` from auth/membership middleware
+before any member list is generated.
+Active non-admin members receive only selectable active members with minimal
+fields:
+
+```json
+{ "members": [{ "userId": "usr_...", "displayName": "Alice" }] }
+```
+
+Admins receive the full administration list, including inactive default-group
+members and the fields needed for role/status management:
+
+```json
+{
+  "members": [
+    {
+      "userId": "usr_...",
+      "displayName": "Alice",
+      "role": "member",
+      "status": "active",
+      "joinedAt": "2026-06-16 09:00:00"
+    }
+  ]
+}
+```
 
 ### PATCH `/api/members/:userId`
 

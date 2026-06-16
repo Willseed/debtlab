@@ -33,9 +33,9 @@ export type PendingPayment = {
 export type SettlementMember = {
   readonly userId: string;
   readonly displayName: string;
-  readonly role: 'member' | 'admin';
-  readonly status: 'active' | 'disabled' | 'pending';
-  readonly joinedAt: string | null;
+  readonly role?: 'member' | 'admin';
+  readonly status?: 'active' | 'disabled' | 'pending';
+  readonly joinedAt?: string | null;
 };
 
 export type MemberListResponse = {

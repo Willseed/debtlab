@@ -237,9 +237,6 @@ describe('ExpenseListPageComponent', () => {
       {
         userId: 'usr_late_member',
         displayName: 'Late Member',
-        role: 'member',
-        status: 'active',
-        joinedAt: '2026-06-16 09:02:00',
       },
     ]);
     fixture.detectChanges();

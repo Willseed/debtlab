@@ -5,7 +5,7 @@ import { Hono } from 'hono';
 
 import { memberRoutes } from '../src/routes/members';
 import { createSessionToken, SESSION_COOKIE_NAME } from '../src/services/auth.service';
-import { AppBindings, SessionUser } from '../src/types';
+import { ApiErrorCode, AppBindings, SessionUser } from '../src/types';
 
 const SESSION_SECRET = 'test-session-secret-at-least-long-enough';
 
@@ -17,6 +17,14 @@ const alice: SessionUser = {
   status: 'active',
 };
 
+const admin: SessionUser = {
+  id: 'usr_admin',
+  email: 'admin@example.test',
+  displayName: 'Admin',
+  role: 'admin',
+  status: 'active',
+};
+
 class FakeMemberD1 {
   constructor(
     readonly currentUser: SessionUser = alice,
@@ -25,6 +33,7 @@ class FakeMemberD1 {
       readonly display_name: string;
       readonly role: 'member' | 'admin';
       readonly status: 'active' | 'disabled' | 'pending';
+      readonly user_status?: 'active' | 'disabled' | 'pending';
       readonly joined_at: string | null;
     }[] = [],
     private readonly activeMemberIds: readonly string[] = [currentUser.id],
@@ -89,7 +98,7 @@ class FakeMemberStatement {
   }
 }
 
-test('GET /api/members returns default-group members and the current user fallback', async () => {
+test('GET /api/members returns only active minimal member fields to active members', async () => {
   const db = new FakeMemberD1(alice, [
     {
       user_id: 'usr_bob',
@@ -97,6 +106,28 @@ test('GET /api/members returns default-group members and the current user fallba
       role: 'member',
       status: 'active',
       joined_at: '2026-06-16 09:00:00',
+    },
+    {
+      user_id: 'usr_pending',
+      display_name: 'Pending',
+      role: 'member',
+      status: 'pending',
+      joined_at: '2026-06-16 09:01:00',
+    },
+    {
+      user_id: 'usr_disabled',
+      display_name: 'Disabled',
+      role: 'member',
+      status: 'disabled',
+      joined_at: '2026-06-16 09:02:00',
+    },
+    {
+      user_id: 'usr_user_disabled',
+      display_name: 'User Disabled',
+      role: 'member',
+      status: 'active',
+      user_status: 'disabled',
+      joined_at: '2026-06-16 09:03:00',
     },
   ]);
   const response = await requestMembers(db, alice);
@@ -107,16 +138,65 @@ test('GET /api/members returns default-group members and the current user fallba
       {
         userId: 'usr_bob',
         displayName: 'Bob',
-        role: 'member',
-        status: 'active',
-        joinedAt: '2026-06-16 09:00:00',
       },
       {
         userId: alice.id,
         displayName: alice.displayName,
-        role: alice.role,
-        status: alice.status,
-        joinedAt: null,
+      },
+    ],
+  });
+});
+
+test('GET /api/members returns full member fields and inactive members to admins', async () => {
+  const db = new FakeMemberD1(admin, [
+    {
+      user_id: admin.id,
+      display_name: admin.displayName,
+      role: 'admin',
+      status: 'active',
+      joined_at: '2026-06-16 09:00:00',
+    },
+    {
+      user_id: 'usr_pending',
+      display_name: 'Pending',
+      role: 'member',
+      status: 'pending',
+      joined_at: '2026-06-16 09:01:00',
+    },
+    {
+      user_id: 'usr_disabled',
+      display_name: 'Disabled',
+      role: 'member',
+      status: 'active',
+      user_status: 'disabled',
+      joined_at: '2026-06-16 09:02:00',
+    },
+  ]);
+  const response = await requestMembers(db, admin);
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    members: [
+      {
+        userId: admin.id,
+        displayName: admin.displayName,
+        role: 'admin',
+        status: 'active',
+        joinedAt: '2026-06-16 09:00:00',
+      },
+      {
+        userId: 'usr_pending',
+        displayName: 'Pending',
+        role: 'member',
+        status: 'pending',
+        joinedAt: '2026-06-16 09:01:00',
+      },
+      {
+        userId: 'usr_disabled',
+        displayName: 'Disabled',
+        role: 'member',
+        status: 'disabled',
+        joinedAt: '2026-06-16 09:02:00',
       },
     ],
   });
@@ -147,6 +227,61 @@ test('GET /api/members requires authentication', async () => {
   assert.equal(response.status, 401);
 });
 
+test('GET /api/members rejects pending default-group members with 403', async () => {
+  const response = await requestMembers(
+    new FakeMemberD1(
+      alice,
+      [
+        {
+          user_id: alice.id,
+          display_name: alice.displayName,
+          role: 'member',
+          status: 'pending',
+          joined_at: '2026-06-16 09:00:00',
+        },
+      ],
+      [],
+    ),
+    alice,
+  );
+
+  await assertApiError(response, 403, 'FORBIDDEN', 'Default group access is required.');
+});
+
+test('GET /api/members rejects disabled default-group members with 403', async () => {
+  const response = await requestMembers(
+    new FakeMemberD1(
+      alice,
+      [
+        {
+          user_id: alice.id,
+          display_name: alice.displayName,
+          role: 'member',
+          status: 'disabled',
+          joined_at: '2026-06-16 09:00:00',
+        },
+      ],
+      [],
+    ),
+    alice,
+  );
+
+  await assertApiError(response, 403, 'FORBIDDEN', 'Default group access is required.');
+});
+
+test('GET /api/members rejects non-members with 403', async () => {
+  const response = await requestMembers(new FakeMemberD1(alice, [], []), alice);
+
+  await assertApiError(response, 403, 'FORBIDDEN', 'Default group access is required.');
+});
+
+test('GET /api/members rejects disabled current users with 403', async () => {
+  const disabledUser: SessionUser = { ...alice, status: 'disabled' };
+  const response = await requestMembers(new FakeMemberD1(disabledUser), disabledUser);
+
+  await assertApiError(response, 403, 'FORBIDDEN', 'User is not active.');
+});
+
 async function requestMembers(db: FakeMemberD1, user: SessionUser): Promise<Response> {
   const app = makeApp();
   const token = await createSessionToken(user, SESSION_SECRET);
@@ -170,4 +305,21 @@ function makeApp(): Hono<AppBindings> {
 
 function env(db: FakeMemberD1) {
   return { DB: db as unknown as D1Database, SESSION_SECRET };
+}
+
+async function assertApiError(
+  response: Response,
+  status: number,
+  code: ApiErrorCode,
+  message: string,
+): Promise<void> {
+  assert.equal(response.status, status);
+  const body = (await response.json()) as {
+    readonly error: {
+      readonly code: ApiErrorCode;
+      readonly message: string;
+    };
+  };
+  assert.equal(body.error.code, code);
+  assert.equal(body.error.message, message);
 }

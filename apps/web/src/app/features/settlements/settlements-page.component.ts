@@ -168,11 +168,11 @@ export class SettlementsPageComponent implements OnInit {
   protected readonly statusMessage = signal('');
   protected readonly recordingTransferKey = signal<string | null>(null);
   protected readonly confirmingPaymentIds = signal<ReadonlySet<string>>(new Set());
-  private readonly activeJoinedMemberIds = computed<ReadonlySet<string>>(
+  private readonly activeMemberIds = computed<ReadonlySet<string>>(
     () =>
       new Set(
         this.members()
-          .filter((member) => member.status === 'active' && member.joinedAt !== null)
+          .filter((member) => member.status === undefined || member.status === 'active')
           .map((member) => member.userId),
       ),
   );
@@ -200,9 +200,9 @@ export class SettlementsPageComponent implements OnInit {
     const currentUser = this.authService.currentUser();
     const isActiveUser = currentUser?.status === 'active';
     const isAdmin = isActiveUser && this.authService.isAdmin();
-    const isActiveJoinedMember = isActiveUser && this.activeJoinedMemberIds().has(currentUser.id);
+    const isActiveMember = isActiveUser && this.activeMemberIds().has(currentUser.id);
 
-    return (isActiveJoinedMember || isAdmin) && !this.hasPendingPaymentForTransfer(t);
+    return (isActiveMember || isAdmin) && !this.hasPendingPaymentForTransfer(t);
   }
 
   canConfirm(p: PendingPayment): boolean {

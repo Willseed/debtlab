@@ -4,7 +4,7 @@ import { errorResponse } from '../http/error-response';
 import { requireDefaultGroupMember } from '../middleware/require-default-group-member';
 import { requireAdmin } from '../middleware/require-admin';
 import { requireAuth } from '../middleware/require-auth';
-import { listDefaultGroupMembers } from '../services/default-group.service';
+import { type DefaultGroupMember, listDefaultGroupMembers } from '../services/default-group.service';
 import { AppBindings } from '../types';
 
 export const memberRoutes = new Hono<AppBindings>();
@@ -15,9 +15,21 @@ memberRoutes.use('*', requireAuth);
 memberRoutes.use('*', requireDefaultGroupMember);
 
 memberRoutes.get('/', async (c) => {
-  const members = await listDefaultGroupMembers(c.env.DB, c.get('currentUser'));
+  const currentUser = c.get('currentUser');
+  const members = await listDefaultGroupMembers(c.env.DB, currentUser);
 
-  return c.json({ members });
+  return c.json({
+    members: currentUser.role === 'admin' ? members : mapActiveMemberDirectory(members),
+  });
 });
 
 memberRoutes.patch('/:userId', requireAdmin, unfinishedMemberAdminEndpoint);
+
+function mapActiveMemberDirectory(members: readonly DefaultGroupMember[]) {
+  return members
+    .filter((member) => member.status === 'active')
+    .map((member) => ({
+      userId: member.userId,
+      displayName: member.displayName,
+    }));
+}

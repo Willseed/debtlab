@@ -1106,19 +1106,16 @@ export class ExpenseListPageComponent implements OnInit {
     const membersById = new Map<string, MemberListItem>();
 
     for (const member of this.members()) {
-      if (member.status === 'active') {
+      if (member.status === undefined || member.status === 'active') {
         membersById.set(member.userId, member);
       }
     }
 
     const currentUser = this.authService.currentUser();
-    if (currentUser && !membersById.has(currentUser.id)) {
+    if (currentUser?.status === 'active' && !membersById.has(currentUser.id)) {
       membersById.set(currentUser.id, {
         userId: currentUser.id,
         displayName: currentUser.displayName ?? currentUser.email ?? currentUser.id,
-        role: currentUser.role,
-        status: currentUser.status,
-        joinedAt: null,
       });
     }
 

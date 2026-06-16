@@ -32,7 +32,7 @@ const adminUser: SessionUser = {
   status: 'active',
 };
 
-type MembershipState = 'active' | 'pending' | 'none';
+type MembershipState = 'active' | 'pending' | 'disabled' | 'none';
 
 type BusinessRouteCase = {
   readonly name: string;
@@ -81,6 +81,12 @@ for (const routeCase of businessRouteCases) {
 
   test(`${routeCase.name} API rejects pending default-group members with 403`, async () => {
     const response = await requestBusinessRoute(routeCase, activeMember, 'pending');
+
+    await assertApiError(response, 403, 'FORBIDDEN', DEFAULT_GROUP_ACCESS_MESSAGE);
+  });
+
+  test(`${routeCase.name} API rejects disabled default-group members with 403`, async () => {
+    const response = await requestBusinessRoute(routeCase, activeMember, 'disabled');
 
     await assertApiError(response, 403, 'FORBIDDEN', DEFAULT_GROUP_ACCESS_MESSAGE);
   });
@@ -147,7 +153,7 @@ class FakeBusinessD1 {
     readonly user_id: string;
     readonly display_name: string;
     readonly role: 'member' | 'admin';
-    readonly status: 'active' | 'pending';
+    readonly status: 'active' | 'pending' | 'disabled';
     readonly joined_at: string | null;
   }[] {
     if (this.membershipState === 'none') {

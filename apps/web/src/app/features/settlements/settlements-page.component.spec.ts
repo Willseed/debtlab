@@ -151,9 +151,6 @@ describe('SettlementsPageComponent', () => {
       {
         userId: 'usr_carol',
         displayName: 'Carol',
-        role: 'member',
-        status: 'active',
-        joinedAt: '2026-06-16 09:03:00',
       },
     ]);
     flushSummary(createSummary());
@@ -181,16 +178,7 @@ describe('SettlementsPageComponent', () => {
       status: 'active',
     });
     fixture.detectChanges();
-    flushMemberList([
-      ...createMemberList(),
-      {
-        userId: 'usr_carol',
-        displayName: 'Carol',
-        role: 'member',
-        status: 'active',
-        joinedAt: null,
-      },
-    ]);
+    flushMemberList();
     flushSummary(
       createSummary({
         balances: [
