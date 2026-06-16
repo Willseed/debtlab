@@ -424,24 +424,6 @@ describe('SettlementsPageComponent', () => {
     fixture.detectChanges();
   }
 
-  function createMemberList(): readonly SettlementMember[] {
-    return [
-      {
-        userId: 'usr_alice',
-        displayName: 'Alice',
-        role: 'member',
-        status: 'active',
-        joinedAt: '2026-06-16 09:00:00',
-      },
-      {
-        userId: 'usr_bob',
-        displayName: 'Bob',
-        role: 'member',
-        status: 'active',
-        joinedAt: '2026-06-16 09:01:00',
-      },
-    ];
-  }
 });
 
 function clickButton(label: string): void {
@@ -470,4 +452,23 @@ function createSummary(overrides: Partial<SettlementSummary> = {}): SettlementSu
     pendingPayments: [],
     ...overrides,
   };
+}
+
+function createMemberList(): readonly SettlementMember[] {
+  return [
+    {
+      userId: 'usr_alice',
+      displayName: 'Alice',
+      role: 'member',
+      status: 'active',
+      joinedAt: '2026-06-16 09:00:00',
+    },
+    {
+      userId: 'usr_bob',
+      displayName: 'Bob',
+      role: 'member',
+      status: 'active',
+      joinedAt: '2026-06-16 09:01:00',
+    },
+  ];
 }
