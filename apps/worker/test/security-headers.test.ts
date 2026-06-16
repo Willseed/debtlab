@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import { Hono } from 'hono';
 
@@ -31,9 +34,25 @@ test('securityHeaders adds project security headers to API responses', async () 
   assert.match(response.headers.get('Content-Security-Policy') ?? '', /accounts\.google\.com/u);
   assert.match(response.headers.get('Content-Security-Policy') ?? '', /appleid\.apple\.com/u);
   assert.match(response.headers.get('Content-Security-Policy') ?? '', /cloudflareinsights\.com/u);
-  assert.doesNotMatch(response.headers.get('Content-Security-Policy') ?? '', /unsafe-inline/u);
+  assertProductionCspInvariants('worker middleware', CONTENT_SECURITY_POLICY);
   assert.equal(response.headers.get('Cache-Control'), 'no-store');
   assert.match(response.headers.get('Vary') ?? '', /Cookie/u);
+});
+
+test('Cloudflare Pages _headers matches Worker security header sources', () => {
+  const headers = readCloudflarePagesHeaders();
+
+  assert.equal(headers['Strict-Transport-Security'], 'max-age=31536000; includeSubDomains');
+  assert.equal(headers['Content-Security-Policy'], CONTENT_SECURITY_POLICY);
+  assert.equal(headers['X-Frame-Options'], 'DENY');
+  assert.equal(headers['X-Content-Type-Options'], 'nosniff');
+  assert.equal(headers['Referrer-Policy'], 'strict-origin-when-cross-origin');
+  assert.equal(headers['Permissions-Policy'], PERMISSIONS_POLICY);
+  assert.equal(headers['Cross-Origin-Opener-Policy'], 'same-origin');
+  assertProductionCspInvariants(
+    'Cloudflare Pages _headers',
+    headers['Content-Security-Policy'] ?? '',
+  );
 });
 
 test('securityHeaders preserves route-specific Content-Security-Policy values', async () => {
@@ -72,6 +91,7 @@ test('index serves static assets with security headers outside /api', async () =
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'text/html; charset=utf-8');
   assert.equal(await response.text(), '<!doctype html><title>LabSplit</title>');
+  assert.equal(response.headers.get('Content-Security-Policy'), CONTENT_SECURITY_POLICY);
   assert.equal(
     response.headers.get('Strict-Transport-Security'),
     'max-age=31536000; includeSubDomains',
@@ -171,6 +191,79 @@ function createTestEnv(): AppBindings['Bindings'] {
     DB: createUnusedD1(),
     SESSION_SECRET: 'test-session-secret-at-least-long-enough',
   };
+}
+
+function readCloudflarePagesHeaders(): Record<string, string> {
+  const currentDirectory = dirname(fileURLToPath(import.meta.url));
+  const headersPath = resolve(currentDirectory, '../../web/src/_headers');
+  const headers: Record<string, string> = {};
+
+  for (const line of readFileSync(headersPath, 'utf8').split(/\r?\n/u)) {
+    const trimmedLine = line.trim();
+
+    if (trimmedLine.length === 0 || trimmedLine.startsWith('#') || trimmedLine === '/*') {
+      continue;
+    }
+
+    const separatorIndex = trimmedLine.indexOf(':');
+
+    if (separatorIndex === -1) {
+      continue;
+    }
+
+    headers[trimmedLine.slice(0, separatorIndex)] = trimmedLine.slice(separatorIndex + 1).trim();
+  }
+
+  return headers;
+}
+
+function assertProductionCspInvariants(label: string, policy: string): void {
+  assert.notEqual(policy, '', `${label} CSP must be present`);
+
+  const directives = parseCsp(policy);
+  const executableSourceDirectiveNames = ['script-src', 'style-src'] as const;
+
+  for (const [directiveName, sources] of directives.entries()) {
+    for (const source of sources) {
+      assert.notEqual(source, "'unsafe-inline'", `${label} must not allow inline sources`);
+      assert.notEqual(source, "'unsafe-eval'", `${label} must not allow eval sources`);
+      assert.notEqual(source, '*', `${label} must not allow wildcard sources`);
+      assert.notEqual(source, 'http:', `${label} must not allow broad HTTP scheme sources`);
+      assert.notEqual(source, 'https:', `${label} must not allow broad HTTPS scheme sources`);
+      assert.doesNotMatch(source, /^https?:\/\/\*\./u, `${label} must not allow host wildcards`);
+
+      if (source === 'data:') {
+        assert.equal(directiveName, 'img-src', `${label} must only allow data: for images`);
+      }
+    }
+  }
+
+  for (const directiveName of executableSourceDirectiveNames) {
+    const sources = directives.get(directiveName) ?? [];
+
+    assert.ok(sources.length > 0, `${label} must define ${directiveName}`);
+    assert.ok(!sources.includes('data:'), `${label} ${directiveName} must not allow data:`);
+    assert.ok(!sources.includes('blob:'), `${label} ${directiveName} must not allow blob:`);
+    assert.ok(
+      !sources.includes('filesystem:'),
+      `${label} ${directiveName} must not allow filesystem:`,
+    );
+  }
+}
+
+function parseCsp(policy: string): Map<string, readonly string[]> {
+  const directives = new Map<string, readonly string[]>();
+
+  for (const directive of policy.split(';')) {
+    const parts = directive.trim().split(/\s+/u);
+    const [name, ...sources] = parts;
+
+    if (name !== undefined && name.length > 0) {
+      directives.set(name, sources);
+    }
+  }
+
+  return directives;
 }
 
 function createUnusedD1(): D1Database {

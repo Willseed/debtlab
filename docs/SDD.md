@@ -143,8 +143,9 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
   HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
   `Permissions-Policy`, and `Cross-Origin-Opener-Policy`.
 - CSP must preserve the app's Google OAuth, Apple OAuth, and Cloudflare
-  analytics/beacon origins while blocking inline styles, framing, and object
-  embeds. The `/api/health` clue page may keep a route-specific stricter CSP
+  analytics/beacon origins while blocking inline styles/eval, wildcard sources,
+  framing, and object embeds. `data:` is only allowed for images used by the
+  static UI. The `/api/health` clue page may keep a route-specific stricter CSP
   with a per-response style nonce because it intentionally renders
   self-contained HTML.
 - All `/api/*` responses are `Cache-Control: no-store` and vary on `Cookie` so

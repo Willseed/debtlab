@@ -83,6 +83,8 @@ test('health returns HTML for browser navigation Accept headers', async () => {
   assert.match(contentSecurityPolicy, /default-src 'none'/u);
   assert.ok(contentSecurityPolicy.includes(`style-src 'nonce-${styleNonce}'`));
   assert.doesNotMatch(contentSecurityPolicy, /unsafe-inline/u);
+  assert.doesNotMatch(contentSecurityPolicy, /unsafe-eval/u);
+  assert.doesNotMatch(contentSecurityPolicy, /\*/u);
   assert.ok(styleNonce.length > 0);
   assert.match(body, /^<!doctype html>/u);
   assert.match(body, /LabSplit Black Gold/u);

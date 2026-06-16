@@ -79,11 +79,12 @@ Cross-Origin-Opener-Policy: same-origin
 ```
 
 The web CSP intentionally keeps Google OAuth, Apple OAuth, and Cloudflare
-analytics/beacon origins available while blocking framing, object embeds, and
-inline styles. GitHub Pages does not apply `_headers`; it must not be the
-production header enforcement path. The `/api/health` browser HTML response
-keeps its stricter route-specific CSP for the CTF clue page by using a
-per-response style nonce, and the security middleware must not overwrite it.
+analytics/beacon origins available while blocking framing, object embeds, inline
+styles/eval, and wildcard sources. `data:` is only allowed for images used by the
+static UI. GitHub Pages does not apply `_headers`; it must not be the production
+header enforcement path. The `/api/health` browser HTML response keeps its
+stricter route-specific CSP for the CTF clue page by using a per-response style
+nonce, and the security middleware must not overwrite it.
 
 All `/api/*` responses are `Cache-Control: no-store` and vary on `Cookie`.
 API preflight requests from allowed origins return CORS credentials headers so
