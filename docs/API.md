@@ -35,8 +35,10 @@ NOT_IMPLEMENTED
 ## Security Headers
 
 The Angular static deployment ships `apps/web/src/_headers` for Cloudflare
-Pages / Workers Assets. The Worker applies the same posture to `/api/*` through
-security header middleware. Required response headers include:
+Pages / Workers Assets. Production traffic for `lab.buy2330.cc/*` is handled by
+the Worker route, which serves Angular through Workers Assets and applies the
+same posture to static and `/api/*` responses through security header
+middleware. Required response headers include:
 
 ```txt
 Strict-Transport-Security: max-age=31536000; includeSubDomains
@@ -49,13 +51,17 @@ Cross-Origin-Opener-Policy: same-origin
 ```
 
 The web CSP intentionally keeps Google OAuth, Apple OAuth, and Cloudflare
-analytics/beacon origins available while blocking framing and object embeds. The
-`/api/health` browser HTML response keeps its stricter route-specific CSP for
-the CTF clue page, and the security middleware must not overwrite it.
+analytics/beacon origins available while blocking framing and object embeds.
+GitHub Pages does not apply `_headers`; it must not be the production header
+enforcement path. The `/api/health` browser HTML response keeps its stricter
+route-specific CSP for the CTF clue page, and the security middleware must not
+overwrite it.
 
 ## Auth
 
-Production `/api/*` traffic is served by the Cloudflare Worker route `lab.buy2330.cc/api/*`.
+Production traffic is served by the Cloudflare Worker route `lab.buy2330.cc/*`;
+non-API paths are forwarded to Workers Assets, and `/api/*` paths are handled by
+the Hono API routes.
 Run the `Deploy Cloudflare Worker` workflow manually after `CLOUDFLARE_API_TOKEN` has Workers, D1, and route-management permissions.
 
 ### GET `/api/auth/google/start`

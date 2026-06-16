@@ -16,7 +16,7 @@ import { AppBindings } from './types';
 
 const app = new Hono<AppBindings>();
 
-app.use('/api/*', securityHeaders);
+app.use('*', securityHeaders);
 app.use('/api/*', validateOrigin);
 
 app.route('/api/health', healthRoutes);
@@ -30,8 +30,20 @@ app.route('/api/settlements', settlementRoutes);
 app.route('/api/payments', paymentRoutes);
 app.route('/api/admin', adminRoutes);
 
-app.notFound((c) => {
-  return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
+app.all('*', async (c) => {
+  if (new URL(c.req.url).pathname.startsWith('/api/')) {
+    return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
+  }
+
+  if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+    return errorResponse(c, 404, 'NOT_FOUND', 'Route not found.');
+  }
+
+  if (!c.env.ASSETS) {
+    return errorResponse(c, 500, 'INTERNAL_ERROR', 'Static asset binding is not configured.');
+  }
+
+  return c.env.ASSETS.fetch(c.req.raw);
 });
 
 app.onError((error, c) => {

@@ -60,6 +60,93 @@ test('index applies security headers to origin validation failures', async () =>
   assert.equal(response.headers.get('X-Frame-Options'), 'DENY');
 });
 
+test('index serves static assets with security headers outside /api', async () => {
+  const response = await app.request('/', undefined, {
+    ...createTestEnv(),
+    ASSETS: createStaticAssets(),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Content-Type'), 'text/html; charset=utf-8');
+  assert.equal(await response.text(), '<!doctype html><title>LabSplit</title>');
+  assert.equal(
+    response.headers.get('Strict-Transport-Security'),
+    'max-age=31536000; includeSubDomains',
+  );
+  assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
+  assert.equal(response.headers.get('X-Frame-Options'), 'DENY');
+});
+
+test('index does not fall back API misses to static assets', async () => {
+  const response = await app.request('/api/not-found', undefined, {
+    ...createTestEnv(),
+    ASSETS: createThrowingAssets(),
+  });
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: 'NOT_FOUND',
+      message: 'Route not found.',
+      details: {},
+    },
+  });
+});
+
+test('index rejects non-GET static route requests before assets', async () => {
+  const response = await app.request(
+    '/',
+    {
+      method: 'POST',
+      headers: {
+        Origin: 'https://lab.buy2330.cc',
+      },
+    },
+    {
+      ...createTestEnv(),
+      ASSETS: createThrowingAssets(),
+    },
+  );
+
+  assert.equal(response.status, 404);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: 'NOT_FOUND',
+      message: 'Route not found.',
+      details: {},
+    },
+  });
+});
+
+test('index reports missing static asset binding explicitly', async () => {
+  const response = await app.request('/', undefined, createTestEnv());
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'Static asset binding is not configured.',
+      details: {},
+    },
+  });
+});
+
+test('index maps unexpected static asset failures to internal errors', async () => {
+  const response = await app.request('/', undefined, {
+    ...createTestEnv(),
+    ASSETS: createThrowingAssets(),
+  });
+
+  assert.equal(response.status, 500);
+  assert.deepEqual(await response.json(), {
+    error: {
+      code: 'INTERNAL_ERROR',
+      message: 'Unexpected server error.',
+      details: {},
+    },
+  });
+});
+
 function createTestEnv(): AppBindings['Bindings'] {
   return {
     DB: createUnusedD1(),
@@ -73,4 +160,23 @@ function createUnusedD1(): D1Database {
       throw new Error('D1 should not be used by security header tests.');
     },
   } as unknown as D1Database;
+}
+
+function createStaticAssets(): NonNullable<AppBindings['Bindings']['ASSETS']> {
+  return {
+    fetch: async () =>
+      new Response('<!doctype html><title>LabSplit</title>', {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+        },
+      }),
+  };
+}
+
+function createThrowingAssets(): NonNullable<AppBindings['Bindings']['ASSETS']> {
+  return {
+    fetch: () => {
+      throw new Error('Static assets should not be requested.');
+    },
+  };
 }

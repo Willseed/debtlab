@@ -3,8 +3,8 @@ import { MiddlewareHandler } from 'hono';
 import { AppBindings } from '../types';
 
 export const CONTENT_SECURITY_POLICY = [
-  "default-src 'none'",
-  "base-uri 'none'",
+  "default-src 'self'",
+  "base-uri 'self'",
   "object-src 'none'",
   "frame-ancestors 'none'",
   "form-action 'self' https://accounts.google.com https://appleid.apple.com",

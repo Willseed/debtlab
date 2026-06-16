@@ -46,7 +46,8 @@ handling.
 
 ```txt
 Browser
-  -> Cloudflare Pages / Workers Assets
+  -> Cloudflare Worker route lab.buy2330.cc/*
+  -> Workers Assets for Angular static files
   -> Angular 22 SPA
   -> /api/* Cloudflare Worker API
   -> Cloudflare D1
@@ -137,7 +138,8 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
 - Session cookie name: `labsplit_session`.
 - Session cookies must be `HttpOnly`, `Secure`, `SameSite=Lax`, `Path=/`, and
   time-limited.
-- Static web assets and `/api/*` responses must send security headers:
+- Static web assets and `/api/*` responses must send security headers from the
+  production Worker route, not from GitHub Pages:
   HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
   `Permissions-Policy`, and `Cross-Origin-Opener-Policy`.
 - CSP must preserve the app's Google OAuth, Apple OAuth, and Cloudflare

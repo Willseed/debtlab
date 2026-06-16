@@ -1,4 +1,7 @@
+export type StaticAssetsBinding = Pick<Fetcher, 'fetch'>;
+
 export type Env = {
+  readonly ASSETS?: StaticAssetsBinding;
   readonly DB: D1Database;
   readonly SESSION_SECRET: string;
   readonly APP_BASE_URL?: string;

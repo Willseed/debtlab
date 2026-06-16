@@ -2,6 +2,11 @@ name = "labsplit-api"
 main = "src/index.ts"
 compatibility_date = "2026-06-13"
 
+[assets]
+directory = "../web/dist/web/browser"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
 [vars]
 APP_BASE_URL = "http://localhost:4200"
 
@@ -13,7 +18,7 @@ migrations_dir = "../../migrations"
 
 [env.production]
 routes = [
-  { pattern = "lab.buy2330.cc/api/*", zone_name = "buy2330.cc" }
+  { pattern = "lab.buy2330.cc/*", zone_name = "buy2330.cc" }
 ]
 
 [env.production.vars]
