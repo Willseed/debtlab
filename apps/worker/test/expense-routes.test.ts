@@ -142,58 +142,19 @@ class FakeExpenseRouteStatement {
 
   async first<T>(): Promise<T | null> {
     if (this.sql.includes('FROM users')) {
-      return {
-        id: this.db.user.id,
-        email: this.db.user.email,
-        display_name: this.db.user.displayName,
-        avatar_url: null,
-        role: this.db.user.role,
-        status: this.db.user.status,
-      } as T;
+      return this.currentUserRow() as T;
     }
 
     if (this.sql.includes('FROM expenses e')) {
-      const expenseId = this.values[0];
-      return (this.db.expenseRows.find((row) => row.id === expenseId) ?? null) as T | null;
+      return this.expenseListRow() as T | null;
     }
 
-    if (
-      this.sql.includes('SELECT group_id') &&
-      this.sql.includes('title') &&
-      this.sql.includes('FROM expenses')
-    ) {
-      if (!this.db.expenseDeleteRow || this.db.expenseDeleteRow.group_id !== this.values[1]) {
-        return null;
-      }
-
-      return this.db.expenseDeleteRow
-        ? ({
-            ...this.db.expenseDeleteRow,
-            paid_by_user_id:
-              this.db.expenseDeleteRow.paid_by_user_id ?? this.db.expenseDeleteRow.created_by,
-          } as T)
-        : null;
+    if (this.isExpenseDeleteLookup()) {
+      return this.expenseDeleteRow() as T | null;
     }
 
-    if (
-      this.sql.includes('SELECT group_id, paid_by_user_id, amount, split_method') &&
-      this.sql.includes('FROM expenses')
-    ) {
-      if (
-        !this.db.expenseOwnerRow ||
-        (this.db.expenseOwnerRow.group_id ?? 'grp_default') !== this.values[1]
-      ) {
-        return null;
-      }
-
-      return this.db.expenseOwnerRow
-        ? ({
-            ...this.db.expenseOwnerRow,
-            paid_by_user_id:
-              this.db.expenseOwnerRow.paid_by_user_id ?? this.db.expenseOwnerRow.created_by,
-            split_method: this.db.expenseOwnerRow.split_method ?? 'equal',
-          } as T)
-        : null;
+    if (this.isExpenseUpdateLookup()) {
+      return this.expenseUpdateRow() as T | null;
     }
 
     if (this.sql.includes('SELECT id') && this.sql.includes('FROM expenses')) {
@@ -201,6 +162,64 @@ class FakeExpenseRouteStatement {
     }
 
     return null;
+  }
+
+  private currentUserRow() {
+    return {
+      id: this.db.user.id,
+      email: this.db.user.email,
+      display_name: this.db.user.displayName,
+      avatar_url: null,
+      role: this.db.user.role,
+      status: this.db.user.status,
+    };
+  }
+
+  private expenseListRow() {
+    const expenseId = this.values[0];
+    return this.db.expenseRows.find((row) => row.id === expenseId) ?? null;
+  }
+
+  private isExpenseDeleteLookup(): boolean {
+    return (
+      this.sql.includes('SELECT group_id') &&
+      this.sql.includes('title') &&
+      this.sql.includes('FROM expenses')
+    );
+  }
+
+  private expenseDeleteRow() {
+    const row = this.db.expenseDeleteRow;
+
+    if (!row || row.group_id !== this.values[1]) {
+      return null;
+    }
+
+    return {
+      ...row,
+      paid_by_user_id: row.paid_by_user_id ?? row.created_by,
+    };
+  }
+
+  private isExpenseUpdateLookup(): boolean {
+    return (
+      this.sql.includes('SELECT group_id, paid_by_user_id, amount, split_method') &&
+      this.sql.includes('FROM expenses')
+    );
+  }
+
+  private expenseUpdateRow() {
+    const row = this.db.expenseOwnerRow;
+
+    if (!row || (row.group_id ?? 'grp_default') !== this.values[1]) {
+      return null;
+    }
+
+    return {
+      ...row,
+      paid_by_user_id: row.paid_by_user_id ?? row.created_by,
+      split_method: row.split_method ?? 'equal',
+    };
   }
 
   async all<T>(): Promise<{ readonly results: readonly T[] }> {
