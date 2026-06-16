@@ -117,6 +117,7 @@
       <trans-unit id="mysterySubmissionWaitingStatus" datatype="html"><source>正在載入挑戰狀態…</source><target>正在載入挑戰狀態…</target></trans-unit>
       <trans-unit id="mysteryPasswordLabel" datatype="html"><source>原始密碼</source><target>原始密碼</target></trans-unit>
       <trans-unit id="mysteryPasswordPlaceholder" datatype="html"><source>輸入原始密碼</source><target>輸入原始密碼</target></trans-unit>
+      <trans-unit id="mysterySubmitCountdownButton" datatype="html"><source>請等待 <x id="INTERPOLATION" equiv-text="{{ retryAfterSeconds() }}"/> 秒</source><target>請等待 <x id="INTERPOLATION" equiv-text="{{ retryAfterSeconds() }}"/> 秒</target></trans-unit>
       <trans-unit id="mysterySubmittingButton" datatype="html"><source>提交中…</source><target>提交中…</target></trans-unit>
       <trans-unit id="mysterySubmitButton" datatype="html"><source>提交密碼</source><target>提交密碼</target></trans-unit>
       <trans-unit id="mysteryLeaderboardTitle" datatype="html"><source>排行榜</source><target>排行榜</target></trans-unit>
@@ -142,6 +143,8 @@
       <trans-unit id="mysterySubmitSuccess" datatype="html"><source>已完成挑戰，提交已關閉。排行榜已更新。</source><target>已完成挑戰，提交已關閉。排行榜已更新。</target></trans-unit>
       <trans-unit id="mysteryStateLoadError" datatype="html"><source>挑戰狀態無法讀取，請稍後再試。</source><target>挑戰狀態無法讀取，請稍後再試。</target></trans-unit>
       <trans-unit id="mysteryLeaderboardLoadError" datatype="html"><source>無法載入排行榜，請稍後再試。</source><target>無法載入排行榜，請稍後再試。</target></trans-unit>
+      <trans-unit id="mysteryRateLimitWithSeconds" datatype="html"><source>嘗試次數太多，請等待 <x id="seconds" equiv-text="retryAfterSeconds"/> 秒後再試。</source><target>嘗試次數太多，請等待 <x id="seconds" equiv-text="retryAfterSeconds"/> 秒後再試。</target></trans-unit>
+      <trans-unit id="mysteryRateLimitGeneric" datatype="html"><source>嘗試次數太多，請稍後再試。</source><target>嘗試次數太多，請稍後再試。</target></trans-unit>
       <trans-unit id="mysteryConflictGeneric" datatype="html"><source>你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。</source><target>你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。</target></trans-unit>
       <trans-unit id="mysteryValidationError" datatype="html"><source>密碼錯誤或已被使用，請確認後再試。</source><target>密碼錯誤或已被使用，請確認後再試。</target></trans-unit>
       <trans-unit id="mysteryUnauthorizedError" datatype="html"><source>登入狀態已失效，請重新登入後再試。</source><target>登入狀態已失效，請重新登入後再試。</target></trans-unit>

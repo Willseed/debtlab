@@ -47,6 +47,8 @@ Required targets:
 12. `ErrorHandlerService`.
 13. `EasterEggService`.
 14. `KonamiCodeDirective`.
+15. Challenge rate-limit countdown UI using `retryAfterSeconds` and localized
+    copy.
 
 ## Worker Tests
 
@@ -58,6 +60,9 @@ Worker tests must cover:
 4. Auth/session behavior.
 5. Authorization behavior.
 6. Audit logging behavior.
+7. Challenge rate limiting for mystery challenge and Garage CTF submissions:
+   `429 RATE_LIMITED`, `Retry-After`, structured details, and limiter clearing
+   after successful solve/completion.
 
 ## E2E
 

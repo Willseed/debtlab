@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed, fakeAsync, tick } from '@angular/core/testing';
 
 import {
   MysteryChallengeLeaderboardEntry,
@@ -298,6 +298,134 @@ describe('MysteryChallengePageComponent', () => {
     expect(content()).toContain('無法提交密碼');
   });
 
+  it('shows retry timing for RATE_LIMITED and HTTP 429 submission errors', fakeAsync(() => {
+    fixture.detectChanges();
+    http.expectOne('/api/mystery-challenge').flush(createChallengeState());
+    http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
+    fixture.detectChanges();
+
+    setPassword('SystemLab0427');
+    clickSubmit();
+    http.expectOne('/api/mystery-challenge/submissions').flush(
+      {
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Too many attempts.',
+          details: { retryAfterSeconds: 5 },
+        },
+      },
+      { status: 400, statusText: 'Bad Request' },
+    );
+    fixture.detectChanges();
+    expect(content()).toContain('嘗試次數太多，請等待 5 秒後再試。');
+
+    tick(5000);
+    fixture.detectChanges();
+
+    clickSubmit();
+    http.expectOne('/api/mystery-challenge/submissions').flush(
+      {
+        error: {
+          code: 'INTERNAL_ERROR',
+          message: 'Too many attempts.',
+          details: { retryAfterSeconds: 4 },
+        },
+      },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+    fixture.detectChanges();
+    expect(content()).toContain('嘗試次數太多，請等待 4 秒後再試。');
+
+    tick(4000);
+    fixture.detectChanges();
+  }));
+
+  it('shows a generic rate limit message when retry timing is missing', () => {
+    fixture.detectChanges();
+    http.expectOne('/api/mystery-challenge').flush(createChallengeState());
+    http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
+    fixture.detectChanges();
+
+    setPassword('SystemLab0427');
+    clickSubmit();
+    http
+      .expectOne('/api/mystery-challenge/submissions')
+      .flush(
+        { error: { code: 'RATE_LIMITED', message: 'Too many attempts.', details: {} } },
+        { status: 429, statusText: 'Too Many Requests' },
+      );
+    fixture.detectChanges();
+
+    expect(content()).toContain('嘗試次數太多，請稍後再試。');
+    expect(submitButton().disabled).toBeFalse();
+  });
+
+  it('accepts string retry timing from RATE_LIMITED details', fakeAsync(() => {
+    fixture.detectChanges();
+    http.expectOne('/api/mystery-challenge').flush(createChallengeState());
+    http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
+    fixture.detectChanges();
+
+    setPassword('SystemLab0427');
+    clickSubmit();
+    http.expectOne('/api/mystery-challenge/submissions').flush(
+      {
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Too many attempts.',
+          details: { retryAfterSeconds: '2' },
+        },
+      },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+    fixture.detectChanges();
+
+    expect(content()).toContain('嘗試次數太多，請等待 2 秒後再試。');
+    expect(submitButton().disabled).toBeTrue();
+
+    tick(2000);
+    fixture.detectChanges();
+  }));
+
+  it('disables submission and updates the countdown button until retry delay ends', fakeAsync(() => {
+    fixture.detectChanges();
+    http.expectOne('/api/mystery-challenge').flush(createChallengeState());
+    http.expectOne('/api/mystery-challenge/leaderboard').flush({ leaderboard: [] });
+    fixture.detectChanges();
+
+    setPassword('SystemLab0427');
+    clickSubmit();
+    http.expectOne('/api/mystery-challenge/submissions').flush(
+      {
+        error: {
+          code: 'RATE_LIMITED',
+          message: 'Too many attempts.',
+          details: { retryAfterSeconds: 3 },
+        },
+      },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+    fixture.detectChanges();
+
+    expect(submitButton().disabled).toBeTrue();
+    expect(submitButton().textContent).toContain('請等待 3 秒');
+
+    tick(1000);
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBeTrue();
+    expect(submitButton().textContent).toContain('請等待 2 秒');
+
+    tick(2000);
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBeFalse();
+    expect(submitButton().textContent).toContain('提交密碼');
+    expect(submitButton().textContent).not.toContain('請等待');
+
+    tick(2000);
+    fixture.detectChanges();
+    expect(submitButton().disabled).toBeFalse();
+  }));
+
   function setPassword(value: string): void {
     const input = fixture.nativeElement.querySelector('#mystery-password') as HTMLInputElement;
     input.value = value;
@@ -306,11 +434,13 @@ describe('MysteryChallengePageComponent', () => {
   }
 
   function clickSubmit(): void {
-    const button = fixture.nativeElement.querySelector(
-      'button[type="submit"]',
-    ) as HTMLButtonElement;
+    const button = submitButton();
     expect(button.disabled).toBeFalse();
     button.click();
+  }
+
+  function submitButton(): HTMLButtonElement {
+    return fixture.nativeElement.querySelector('button[type="submit"]') as HTMLButtonElement;
   }
 
   function content(): string {

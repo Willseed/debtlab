@@ -30,12 +30,35 @@ FORBIDDEN
 VALIDATION_ERROR
 NOT_FOUND
 CONFLICT
+RATE_LIMITED
 OAUTH_VERIFICATION_FAILED
 UNSUPPORTED_MEDIA_TYPE
 SPLIT_TOTAL_MISMATCH
 INTERNAL_ERROR
 NOT_IMPLEMENTED
 ```
+
+`RATE_LIMITED` uses HTTP `429 Too Many Requests`. Challenge submission
+endpoints return it when the authenticated user exceeds 3 submissions in 60
+seconds for the same endpoint. The response must include a `Retry-After` header
+whose value matches `details.retryAfterSeconds`:
+
+```json
+{
+  "error": {
+    "code": "RATE_LIMITED",
+    "message": "Too many challenge submissions.",
+    "details": {
+      "retryAfterSeconds": 42,
+      "limit": 3,
+      "windowSeconds": 60
+    }
+  }
+}
+```
+
+Successful challenge solve/completion clears the limiter for that user and
+endpoint.
 
 ## Security Headers
 
@@ -301,6 +324,26 @@ Response (`status` is `pending` or `confirmed`):
 
 Receiver or admin only. Confirms a pending payment and writes an audit log.
 
+## Mystery challenge
+
+### GET `/api/mystery-challenge`
+
+Authenticated. Returns the current user's challenge state, completion status, and
+available encoded password prompts.
+
+### GET `/api/mystery-challenge/leaderboard`
+
+Authenticated. Returns the challenge leaderboard.
+
+### POST `/api/mystery-challenge/submissions`
+
+Authenticated. Accepts `{ "password": "..." }`. Correct submissions complete the
+challenge, return `201 Created`, and clear that user's limiter for this endpoint.
+The endpoint is rate-limited per authenticated user to 3 submissions per 60
+seconds. Exceeding the limit returns `429 RATE_LIMITED` with `Retry-After` and
+`details.retryAfterSeconds`, `details.limit`, and `details.windowSeconds` as
+defined in Error Codes.
+
 ## Easter eggs
 
 ### GET `/api/health`
@@ -319,9 +362,13 @@ the first solver display name when present.
 ### POST `/api/easter-eggs/garage-ctf/solve`
 
 Authenticated. Accepts `{ "password": "..." }`. The first correct submission
-writes the global first-solver row and the user's hidden garage unlock. After the
-first solve exists, all submissions return `409 CONFLICT`; the garage UI must not
-allow further password entry.
+writes the global first-solver row, writes the user's hidden garage unlock,
+returns `201 Created`, and clears that user's limiter for this endpoint. The
+endpoint is rate-limited per authenticated user to 3 submissions per 60 seconds.
+Exceeding the limit returns `429 RATE_LIMITED` with `Retry-After` and
+`details.retryAfterSeconds`, `details.limit`, and `details.windowSeconds` as
+defined in Error Codes. After the first solve exists, all submissions return
+`409 CONFLICT`; the garage UI must not allow further password entry.
 
 ## Admin
 

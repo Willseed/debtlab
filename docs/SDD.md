@@ -160,6 +160,12 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
 - API request bodies must use strict allowlists and reject unexpected fields to
   prevent mass assignment of role, status, ownership, settlement, or audit
   properties.
+- Mystery challenge and Garage CTF submission routes must enforce a user-level
+  Worker backend rate limit of 3 submissions per 60 seconds per endpoint. This
+  behavior is application-owned and must not depend on Cloudflare WAF rules.
+  Rate-limited responses return `429 RATE_LIMITED`, `Retry-After`, and
+  `details.retryAfterSeconds`; successful solve/completion clears the user's
+  limiter for that endpoint.
 
 Allowed production origin when production `APP_BASE_URL` is configured:
 
@@ -284,6 +290,9 @@ MVP Easter eggs are Konami Code, Midnight Lab Mode, and hidden `/garage`.
 Easter eggs must be optional, admin-configurable, tracked per user, tested,
 implemented with original assets/styles from `docs/DESIGN.md`, accessible where
 applicable, and unable to modify accounting or settlement results.
+
+Challenge retry UX must show a localized countdown based on the API
+`retryAfterSeconds` value instead of guessing client-side windows.
 
 ## 11. Testing and quality gates
 

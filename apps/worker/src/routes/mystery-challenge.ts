@@ -10,10 +10,21 @@ import {
   readMysteryChallengeState,
   submitMysteryChallengePassword,
 } from '../services/mystery-challenge.service';
+import {
+  clearRateLimit,
+  consumeRateLimit,
+  RateLimitExceededError,
+} from '../services/rate-limit.service';
 import { AppBindings } from '../types';
 import { mysteryChallengeSubmissionSchema } from '../validation/schemas';
 
 export const mysteryChallengeRoutes = new Hono<AppBindings>();
+
+const SUBMISSION_RATE_LIMIT = {
+  scope: 'mystery-challenge-submission',
+  limit: 3,
+  windowSeconds: 60,
+} as const;
 
 mysteryChallengeRoutes.use('*', requireAuth);
 
@@ -55,7 +66,12 @@ async function handleSubmission(c: Context<AppBindings>) {
   const user = c.get('currentUser');
 
   try {
+    await consumeRateLimit(c.env.DB, {
+      ...SUBMISSION_RATE_LIMIT,
+      userId: user.id,
+    });
     const result = await submitMysteryChallengePassword(c.env.DB, user, parsed.data.password);
+    await clearRateLimit(c.env.DB, SUBMISSION_RATE_LIMIT.scope, user.id);
     return c.json(
       {
         completed: true,
@@ -65,6 +81,15 @@ async function handleSubmission(c: Context<AppBindings>) {
       201,
     );
   } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      c.header('Retry-After', String(error.retryAfterSeconds));
+      return errorResponse(c, 429, 'RATE_LIMITED', '神秘挑戰提交太頻繁，請稍後再試。', {
+        retryAfterSeconds: error.retryAfterSeconds,
+        limit: error.limit,
+        windowSeconds: error.windowSeconds,
+      });
+    }
+
     if (error instanceof MysteryChallengeInvalidPasswordError) {
       return errorResponse(c, 422, 'VALIDATION_ERROR', error.message, {
         reason: 'PASSWORD_INVALID',

@@ -3,6 +3,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import {
   ChangeDetectionStrategy,
   Component,
+  OnDestroy,
   OnInit,
   computed,
   inject,
@@ -133,7 +134,11 @@ import {
                 class="button button--primary mystery-form__submit"
                 [disabled]="!canSubmit() || passwordControl.invalid"
               >
-                @if (submitting()) {
+                @if (retryAfterSeconds() > 0) {
+                  <span i18n="Mystery submit countdown button@@mysterySubmitCountdownButton">
+                    請等待 {{ retryAfterSeconds() }} 秒
+                  </span>
+                } @else if (submitting()) {
                   <span i18n="Mystery submitting button@@mysterySubmittingButton">提交中…</span>
                 } @else {
                   <span i18n="Mystery submit button@@mysterySubmitButton">提交密碼</span>
@@ -281,8 +286,9 @@ import {
     `,
   ],
 })
-export class MysteryChallengePageComponent implements OnInit {
+export class MysteryChallengePageComponent implements OnInit, OnDestroy {
   private readonly api = inject(MysteryChallengeApiService);
+  private retryAfterTimerId: ReturnType<typeof setInterval> | null = null;
 
   protected readonly challenge = signal<MysteryChallengeState | null>(null);
   protected readonly leaderboard = signal<readonly MysteryChallengeLeaderboardEntry[]>([]);
@@ -293,6 +299,7 @@ export class MysteryChallengePageComponent implements OnInit {
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal('');
   protected readonly successMessage = signal('');
+  protected readonly retryAfterSeconds = signal(0);
   protected readonly passwordControl = new FormControl('', {
     nonNullable: true,
     validators: [Validators.required],
@@ -352,12 +359,20 @@ export class MysteryChallengePageComponent implements OnInit {
   });
 
   protected readonly canSubmit = computed(
-    () => this.challenge() !== null && this.submissionClosedReason() === '' && !this.submitting(),
+    () =>
+      this.challenge() !== null &&
+      this.submissionClosedReason() === '' &&
+      !this.submitting() &&
+      this.retryAfterSeconds() <= 0,
   );
 
   ngOnInit(): void {
     this.loadState();
     this.loadLeaderboard();
+  }
+
+  ngOnDestroy(): void {
+    this.clearRetryAfterCountdown();
   }
 
   protected submitPassword(): void {
@@ -371,6 +386,7 @@ export class MysteryChallengePageComponent implements OnInit {
     }
 
     this.submitting.set(true);
+    this.resetRetryAfterCountdown();
     this.errorMessage.set('');
     this.successMessage.set('');
     this.api.submitPassword(password).subscribe({
@@ -386,6 +402,10 @@ export class MysteryChallengePageComponent implements OnInit {
       error: (error: HttpErrorResponse) => {
         this.submitting.set(false);
         this.errorMessage.set(formatSubmitError(error));
+        const retryAfterSeconds = readRetryAfterSeconds(error);
+        if (isRateLimitError(error) && retryAfterSeconds !== null) {
+          this.startRetryAfterCountdown(retryAfterSeconds);
+        }
         if (isConflictError(error)) {
           this.loadState();
           this.loadLeaderboard();
@@ -434,10 +454,44 @@ export class MysteryChallengePageComponent implements OnInit {
       },
     });
   }
+
+  private startRetryAfterCountdown(seconds: number): void {
+    const normalizedSeconds = Math.max(1, Math.ceil(seconds));
+    this.clearRetryAfterCountdown();
+    this.retryAfterSeconds.set(normalizedSeconds);
+
+    this.retryAfterTimerId = setInterval(() => {
+      this.retryAfterSeconds.update((currentSeconds) => {
+        const nextSeconds = Math.max(0, currentSeconds - 1);
+        if (nextSeconds === 0) {
+          this.clearRetryAfterCountdown();
+        }
+        return nextSeconds;
+      });
+    }, 1000);
+  }
+
+  private clearRetryAfterCountdown(): void {
+    if (this.retryAfterTimerId === null) return;
+    clearInterval(this.retryAfterTimerId);
+    this.retryAfterTimerId = null;
+  }
+
+  private resetRetryAfterCountdown(): void {
+    this.clearRetryAfterCountdown();
+    this.retryAfterSeconds.set(0);
+  }
 }
 
 function formatSubmitError(error: HttpErrorResponse): string {
   const code = readApiErrorCode(error);
+  if (isRateLimitError(error)) {
+    const retryAfterSeconds = readRetryAfterSeconds(error);
+    if (retryAfterSeconds !== null) {
+      return $localize`:Mystery rate limit with seconds@@mysteryRateLimitWithSeconds:嘗試次數太多，請等待 ${retryAfterSeconds}:seconds: 秒後再試。`;
+    }
+    return $localize`:Mystery rate limit generic@@mysteryRateLimitGeneric:嘗試次數太多，請稍後再試。`;
+  }
   if (isConflictError(error)) {
     return $localize`:Mystery conflict generic@@mysteryConflictGeneric:你已完成挑戰，或這組密碼已被領取；提交已關閉，請查看挑戰狀態。`;
   }
@@ -483,8 +537,41 @@ function completedAtTimestamp(value: string): number {
 }
 
 function readApiErrorCode(error: HttpErrorResponse): string | undefined {
-  const payload = error.error as { readonly error?: { readonly code?: string } } | null;
-  return payload?.error?.code;
+  const code = readApiErrorEnvelope(error)?.['code'];
+  return typeof code === 'string' ? code : undefined;
+}
+
+function readRetryAfterSeconds(error: HttpErrorResponse): number | null {
+  const details = readApiErrorEnvelope(error)?.['details'];
+  if (!isRecord(details)) return null;
+
+  const retryAfterSeconds = details['retryAfterSeconds'];
+  const seconds =
+    typeof retryAfterSeconds === 'number'
+      ? retryAfterSeconds
+      : typeof retryAfterSeconds === 'string'
+        ? Number(retryAfterSeconds.trim())
+        : Number.NaN;
+
+  if (!Number.isFinite(seconds) || seconds <= 0) return null;
+  return Math.ceil(seconds);
+}
+
+function readApiErrorEnvelope(
+  error: HttpErrorResponse,
+): Readonly<Record<string, unknown>> | undefined {
+  const payload: unknown = error.error;
+  if (!isRecord(payload)) return undefined;
+  const apiError = payload['error'];
+  return isRecord(apiError) ? apiError : undefined;
+}
+
+function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function isRateLimitError(error: HttpErrorResponse): boolean {
+  return error.status === 429 || readApiErrorCode(error) === 'RATE_LIMITED';
 }
 
 function isConflictError(error: HttpErrorResponse): boolean {

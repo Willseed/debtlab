@@ -4,6 +4,11 @@ import { z } from 'zod';
 import { errorResponse } from '../http/error-response';
 import { requireAuth } from '../middleware/require-auth';
 import { verifyGarageCtfPassword } from '../services/garage-ctf.service';
+import {
+  clearRateLimit,
+  consumeRateLimit,
+  RateLimitExceededError,
+} from '../services/rate-limit.service';
 import { AppBindings } from '../types';
 
 const solveSchema = z
@@ -19,6 +24,12 @@ type GarageCTFFirstSolveRow = {
 };
 
 export const easterEggRoutes = new Hono<AppBindings>();
+
+const GARAGE_CTF_RATE_LIMIT = {
+  scope: 'garage-ctf-solve',
+  limit: 3,
+  windowSeconds: 60,
+} as const;
 
 easterEggRoutes.use('*', requireAuth);
 
@@ -52,6 +63,26 @@ easterEggRoutes.post('/garage-ctf/solve', async (c) => {
     );
   }
 
+  const user = c.get('currentUser');
+
+  try {
+    await consumeRateLimit(c.env.DB, {
+      ...GARAGE_CTF_RATE_LIMIT,
+      userId: user.id,
+    });
+  } catch (error) {
+    if (error instanceof RateLimitExceededError) {
+      c.header('Retry-After', String(error.retryAfterSeconds));
+      return errorResponse(c, 429, 'RATE_LIMITED', '車庫 CTF 嘗試太頻繁，請稍後再試。', {
+        retryAfterSeconds: error.retryAfterSeconds,
+        limit: error.limit,
+        windowSeconds: error.windowSeconds,
+      });
+    }
+
+    throw error;
+  }
+
   const existing = await c.env.DB.prepare(
     'SELECT id FROM garage_ctf_first_solve WHERE id = 1',
   ).first<{ id: number }>();
@@ -63,8 +94,6 @@ easterEggRoutes.post('/garage-ctf/solve', async (c) => {
   if (!(await verifyGarageCtfPassword(c.env.DB, parsed.data.password))) {
     return errorResponse(c, 422, 'VALIDATION_ERROR', 'Incorrect password.');
   }
-
-  const user = c.get('currentUser');
 
   const firstSolveResult = await c.env.DB.prepare(
     'INSERT OR IGNORE INTO garage_ctf_first_solve (id, user_id, display_name) VALUES (1, ?, ?)',
@@ -90,6 +119,8 @@ easterEggRoutes.post('/garage-ctf/solve', async (c) => {
       .bind(user.id, egg.id)
       .run();
   }
+
+  await clearRateLimit(c.env.DB, GARAGE_CTF_RATE_LIMIT.scope, user.id);
 
   const row = await c.env.DB.prepare(
     'SELECT solved_at FROM garage_ctf_first_solve WHERE id = 1',

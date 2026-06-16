@@ -39,6 +39,7 @@ const carol: SessionUser = {
 const alphaPassword = 'test-alpha-passphrase';
 const betaPassword = 'test-beta-passphrase';
 const wrongPassword = 'test-wrong-passphrase';
+const MYSTERY_RATE_LIMIT_SCOPE = 'mystery-challenge-submission';
 
 type MysteryChallengePromptBody = {
   readonly id: string;
@@ -80,8 +81,12 @@ type MysteryChallengeSubmissionBody = {
 type ApiErrorBody = {
   readonly error: {
     readonly code: string;
+    readonly message: string;
     readonly details: {
       readonly reason?: string;
+      readonly retryAfterSeconds?: number;
+      readonly limit?: number;
+      readonly windowSeconds?: number;
     };
   };
 };
@@ -121,6 +126,12 @@ type CompletionRow = {
   user_id: string;
   display_name: string;
   completed_at: string;
+};
+
+type StoredRateLimitRow = {
+  attempts: number;
+  reset_at: string;
+  updated_at: string;
 };
 
 test('GET /api/mystery-challenge returns active state with encoded clue sequences', async () => {
@@ -255,6 +266,42 @@ test('POST /api/mystery-challenge/submissions accepts one unclaimed password onc
   assert.equal(db.completions[0]?.password_id, 'signal_alpha');
 });
 
+test('POST /api/mystery-challenge/submissions clears the user limiter after completion', async () => {
+  const rateLimitKey = scopedUserRateLimitKey(MYSTERY_RATE_LIMIT_SCOPE, alice.id);
+  const db = new FakeMysteryD1({
+    completionTimestamps: ['2026-06-15 14:00:00.100'],
+    rateLimits: [
+      [
+        rateLimitKey,
+        {
+          attempts: 2,
+          reset_at: utc8TextFromNow(60),
+          updated_at: utc8TextFromNow(0),
+        },
+      ],
+    ],
+  });
+  const app = makeApp();
+  const cookie = await authCookie(alice);
+
+  const response = await app.request(
+    '/api/mystery-challenge/submissions',
+    {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/json',
+        Origin: ALLOWED_ORIGIN,
+      },
+      body: JSON.stringify({ password: alphaPassword }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 201);
+  assert.equal(db.rateLimits.has(rateLimitKey), false);
+});
+
 test('POST /api/mystery-challenge/submissions rejects malformed bodies with standard errors', async () => {
   const db = new FakeMysteryD1();
   const app = makeApp();
@@ -303,6 +350,48 @@ test('POST /api/mystery-challenge/submissions rejects invalid passwords without 
   const body = (await response.json()) as ApiErrorBody;
   assert.equal(body.error.code, 'VALIDATION_ERROR');
   assert.equal(body.error.details.reason, 'PASSWORD_INVALID');
+  assert.equal(db.completions.length, 0);
+});
+
+test('POST /api/mystery-challenge/submissions returns 429 with retry metadata', async () => {
+  const db = new FakeMysteryD1({
+    rateLimits: [
+      [
+        scopedUserRateLimitKey(MYSTERY_RATE_LIMIT_SCOPE, alice.id),
+        {
+          attempts: 3,
+          reset_at: utc8TextFromNow(60),
+          updated_at: utc8TextFromNow(0),
+        },
+      ],
+    ],
+  });
+  const app = makeApp();
+  const cookie = await authCookie(alice);
+
+  const response = await app.request(
+    '/api/mystery-challenge/submissions',
+    {
+      method: 'POST',
+      headers: {
+        Cookie: cookie,
+        'Content-Type': 'application/json',
+        Origin: ALLOWED_ORIGIN,
+      },
+      body: JSON.stringify({ password: wrongPassword }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 429);
+  const body = (await response.json()) as ApiErrorBody;
+  const retryAfterHeader = Number(response.headers.get('Retry-After'));
+  assert.equal(body.error.code, 'RATE_LIMITED');
+  assert.equal(body.error.message, '神秘挑戰提交太頻繁，請稍後再試。');
+  assert.equal(body.error.details.retryAfterSeconds, retryAfterHeader);
+  assert.equal(body.error.details.limit, 3);
+  assert.equal(body.error.details.windowSeconds, 60);
+  assert.equal(retryAfterHeader > 0, true);
   assert.equal(db.completions.length, 0);
 });
 
@@ -549,6 +638,7 @@ class FakeMysteryD1 {
   ]);
   readonly completionTimestamps: string[];
   readonly completions: CompletionRow[];
+  readonly rateLimits: Map<string, StoredRateLimitRow>;
   readonly forceNullInsertChanges: boolean;
   readonly hideInsertedCompletion: boolean;
   readonly nullClaimResults: boolean;
@@ -560,6 +650,7 @@ class FakeMysteryD1 {
     opts: {
       readonly completions?: readonly CompletionRow[];
       readonly completionTimestamps?: readonly string[];
+      readonly rateLimits?: readonly (readonly [string, StoredRateLimitRow])[];
       readonly forceNullInsertChanges?: boolean;
       readonly hideInsertedCompletion?: boolean;
       readonly nullClaimResults?: boolean;
@@ -569,6 +660,7 @@ class FakeMysteryD1 {
   ) {
     this.completions = [...(opts.completions ?? [])];
     this.completionTimestamps = [...(opts.completionTimestamps ?? [])];
+    this.rateLimits = new Map((opts.rateLimits ?? []).map(([key, row]) => [key, { ...row }]));
     this.forceNullInsertChanges = opts.forceNullInsertChanges ?? false;
     this.hideInsertedCompletion = opts.hideInsertedCompletion ?? false;
     this.nullClaimResults = opts.nullClaimResults ?? false;
@@ -628,6 +720,12 @@ class FakeMysteryStatement {
   }
 
   async first<T>(): Promise<T | null> {
+    if (this.sql.includes('FROM rate_limits')) {
+      const key = String(this.values[0]);
+      const row = this.db.rateLimits.get(key);
+      return row ? ({ attempts: row.attempts, reset_at: row.reset_at } as T) : null;
+    }
+
     if (this.sql.includes('FROM users')) {
       const userId = String(this.values[0]);
       const user = this.db.users.get(userId);
@@ -704,6 +802,52 @@ class FakeMysteryStatement {
   }
 
   async run() {
+    if (this.sql.includes('INSERT INTO rate_limits')) {
+      const [keyValue, resetAtValue, updatedAtValue] = this.values;
+      const key = String(keyValue);
+
+      if (!this.db.rateLimits.has(key)) {
+        this.db.rateLimits.set(key, {
+          attempts: 1,
+          reset_at: String(resetAtValue),
+          updated_at: String(updatedAtValue),
+        });
+      }
+
+      return { meta: { changes: 1 } };
+    }
+
+    if (this.sql.includes('SET attempts = 1')) {
+      const [resetAtValue, updatedAtValue, keyValue] = this.values;
+      this.db.rateLimits.set(String(keyValue), {
+        attempts: 1,
+        reset_at: String(resetAtValue),
+        updated_at: String(updatedAtValue),
+      });
+      return { meta: { changes: 1 } };
+    }
+
+    if (this.sql.includes('SET attempts = attempts + 1')) {
+      const [updatedAtValue, keyValue] = this.values;
+      const key = String(keyValue);
+      const row = this.db.rateLimits.get(key);
+
+      if (row) {
+        this.db.rateLimits.set(key, {
+          ...row,
+          attempts: row.attempts + 1,
+          updated_at: String(updatedAtValue),
+        });
+      }
+
+      return { meta: { changes: row ? 1 : 0 } };
+    }
+
+    if (this.sql.includes('DELETE FROM rate_limits')) {
+      const deleted = this.db.rateLimits.delete(String(this.values[0]));
+      return { meta: { changes: deleted ? 1 : 0 } };
+    }
+
     if (this.sql.includes('INSERT OR IGNORE INTO mystery_challenge_completions')) {
       const [id, passwordId, userId, displayName] = this.values.map(String);
       return this.db.insertCompletion(id, passwordId, userId, displayName);
@@ -728,6 +872,29 @@ function env(db: FakeMysteryD1) {
 async function authCookie(user: SessionUser): Promise<string> {
   const token = await createSessionToken(user, SESSION_SECRET);
   return `${SESSION_COOKIE_NAME}=${token}`;
+}
+
+function scopedUserRateLimitKey(scope: string, userId: string): string {
+  return `${scope}:${userId}`;
+}
+
+function utc8TextFromNow(offsetSeconds: number): string {
+  const date = new Date(Date.now() + offsetSeconds * 1000 + 8 * 60 * 60 * 1000);
+
+  return (
+    [
+      date.getUTCFullYear(),
+      padDatePart(date.getUTCMonth() + 1),
+      padDatePart(date.getUTCDate()),
+    ].join('-') +
+    ` ${padDatePart(date.getUTCHours())}:${padDatePart(date.getUTCMinutes())}:${padDatePart(
+      date.getUTCSeconds(),
+    )}`
+  );
+}
+
+function padDatePart(value: number): string {
+  return String(value).padStart(2, '0');
 }
 
 function completionSeed(opts: {
