@@ -132,7 +132,9 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
 - Disabled users cannot create new sessions.
 - The first verified OAuth user in an empty reset database bootstraps as active
   admin; later unknown verified OAuth users become pending members. Existing
-  pending users remain pending on later verified logins.
+  pending users remain pending on later verified logins. Pending OAuth users are
+  not added to the default group until an activation or allowlist path joins
+  them.
 - Authenticated/admin authorization must consult current D1 user role/status,
   not stale client claims.
 - Session cookie name: `labsplit_session`.

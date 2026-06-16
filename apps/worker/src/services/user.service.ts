@@ -51,7 +51,7 @@ async function findOrCreateOAuthUser(
       avatarUrl: profile.avatarUrl ?? existingUser.avatarUrl,
     };
 
-    if (user.status !== 'disabled') {
+    if (user.status === 'active') {
       await db.batch([...createDefaultGroupMembershipStatements(db, user)]);
     }
 
@@ -75,7 +75,7 @@ async function findOrCreateOAuthUser(
     status,
   };
 
-  await db.batch([
+  const createUserStatements = [
     db
       .prepare(
         `INSERT INTO users (id, email, display_name, avatar_url, role, status)
@@ -88,8 +88,13 @@ async function findOrCreateOAuthUser(
          VALUES (?, ?, ?, ?, ?)`,
       )
       .bind(identityId, userId, provider, profile.subject, profile.email ?? null),
-    ...createDefaultGroupMembershipStatements(db, user),
-  ]);
+  ];
+
+  await db.batch(
+    shouldBootstrapFirstUser
+      ? [...createUserStatements, ...createDefaultGroupMembershipStatements(db, user)]
+      : createUserStatements,
+  );
 
   return user;
 }

@@ -46,6 +46,7 @@ class FakeD1Database {
   readonly identities = new Map<string, string>();
   readonly groups = new Set<string>();
   readonly groupMembers = new Map<string, GroupMemberRow>();
+  readonly groupMemberInsertUserIds: string[] = [];
 
   prepare(sql: string) {
     return new FakeD1PreparedStatement(this, sql);
@@ -113,6 +114,7 @@ class FakeD1PreparedStatement {
 
     if (this.sql.includes('INSERT OR IGNORE INTO group_members')) {
       const [, groupId, userId, role, status] = this.values;
+      this.db.groupMemberInsertUserIds.push(String(userId));
       const groupMember: GroupMemberRow = {
         group_id: String(groupId),
         user_id: String(userId),
@@ -152,13 +154,22 @@ test('first Google user bootstraps as active admin in an empty database', async 
   assertDefaultGroupMembership(db, user.id, 'admin');
 });
 
-test('later new Google users default to pending members', async () => {
-  const db = createDbWithExistingUser({ id: 'usr_existing', role: 'admin' });
+test('second Google user defaults to pending without joining the default group', async () => {
+  const db = new FakeD1Database();
+  const bootstrapUser = await createGoogleUser(db, {
+    subject: 'bootstrap-google-subject',
+    email: 'bootstrap@example.com',
+    displayName: 'Bootstrap User',
+  });
+
+  assertDefaultGroupMembership(db, bootstrapUser.id, 'admin');
+  db.groupMemberInsertUserIds.length = 0;
+
   const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
 
   assert.equal(user.status, 'pending');
   assert.equal(user.role, 'member');
-  assertDefaultGroupMembership(db, user.id, 'member', 'pending');
+  assertNoDefaultGroupMembership(db, user.id);
 });
 
 test('current user lookup reads current role and status from D1', async () => {
@@ -212,7 +223,7 @@ test('existing pending Google users remain pending on their next verified login'
 
   assert.equal(user.status, 'pending');
   assert.equal(db.users.get(existing.id)?.status, 'pending');
-  assertDefaultGroupMembership(db, existing.id, 'member', 'pending');
+  assertNoDefaultGroupMembership(db, existing.id);
 });
 
 test('existing disabled Google users stay disabled on verified login', async () => {
@@ -227,7 +238,7 @@ test('existing disabled Google users stay disabled on verified login', async () 
 
   assert.equal(user.status, 'disabled');
   assert.equal(db.users.get(existing.id)?.status, 'disabled');
-  assert.equal(db.groupMembers.has(groupMemberKey(DEFAULT_GROUP_ID, existing.id)), false);
+  assertNoDefaultGroupMembership(db, existing.id);
 });
 
 test('existing Google users update verified email and keep existing display fields when missing', async () => {
@@ -271,7 +282,7 @@ test('new Apple users reuse OAuth user creation patterns', async () => {
   assert.equal(user.role, 'member');
   assert.equal(user.email, 'apple-user@example.com');
   assert.equal(user.displayName, 'apple-user@example.com');
-  assertDefaultGroupMembership(db, user.id, 'member', 'pending');
+  assertNoDefaultGroupMembership(db, user.id);
 });
 
 test('new Apple users fall back to provider subject when Apple omits email', async () => {
@@ -295,7 +306,7 @@ test('existing pending Apple users remain pending on verified login', async () =
 
   assert.equal(user.status, 'pending');
   assert.equal(db.users.get(existing.id)?.status, 'pending');
-  assertDefaultGroupMembership(db, existing.id, 'member', 'pending');
+  assertNoDefaultGroupMembership(db, existing.id);
 });
 
 test('existing disabled Apple users stay disabled on verified login', async () => {
@@ -310,7 +321,7 @@ test('existing disabled Apple users stay disabled on verified login', async () =
 
   assert.equal(user.status, 'disabled');
   assert.equal(db.users.get(existing.id)?.status, 'disabled');
-  assert.equal(db.groupMembers.has(groupMemberKey(DEFAULT_GROUP_ID, existing.id)), false);
+  assertNoDefaultGroupMembership(db, existing.id);
 });
 
 test('current user lookup falls back to email or ID for display name', async () => {
@@ -406,6 +417,11 @@ function assertDefaultGroupMembership(
     role,
     status,
   });
+}
+
+function assertNoDefaultGroupMembership(db: FakeD1Database, userId: string): void {
+  assert.equal(db.groupMemberInsertUserIds.includes(userId), false);
+  assert.equal(db.groupMembers.has(groupMemberKey(DEFAULT_GROUP_ID, userId)), false);
 }
 
 function readNullableString(value: unknown): string | null {
