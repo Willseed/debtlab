@@ -66,7 +66,7 @@ describe('LandingPageComponent', () => {
     expect(authService.startAppleSignIn).toHaveBeenCalledOnceWith();
   });
 
-  it('renders enabled large official-style Google and Apple sign-in buttons', () => {
+  it('renders enabled provider icon buttons for Google and Apple sign-in', () => {
     createComponent();
 
     const providerGroup = fixture.nativeElement.querySelector(
@@ -93,10 +93,12 @@ describe('LandingPageComponent', () => {
     expect(appleButton.disabled).toBeFalse();
     expect(googleButton.getAttribute('aria-labelledby')).toBe('landing-google-login-label');
     expect(appleButton.getAttribute('aria-labelledby')).toBe('landing-apple-login-label');
-    expect(googleButton.textContent?.trim()).toBe('使用 Google 繼續');
-    expect(appleButton.textContent?.trim()).toBe('使用 Apple 繼續');
-    expect(googleLabel.textContent?.trim()).toBe('使用 Google 繼續');
-    expect(appleLabel.textContent?.trim()).toBe('使用 Apple 繼續');
+    expect(googleButton.querySelector('.oauth-button__icon svg')).not.toBeNull();
+    expect(appleButton.querySelector('.oauth-button__icon svg')).not.toBeNull();
+    expect(googleButton.textContent?.trim()).toBe('Google');
+    expect(appleButton.textContent?.trim()).toBe('Apple');
+    expect(googleLabel.textContent?.trim()).toBe('Google');
+    expect(appleLabel.textContent?.trim()).toBe('Apple');
   });
 
   it('renders the public OAuth-gated landing subtitle', () => {
@@ -114,8 +116,8 @@ describe('LandingPageComponent', () => {
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.textContent).not.toContain('使用 Google 繼續');
-    expect(compiled.textContent).not.toContain('使用 Apple 繼續');
+    expect(compiled.querySelector('.oauth-button--google')).toBeNull();
+    expect(compiled.querySelector('.oauth-button--apple')).toBeNull();
     expect(compiled.textContent).toContain('前往儀表板');
   });
 

@@ -775,7 +775,7 @@
         <note priority="1" from="description">OAuth provider group</note>
       </trans-unit>
       <trans-unit id="landingGoogleLogin" datatype="html">
-        <source> 使用 Google 繼續 </source>
+        <source> Google </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
           <context context-type="linenumber">39,43</context>
@@ -783,7 +783,7 @@
         <note priority="1" from="description">Google login</note>
       </trans-unit>
       <trans-unit id="landingAppleLogin" datatype="html">
-        <source> 使用 Apple 繼續 </source>
+        <source> Apple </source>
         <context-group purpose="location">
           <context context-type="sourcefile">src/app/features/landing/landing-page.component.ts</context>
           <context context-type="linenumber">53,57</context>
@@ -1293,6 +1293,14 @@
           <context context-type="linenumber">269</context>
         </context-group>
         <note priority="1" from="description">Settlement payment confirm error</note>
+      </trans-unit>
+      <trans-unit id="settlementMembersLoadError" datatype="html">
+        <source>無法載入結算成員，請稍後再試。</source>
+        <context-group purpose="location">
+          <context context-type="sourcefile">src/app/features/settlements/settlements-page.component.ts</context>
+          <context context-type="linenumber">310</context>
+        </context-group>
+        <note priority="1" from="description">Settlement members load error</note>
       </trans-unit>
       <trans-unit id="settlementSummaryLoadError" datatype="html">
         <source>無法載入結算資料，請稍後再試。</source>

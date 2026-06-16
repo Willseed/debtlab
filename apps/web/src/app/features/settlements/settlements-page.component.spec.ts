@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { CurrentUser } from '../../shared/models/current-user.model';
-import { SettlementSummary } from './settlement-api.service';
+import { SettlementMember, SettlementSummary } from './settlement-api.service';
 import { SettlementsPageComponent } from './settlements-page.component';
 
 describe('SettlementsPageComponent', () => {
@@ -49,8 +49,8 @@ describe('SettlementsPageComponent', () => {
 
   it('records a suggested transfer as a pending payment for the current sender', () => {
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(createSummary());
-    fixture.detectChanges();
+    flushMemberList();
+    flushSummary(createSummary());
 
     clickButton('記錄付款');
 
@@ -62,7 +62,7 @@ describe('SettlementsPageComponent', () => {
       amount: 300,
     });
     post.flush({ payment: { id: 'pay_1', status: 'pending' } });
-    http.expectOne('/api/settlements/summary').flush(
+    flushSummary(
       createSummary({
         pendingPayments: [
           {
@@ -79,7 +79,6 @@ describe('SettlementsPageComponent', () => {
         ],
       }),
     );
-    fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('已記錄付款');
     expect(fixture.nativeElement.textContent).toContain('等待確認');
@@ -94,8 +93,8 @@ describe('SettlementsPageComponent', () => {
       status: 'active',
     });
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(createSummary());
-    fixture.detectChanges();
+    flushMemberList();
+    flushSummary(createSummary());
 
     clickButton('記錄付款');
 
@@ -107,8 +106,7 @@ describe('SettlementsPageComponent', () => {
       amount: 300,
     });
     post.flush({ payment: { id: 'pay_1', status: 'confirmed' } });
-    http.expectOne('/api/settlements/summary').flush(createSummary({ suggestedTransfers: [] }));
-    fixture.detectChanges();
+    flushSummary(createSummary({ suggestedTransfers: [] }));
 
     expect(fixture.nativeElement.textContent).toContain('已記錄並確認付款');
   });
@@ -122,8 +120,8 @@ describe('SettlementsPageComponent', () => {
       status: 'active',
     });
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(createSummary());
-    fixture.detectChanges();
+    flushMemberList();
+    flushSummary(createSummary());
 
     clickButton('記錄付款');
 
@@ -134,13 +132,12 @@ describe('SettlementsPageComponent', () => {
       amount: 300,
     });
     post.flush({ payment: { id: 'pay_1', status: 'confirmed' } });
-    http.expectOne('/api/settlements/summary').flush(createSummary({ suggestedTransfers: [] }));
-    fixture.detectChanges();
+    flushSummary(createSummary({ suggestedTransfers: [] }));
 
     expect(fixture.nativeElement.textContent).toContain('已記錄並確認付款');
   });
 
-  it('records suggested transfers as any joined member with a balance row', () => {
+  it('records suggested transfers as any active joined member even without a balance row', () => {
     currentUserState.set({
       id: 'usr_carol',
       email: 'carol@example.com',
@@ -149,16 +146,17 @@ describe('SettlementsPageComponent', () => {
       status: 'active',
     });
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(
-      createSummary({
-        balances: [
-          { userId: 'usr_alice', displayName: 'Alice', net: 300 },
-          { userId: 'usr_bob', displayName: 'Bob', net: -300 },
-          { userId: 'usr_carol', displayName: 'Carol', net: 0 },
-        ],
-      }),
-    );
-    fixture.detectChanges();
+    flushMemberList([
+      ...createMemberList(),
+      {
+        userId: 'usr_carol',
+        displayName: 'Carol',
+        role: 'member',
+        status: 'active',
+        joinedAt: '2026-06-16 09:03:00',
+      },
+    ]);
+    flushSummary(createSummary());
 
     clickButton('記錄付款');
 
@@ -169,10 +167,45 @@ describe('SettlementsPageComponent', () => {
       amount: 300,
     });
     post.flush({ payment: { id: 'pay_1', status: 'pending' } });
-    http.expectOne('/api/settlements/summary').flush(createSummary());
-    fixture.detectChanges();
+    flushSummary(createSummary());
 
     expect(fixture.nativeElement.textContent).toContain('已記錄付款');
+  });
+
+  it('does not record suggested transfers for callers who are not joined members', () => {
+    currentUserState.set({
+      id: 'usr_carol',
+      email: 'carol@example.com',
+      displayName: 'Carol',
+      role: 'member',
+      status: 'active',
+    });
+    fixture.detectChanges();
+    flushMemberList([
+      ...createMemberList(),
+      {
+        userId: 'usr_carol',
+        displayName: 'Carol',
+        role: 'member',
+        status: 'active',
+        joinedAt: null,
+      },
+    ]);
+    flushSummary(
+      createSummary({
+        balances: [
+          { userId: 'usr_alice', displayName: 'Alice', net: 300 },
+          { userId: 'usr_bob', displayName: 'Bob', net: -300 },
+          { userId: 'usr_carol', displayName: 'Carol', net: 0 },
+        ],
+      }),
+    );
+
+    expect(fixture.nativeElement.textContent).not.toContain('記錄付款');
+    (fixture.componentInstance as unknown as { recordTransfer(t: unknown): void }).recordTransfer(
+      createSummary().suggestedTransfers[0],
+    );
+    http.expectNone('/api/payments');
   });
 
   it('confirms pending payments when the current user is the receiver', () => {
@@ -184,7 +217,8 @@ describe('SettlementsPageComponent', () => {
       status: 'active',
     });
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(
+    flushMemberList();
+    flushSummary(
       createSummary({
         suggestedTransfers: [],
         pendingPayments: [
@@ -202,21 +236,20 @@ describe('SettlementsPageComponent', () => {
         ],
       }),
     );
-    fixture.detectChanges();
 
     clickButton('確認付款');
 
     const patch = http.expectOne('/api/payments/pay_1/confirm');
     expect(patch.request.method).toBe('PATCH');
     patch.flush({ ok: true, payment: { id: 'pay_1' } });
-    http.expectOne('/api/settlements/summary').flush(createSummary({ suggestedTransfers: [] }));
-    fixture.detectChanges();
+    flushSummary(createSummary({ suggestedTransfers: [] }));
 
     expect(fixture.nativeElement.textContent).toContain('已確認付款');
   });
 
   it('surfaces summary load failures', () => {
     fixture.detectChanges();
+    flushMemberList();
     http
       .expectOne('/api/settlements/summary')
       .flush(
@@ -228,19 +261,33 @@ describe('SettlementsPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('無法載入結算資料');
   });
 
+  it('surfaces member load failures', () => {
+    fixture.detectChanges();
+    http
+      .expectOne('/api/members')
+      .flush(
+        { error: { code: 'INTERNAL_ERROR', message: 'boom', details: {} } },
+        { status: 500, statusText: 'Server Error' },
+      );
+    flushSummary(createSummary());
+
+    expect(fixture.nativeElement.textContent).toContain('無法載入結算成員');
+    expect(fixture.nativeElement.textContent).not.toContain('記錄付款');
+  });
+
   it('falls back to zero balance without a current user', () => {
     currentUserState.set(null);
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(createSummary());
-    fixture.detectChanges();
+    flushMemberList([]);
+    flushSummary(createSummary());
 
     expect(fixture.nativeElement.textContent).toContain('NT$0');
   });
 
   it('surfaces record payment failures and avoids duplicate in-flight submissions', () => {
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(createSummary());
-    fixture.detectChanges();
+    flushMemberList();
+    flushSummary(createSummary());
 
     clickButton('記錄付款');
     (fixture.componentInstance as unknown as { recordTransfer(t: unknown): void }).recordTransfer(
@@ -260,7 +307,8 @@ describe('SettlementsPageComponent', () => {
 
   it('blocks duplicate pending payments in the same direction even when amounts differ', () => {
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(
+    flushMemberList();
+    flushSummary(
       createSummary({
         suggestedTransfers: [
           {
@@ -286,7 +334,6 @@ describe('SettlementsPageComponent', () => {
         ],
       }),
     );
-    fixture.detectChanges();
 
     expect(fixture.nativeElement.textContent).toContain('等待確認');
     expect(fixture.nativeElement.textContent).not.toContain('記錄付款');
@@ -306,12 +353,12 @@ describe('SettlementsPageComponent', () => {
     };
 
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(
+    flushMemberList();
+    flushSummary(
       createSummary({
         pendingPayments: [pendingPayment],
       }),
     );
-    fixture.detectChanges();
 
     (
       fixture.componentInstance as unknown as { confirmPayment(payment: unknown): void }
@@ -330,7 +377,8 @@ describe('SettlementsPageComponent', () => {
       status: 'active',
     });
     fixture.detectChanges();
-    http.expectOne('/api/settlements/summary').flush(
+    flushMemberList();
+    flushSummary(
       createSummary({
         suggestedTransfers: [],
         pendingPayments: [
@@ -348,7 +396,6 @@ describe('SettlementsPageComponent', () => {
         ],
       }),
     );
-    fixture.detectChanges();
 
     clickButton('確認付款');
 
@@ -362,6 +409,39 @@ describe('SettlementsPageComponent', () => {
 
     expect(fixture.nativeElement.textContent).toContain('無法確認付款');
   });
+
+  function flushMemberList(members: readonly SettlementMember[] = createMemberList()): void {
+    const request = http.expectOne('/api/members');
+    expect(request.request.method).toBe('GET');
+    request.flush({ members });
+    fixture.detectChanges();
+  }
+
+  function flushSummary(summary: SettlementSummary): void {
+    const request = http.expectOne('/api/settlements/summary');
+    expect(request.request.method).toBe('GET');
+    request.flush(summary);
+    fixture.detectChanges();
+  }
+
+  function createMemberList(): readonly SettlementMember[] {
+    return [
+      {
+        userId: 'usr_alice',
+        displayName: 'Alice',
+        role: 'member',
+        status: 'active',
+        joinedAt: '2026-06-16 09:00:00',
+      },
+      {
+        userId: 'usr_bob',
+        displayName: 'Bob',
+        role: 'member',
+        status: 'active',
+        joinedAt: '2026-06-16 09:01:00',
+      },
+    ];
+  }
 });
 
 function clickButton(label: string): void {

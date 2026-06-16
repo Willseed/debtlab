@@ -6,6 +6,7 @@ import {
   findOrCreateGoogleUser,
   findCurrentUserById,
 } from '../src/services/user.service';
+import { DEFAULT_GROUP_ID } from '../src/services/default-group.service';
 import type { SessionUser } from '../src/types';
 
 type UserRow = {
@@ -18,6 +19,12 @@ type UserRow = {
 };
 
 type UserRowSeed = Partial<UserRow> & Pick<UserRow, 'id'>;
+type GroupMemberRow = {
+  readonly group_id: string;
+  readonly user_id: string;
+  readonly role: 'member' | 'admin';
+  readonly status: 'active';
+};
 type GoogleProfile = Parameters<typeof findOrCreateGoogleUser>[1];
 type AppleProfile = Parameters<typeof findOrCreateAppleUser>[1];
 
@@ -37,6 +44,8 @@ const DEFAULT_EXISTING_USER_SEED: UserRowSeed = { id: 'usr_existing' };
 class FakeD1Database {
   readonly users = new Map<string, UserRow>();
   readonly identities = new Map<string, string>();
+  readonly groups = new Set<string>();
+  readonly groupMembers = new Map<string, GroupMemberRow>();
 
   prepare(sql: string) {
     return new FakeD1PreparedStatement(this, sql);
@@ -97,6 +106,25 @@ class FakeD1PreparedStatement {
       this.db.identities.set(identityKey(String(provider), String(subject)), String(userId));
     }
 
+    if (this.sql.includes('INSERT OR IGNORE INTO groups')) {
+      const [groupId] = this.values;
+      this.db.groups.add(String(groupId));
+    }
+
+    if (this.sql.includes('INSERT OR IGNORE INTO group_members')) {
+      const [, groupId, userId, role] = this.values;
+      const groupMember: GroupMemberRow = {
+        group_id: String(groupId),
+        user_id: String(userId),
+        role: role === 'admin' ? 'admin' : 'member',
+        status: 'active',
+      };
+      this.db.groupMembers.set(
+        groupMemberKey(groupMember.group_id, groupMember.user_id),
+        groupMember,
+      );
+    }
+
     if (this.sql.includes('UPDATE users')) {
       const [email, displayName, avatarUrl, userId] = this.values;
       const existing = this.db.users.get(String(userId));
@@ -117,20 +145,21 @@ class FakeD1PreparedStatement {
 }
 
 test('first Google user bootstraps as active admin in an empty database', async () => {
-  const user = await createGoogleUser(new FakeD1Database(), NEW_GOOGLE_PROFILE);
+  const db = new FakeD1Database();
+  const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
 
   assert.equal(user.status, 'active');
   assert.equal(user.role, 'admin');
+  assertDefaultGroupMembership(db, user.id, 'admin');
 });
 
 test('later new Google users activate immediately as members', async () => {
-  const user = await createGoogleUser(
-    createDbWithExistingUser({ id: 'usr_existing', role: 'admin' }),
-    NEW_GOOGLE_PROFILE,
-  );
+  const db = createDbWithExistingUser({ id: 'usr_existing', role: 'admin' });
+  const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
 
   assert.equal(user.status, 'active');
   assert.equal(user.role, 'member');
+  assertDefaultGroupMembership(db, user.id, 'member');
 });
 
 test('current user lookup reads current role and status from D1', async () => {
@@ -169,6 +198,7 @@ test('existing Google users keep active approval while profile data updates', as
       avatarUrl: 'https://example.com/avatar.png',
     }),
   );
+  assertDefaultGroupMembership(db, existing.id, 'admin');
 });
 
 test('existing pending Google users activate on their next verified login', async () => {
@@ -183,6 +213,7 @@ test('existing pending Google users activate on their next verified login', asyn
 
   assert.equal(user.status, 'active');
   assert.equal(db.users.get(existing.id)?.status, 'active');
+  assertDefaultGroupMembership(db, existing.id, 'member');
 });
 
 test('existing disabled Google users stay disabled on verified login', async () => {
@@ -197,6 +228,7 @@ test('existing disabled Google users stay disabled on verified login', async () 
 
   assert.equal(user.status, 'disabled');
   assert.equal(db.users.get(existing.id)?.status, 'disabled');
+  assert.equal(db.groupMembers.has(groupMemberKey(DEFAULT_GROUP_ID, existing.id)), false);
 });
 
 test('existing Google users update verified email and keep existing display fields when missing', async () => {
@@ -233,12 +265,14 @@ test('new Google users fall back to email or subject for display name', async ()
 });
 
 test('new Apple users reuse OAuth user creation patterns', async () => {
-  const user = await createAppleUser(createDbWithExistingUser(), NEW_APPLE_PROFILE);
+  const db = createDbWithExistingUser();
+  const user = await createAppleUser(db, NEW_APPLE_PROFILE);
 
   assert.equal(user.status, 'active');
   assert.equal(user.role, 'member');
   assert.equal(user.email, 'apple-user@example.com');
   assert.equal(user.displayName, 'apple-user@example.com');
+  assertDefaultGroupMembership(db, user.id, 'member');
 });
 
 test('new Apple users fall back to provider subject when Apple omits email', async () => {
@@ -262,6 +296,7 @@ test('existing disabled Apple users stay disabled on verified login', async () =
 
   assert.equal(user.status, 'disabled');
   assert.equal(db.users.get(existing.id)?.status, 'disabled');
+  assert.equal(db.groupMembers.has(groupMemberKey(DEFAULT_GROUP_ID, existing.id)), false);
 });
 
 test('current user lookup falls back to email or ID for display name', async () => {
@@ -344,6 +379,20 @@ function sessionFromRow(row: UserRow, overrides: Partial<SessionUser> = {}): Ses
   };
 }
 
+function assertDefaultGroupMembership(
+  db: FakeD1Database,
+  userId: string,
+  role: GroupMemberRow['role'],
+): void {
+  assert.equal(db.groups.has(DEFAULT_GROUP_ID), true);
+  assert.deepEqual(db.groupMembers.get(groupMemberKey(DEFAULT_GROUP_ID, userId)), {
+    group_id: DEFAULT_GROUP_ID,
+    user_id: userId,
+    role,
+    status: 'active',
+  });
+}
+
 function readNullableString(value: unknown): string | null {
   return typeof value === 'string' ? value : null;
 }
@@ -358,4 +407,8 @@ function readUserStatus(value: unknown): UserRow['status'] {
 
 function identityKey(provider: string, subject: string): string {
   return `${provider}:${subject}`;
+}
+
+function groupMemberKey(groupId: string, userId: string): string {
+  return `${groupId}:${userId}`;
 }

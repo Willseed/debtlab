@@ -30,6 +30,18 @@ export type PendingPayment = {
   readonly createdAt: string;
 };
 
+export type SettlementMember = {
+  readonly userId: string;
+  readonly displayName: string;
+  readonly role: 'member' | 'admin';
+  readonly status: 'active' | 'disabled' | 'pending';
+  readonly joinedAt: string | null;
+};
+
+export type MemberListResponse = {
+  readonly members: readonly SettlementMember[];
+};
+
 export type SettlementSummary = {
   readonly currency: 'TWD';
   readonly balances: readonly BalanceSummary[];
@@ -60,6 +72,10 @@ export class SettlementApiService {
 
   getSummary(): Observable<SettlementSummary> {
     return this.http.get<SettlementSummary>(`${this.apiBaseUrl}/settlements/summary`);
+  }
+
+  listMembers(): Observable<MemberListResponse> {
+    return this.http.get<MemberListResponse>(`${this.apiBaseUrl}/members`);
   }
 
   recordPayment(request: PaymentCreateRequest): Observable<PaymentCreateResponse> {

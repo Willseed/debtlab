@@ -66,18 +66,21 @@
 
 .oauth-button {
   align-items: center;
-  border: 1px solid;
-  border-radius: var(--radius-md);
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 0.875rem;
   box-sizing: border-box;
+  color: #1f1f1f;
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 1rem;
-  font-weight: 700;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 600;
+  gap: var(--space-3);
   justify-content: center;
-  line-height: 1.25;
-  min-height: 3.5rem;
-  min-width: min(100%, 17rem);
+  line-height: 1;
+  min-height: 5.125rem;
+  min-width: 0;
   padding: 0 var(--space-5);
   text-decoration: none;
   transition:
@@ -89,7 +92,9 @@
 }
 
 .oauth-button:hover {
-  box-shadow: var(--shadow-gold);
+  background: #fff;
+  border-color: #d2d2d7;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.16);
   transform: translateY(-1px);
 }
 
@@ -99,29 +104,39 @@
 }
 
 .oauth-button--google {
-  background: #fff;
-  border-color: #747775;
   color: #1f1f1f;
 }
 
 .oauth-button--google:hover {
-  background: #f8fafd;
-  border-color: #747775;
+  border-color: #d2d2d7;
 }
 
 .oauth-button--apple {
-  background: #000;
-  border-color: #fff;
-  color: #fff;
+  color: #1d1d1f;
 }
 
 .oauth-button--apple:hover {
-  background: #1d1d1f;
-  border-color: #fff;
+  border-color: #d2d2d7;
+}
+
+.oauth-button__icon {
+  color: #000;
+  display: inline-grid;
+  flex: 0 0 auto;
+  height: 2rem;
+  place-items: center;
+  width: 2rem;
+}
+
+.oauth-button__icon svg {
+  display: block;
+  height: 100%;
+  width: 100%;
 }
 
 .oauth-button__text {
   display: inline-block;
+  white-space: nowrap;
 }
 
 .action-group {

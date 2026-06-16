@@ -144,8 +144,8 @@
       <trans-unit id="landingHeroTitle" datatype="html"><source>實驗室花費，精準拆帳</source><target>Lab Expenses. Split With Precision.</target></trans-unit>
       <trans-unit id="landingHeroSubtitle" datatype="html"><source>給任何人使用的共同支出拆帳儀表板。</source><target>An expense cockpit for shared spending, open to anyone with a supported sign-in.</target></trans-unit>
       <trans-unit id="landingOAuthProviders" datatype="html"><source>登入提供者</source><target>Login providers</target></trans-unit>
-      <trans-unit id="landingGoogleLogin" datatype="html"><source>使用 Google 繼續</source><target>Continue with Google</target></trans-unit>
-      <trans-unit id="landingAppleLogin" datatype="html"><source>使用 Apple 繼續</source><target>Continue with Apple</target></trans-unit>
+      <trans-unit id="landingGoogleLogin" datatype="html"><source>Google</source><target>Google</target></trans-unit>
+      <trans-unit id="landingAppleLogin" datatype="html"><source>Apple</source><target>Apple</target></trans-unit>
       <trans-unit id="landingLoginInactiveError" datatype="html"><source>登入未完成：你的帳號已停用，請聯絡管理員。</source><target>Sign-in did not complete: your account has been disabled. Contact an administrator.</target></trans-unit>
       <trans-unit id="landingLoginGenericError" datatype="html"><source>登入未完成，請稍後再試或聯絡管理員。</source><target>Sign-in did not complete. Try again later or contact an administrator.</target></trans-unit>
       <trans-unit id="landingDashboardCta" datatype="html"><source>前往儀表板</source><target>Go to dashboard</target></trans-unit>
@@ -166,6 +166,7 @@
       <trans-unit id="settlementPaymentRecordError" datatype="html"><source>無法記錄付款，請稍後再試。</source><target>Could not record payment. Please try again later.</target></trans-unit>
       <trans-unit id="settlementPaymentConfirmed" datatype="html"><source>已確認付款。</source><target>Payment confirmed.</target></trans-unit>
       <trans-unit id="settlementPaymentConfirmError" datatype="html"><source>無法確認付款，請稍後再試。</source><target>Could not confirm payment. Please try again later.</target></trans-unit>
+      <trans-unit id="settlementMembersLoadError" datatype="html"><source>無法載入結算成員，請稍後再試。</source><target>Could not load settlement members. Please try again later.</target></trans-unit>
       <trans-unit id="settlementSummaryLoadError" datatype="html"><source>無法載入結算資料，請稍後再試。</source><target>Could not load settlement data. Please try again later.</target></trans-unit>
     </body>
   </file>

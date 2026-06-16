@@ -84,6 +84,8 @@ class FakePaymentD1 {
       throwOnBatch?: boolean;
       forceNullMeta?: boolean;
       includeCarolMember?: boolean;
+      activeMemberIds?: readonly string[];
+      settlementExpensePayerId?: string;
     } = {},
   ) {
     this.pendingPayment = pendingPayment;
@@ -111,6 +113,24 @@ class FakePaymentD1 {
       return this.pendingPayment !== null && this.pendingPayment.status === 'pending' ? 1 : 0;
     }
     return 1;
+  }
+
+  readActiveMemberIds(): readonly string[] {
+    if (this.opts.activeMemberIds) {
+      return this.opts.activeMemberIds;
+    }
+
+    const memberIds = [alice.id, bob.id];
+
+    if (this.opts.includeCarolMember) {
+      memberIds.push(carol.id);
+    }
+
+    return memberIds;
+  }
+
+  readSettlementExpensePayerId(): string {
+    return this.opts.settlementExpensePayerId ?? bob.id;
   }
 }
 
@@ -151,25 +171,15 @@ class FakePaymentStatement {
 
   async all<T>(): Promise<{ results: T[] }> {
     if (this.sql.includes('FROM group_members gm')) {
-      const members = [
-        { user_id: alice.id, display_name: alice.displayName },
-        { user_id: bob.id, display_name: bob.displayName },
-      ];
-
-      if (this.db.opts.includeCarolMember) {
-        members.push({ user_id: carol.id, display_name: carol.displayName });
-      }
-
+      const members = this.db.readActiveMemberIds().map((userId) => ({
+        user_id: userId,
+        display_name: displayNameForUser(userId),
+      }));
       return { results: members as T[] };
     }
 
     if (this.sql.includes('FROM group_members')) {
-      const members = [{ user_id: alice.id }, { user_id: bob.id }];
-
-      if (this.db.opts.includeCarolMember) {
-        members.push({ user_id: carol.id });
-      }
-
+      const members = this.db.readActiveMemberIds().map((userId) => ({ user_id: userId }));
       return { results: members as T[] };
     }
 
@@ -178,7 +188,7 @@ class FakePaymentStatement {
         results: [
           {
             id: 'exp_settlement',
-            paid_by_user_id: bob.id,
+            paid_by_user_id: this.db.readSettlementExpensePayerId(),
             amount: 600,
             deleted_at: null,
           },
@@ -280,6 +290,41 @@ test('POST /api/payments creates a pending payment and returns its id and status
   );
 });
 
+test('POST /api/payments lets account B record a suggested transfer from an account A expense', async () => {
+  const db = new FakePaymentD1(bob, null, { settlementExpensePayerId: alice.id });
+  const app = makeApp(db);
+  const cookie = await authCookie(bob);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: bob.id, toUserId: alice.id, amount: 300 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 201);
+  const body = (await response.json()) as { payment: { id: string; status: string } };
+  assert.equal(body.payment.status, 'pending');
+  assert.ok(
+    db.batchStatements.some((batch) =>
+      batch.some(
+        ([sql, , , fromUserId, toUserId, amount]) =>
+          sql.includes('INSERT INTO payments') &&
+          fromUserId === bob.id &&
+          toUserId === alice.id &&
+          amount === 300,
+      ),
+    ),
+  );
+});
+
 test('POST /api/payments lets the receiver record and confirm a payment in one step', async () => {
   const db = new FakePaymentD1(bob);
   const app = makeApp(db);
@@ -360,6 +405,35 @@ test('POST /api/payments lets any joined active member record a relevant suggest
   assert.equal(response.status, 201);
   const body = (await response.json()) as { payment: { id: string; status: string } };
   assert.equal(body.payment.status, 'pending');
+});
+
+test('POST /api/payments rejects account B when B is not an active default-group member', async () => {
+  const db = new FakePaymentD1(bob, null, {
+    activeMemberIds: [alice.id],
+    settlementExpensePayerId: alice.id,
+  });
+  const app = makeApp(db);
+  const cookie = await authCookie(bob);
+
+  const response = await app.request(
+    '/api/payments',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Cookie: cookie,
+        Origin: 'https://lab.buy2330.cc',
+      },
+      body: JSON.stringify({ fromUserId: bob.id, toUserId: alice.id, amount: 300 }),
+    },
+    env(db),
+  );
+
+  assert.equal(response.status, 403);
+  const body = (await response.json()) as { error: { code: string; message: string } };
+  assert.equal(body.error.code, 'FORBIDDEN');
+  assert.match(body.error.message, /active default-group member/u);
+  assert.equal(db.batchStatements.length, 0);
 });
 
 test('POST /api/payments rejects self-payment', async () => {

@@ -11,6 +11,7 @@ import { AuthService } from '../../core/auth/auth.service';
 import {
   PendingPayment,
   SettlementApiService,
+  SettlementMember,
   SettlementSummary,
   SuggestedTransfer,
 } from './settlement-api.service';
@@ -163,9 +164,18 @@ export class SettlementsPageComponent implements OnInit {
   private readonly settlementApi = inject(SettlementApiService);
 
   private readonly summary = signal<SettlementSummary | null>(null);
+  private readonly members = signal<readonly SettlementMember[]>([]);
   protected readonly statusMessage = signal('');
   protected readonly recordingTransferKey = signal<string | null>(null);
   protected readonly confirmingPaymentIds = signal<ReadonlySet<string>>(new Set());
+  private readonly activeJoinedMemberIds = computed<ReadonlySet<string>>(
+    () =>
+      new Set(
+        this.members()
+          .filter((member) => member.status === 'active' && member.joinedAt !== null)
+          .map((member) => member.userId),
+      ),
+  );
 
   readonly myBalance = computed<number>(() => {
     const userId = this.authService.currentUser()?.id;
@@ -182,14 +192,17 @@ export class SettlementsPageComponent implements OnInit {
   );
 
   ngOnInit(): void {
+    this.loadMembers();
     this.loadSummary();
   }
 
   canRecordTransfer(t: SuggestedTransfer): boolean {
-    const userId = this.authService.currentUser()?.id;
-    const isAdmin = this.authService.isAdmin();
-    const isJoinedMember = this.summary()?.balances.some((balance) => balance.userId === userId);
-    return !!userId && (isJoinedMember || isAdmin) && !this.hasPendingPaymentForTransfer(t);
+    const currentUser = this.authService.currentUser();
+    const isActiveUser = currentUser?.status === 'active';
+    const isAdmin = isActiveUser && this.authService.isAdmin();
+    const isActiveJoinedMember = isActiveUser && this.activeJoinedMemberIds().has(currentUser.id);
+
+    return (isActiveJoinedMember || isAdmin) && !this.hasPendingPaymentForTransfer(t);
   }
 
   canConfirm(p: PendingPayment): boolean {
@@ -283,6 +296,18 @@ export class SettlementsPageComponent implements OnInit {
         this.summary.set(null);
         this.statusMessage.set(
           $localize`:Settlement summary load error@@settlementSummaryLoadError:無法載入結算資料，請稍後再試。`,
+        );
+      },
+    });
+  }
+
+  private loadMembers(): void {
+    this.settlementApi.listMembers().subscribe({
+      next: (response) => this.members.set(response.members),
+      error: () => {
+        this.members.set([]);
+        this.statusMessage.set(
+          $localize`:Settlement members load error@@settlementMembersLoadError:無法載入結算成員，請稍後再試。`,
         );
       },
     });

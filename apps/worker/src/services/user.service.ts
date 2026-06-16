@@ -1,4 +1,5 @@
 import { AppleUserProfile } from './apple-oauth.service';
+import { createDefaultGroupMembershipStatements } from './default-group.service';
 import { GoogleUserProfile } from './google-oauth.service';
 import { SessionUser, UserRole, UserStatus } from '../types';
 
@@ -44,14 +45,19 @@ async function findOrCreateOAuthUser(
   if (existingUser) {
     await updateOAuthUserProfile(db, provider, existingUser.id, profile);
     const status: UserStatus = existingUser.status === 'pending' ? 'active' : existingUser.status;
-
-    return {
+    const user = {
       ...existingUser,
       email: profile.email ?? existingUser.email,
       displayName: profile.displayName ?? existingUser.displayName,
       avatarUrl: profile.avatarUrl ?? existingUser.avatarUrl,
       status,
     };
+
+    if (user.status === 'active') {
+      await db.batch([...createDefaultGroupMembershipStatements(db, user)]);
+    }
+
+    return user;
   }
 
   const userId = crypto.randomUUID();
@@ -61,6 +67,15 @@ async function findOrCreateOAuthUser(
   const shouldBootstrapFirstUser = (await countUsers(db)) === 0;
   const role: UserRole = shouldBootstrapFirstUser ? 'admin' : 'member';
   const status: UserStatus = 'active';
+
+  const user: SessionUser = {
+    id: userId,
+    email: profile.email,
+    displayName,
+    avatarUrl: profile.avatarUrl,
+    role,
+    status,
+  };
 
   await db.batch([
     db
@@ -75,16 +90,10 @@ async function findOrCreateOAuthUser(
          VALUES (?, ?, ?, ?, ?)`,
       )
       .bind(identityId, userId, provider, profile.subject, profile.email ?? null),
+    ...createDefaultGroupMembershipStatements(db, user),
   ]);
 
-  return {
-    id: userId,
-    email: profile.email,
-    displayName,
-    avatarUrl: profile.avatarUrl,
-    role,
-    status,
-  };
+  return user;
 }
 
 async function countUsers(db: D1Database): Promise<number> {

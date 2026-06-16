@@ -55,7 +55,7 @@ Request:
 }
 ```
 
-The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as active users immediately: the first user in an empty reset database bootstraps as active admin, and later users are active members. Existing pending Google users are activated on their next verified login. Disabled users remain disabled and must not receive a new session.
+The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as active users immediately: the first user in an empty reset database bootstraps as active admin, and later users are active members. Active users are joined to the default group during verified login, and migrations backfill existing active users into that group. Existing pending Google users are activated on their next verified login. Disabled users remain disabled and must not receive a new session.
 
 ### POST `/api/auth/apple`
 
@@ -83,8 +83,10 @@ The Worker must verify the Apple identity token before creating a local session.
 Apple identities are keyed by provider subject, not email. Unknown Apple
 identities follow the same activation behavior as Google identities: the first
 user in an empty reset database bootstraps as active admin, later users are
-active members, existing pending users are activated on their next verified
-login, and disabled users must not receive a new session.
+active members, active users are joined to the default group during verified
+login, migrations backfill existing active users into that group, existing
+pending users are activated on their next verified login, and disabled users
+must not receive a new session.
 
 ### GET `/api/auth/me`
 
@@ -100,8 +102,8 @@ Clears `labsplit_session`.
 
 Authenticated. Returns active and historical default-group members visible to
 the group. If the caller has not yet been persisted in `group_members`, the
-response includes the active caller as a selectable default-group member
-fallback.
+response includes the active caller as a selectable default-group member fallback
+for legacy sessions.
 
 ### PATCH `/api/members/:userId`
 
@@ -130,8 +132,9 @@ Accepted expense categories are `ingredients`, `prize`, `lodging`, and `other`.
 
 Any authenticated active member may create an expense and participant shares in
 D1. `paidByUserId` and every participant must be an active default-group member;
-the authenticated caller is accepted as an active member and is inserted into the
-default group on first expense creation. The sum of shares must equal `amount`.
+the authenticated caller is accepted as an active member and is also repaired
+into the default group on first expense creation for legacy sessions. The sum of
+shares must equal `amount`.
 The UI supports choosing the payer and one or more active members for equal
 splits.
 

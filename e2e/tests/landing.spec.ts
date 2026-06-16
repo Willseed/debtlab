@@ -9,14 +9,10 @@ test('guest can view the zh-TW landing page login options', async ({ page }) => 
     }),
   ).toBeVisible();
   await expect(page.getByText('給任何人使用的共同支出拆帳儀表板。')).toBeVisible();
-  await expect(page.getByRole('button', { name: '使用 Google 繼續' })).toBeVisible();
-  await expect(page.getByRole('button', { name: '使用 Apple 繼續' })).toBeEnabled();
-  await expect(page.getByRole('button', { name: '使用 Google 繼續' })).toHaveClass(
-    /oauth-button--google/u,
-  );
-  await expect(page.getByRole('button', { name: '使用 Apple 繼續' })).toHaveClass(
-    /oauth-button--apple/u,
-  );
+  await expect(page.getByRole('button', { name: 'Google' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Apple' })).toBeEnabled();
+  await expect(page.getByRole('button', { name: 'Google' })).toHaveClass(/oauth-button--google/u);
+  await expect(page.getByRole('button', { name: 'Apple' })).toHaveClass(/oauth-button--apple/u);
 });
 
 test('Google login button starts the backend OAuth flow', async ({ page }) => {
@@ -27,7 +23,7 @@ test('Google login button starts the backend OAuth flow', async ({ page }) => {
   await page.goto('/');
 
   const googleStartRequest = page.waitForRequest('**/api/auth/google/start');
-  await page.getByRole('button', { name: '使用 Google 繼續' }).click();
+  await page.getByRole('button', { name: 'Google' }).click();
 
   expect((await googleStartRequest).method()).toBe('GET');
 });
@@ -40,7 +36,7 @@ test('Apple login button starts the backend OAuth flow', async ({ page }) => {
   await page.goto('/');
 
   const appleStartRequest = page.waitForRequest('**/api/auth/apple/start');
-  await page.getByRole('button', { name: '使用 Apple 繼續' }).click();
+  await page.getByRole('button', { name: 'Apple' }).click();
 
   expect((await appleStartRequest).method()).toBe('GET');
 });
