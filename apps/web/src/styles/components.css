@@ -197,6 +197,20 @@
   max-width: none;
 }
 
+.field--date,
+.field--date input[type='date'] {
+  min-inline-size: 0;
+}
+
+.field--date input[type='date'] {
+  max-inline-size: 100%;
+  text-align: start;
+}
+
+.field--date input[type='date']::-webkit-date-and-time-value {
+  text-align: start;
+}
+
 .field input,
 .field select,
 .field textarea {

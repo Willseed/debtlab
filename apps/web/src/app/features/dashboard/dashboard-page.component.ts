@@ -110,6 +110,32 @@ import {
         gap: var(--space-2);
         padding-bottom: var(--space-3);
       }
+
+      .metric-grid,
+      .metric-card,
+      .metric-card__value {
+        min-width: 0;
+      }
+
+      .metric-card__value {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+      }
+
+      @media (max-width: 720px) {
+        .metric-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .metric-card {
+          padding: var(--space-4);
+        }
+
+        .metric-card__value {
+          font-size: clamp(1.625rem, 8vw, 2.5rem);
+          line-height: 1.1;
+        }
+      }
     `,
   ],
 })

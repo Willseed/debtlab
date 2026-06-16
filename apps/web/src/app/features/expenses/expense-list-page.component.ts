@@ -382,7 +382,7 @@ type ExpenseForm = {
           </div>
 
           <div class="expense-modal__field expense-modal__field--3">
-            <label class="field">
+            <label class="field field--date">
               <span i18n="Expense date field@@expenseFieldDate">日期</span>
               <input type="date" formControlName="expenseDate" />
             </label>

@@ -102,6 +102,25 @@ describe('DashboardPageComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('無法載入支出資料');
   });
 
+  it('keeps monthly spending value inside a narrow mobile card', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '320px';
+    fixture.detectChanges();
+
+    http.expectOne('/api/settlements/summary').flush(createSummary());
+    http.expectOne('/api/expenses').flush({
+      expenses: [createExpense({ amount: 123_456_789_012, expenseDate: currentMonthDate() })],
+      nextCursor: null,
+    });
+    fixture.detectChanges();
+
+    const monthlyValue = host.querySelector<HTMLElement>('.metric-card__value.money');
+
+    expect(monthlyValue).withContext('monthly spending metric value').not.toBeNull();
+    expect(monthlyValue?.scrollWidth ?? 0).toBeLessThanOrEqual(monthlyValue?.clientWidth ?? 0);
+  });
+
   it('falls back to zero member-specific amounts without a current user', () => {
     currentUserState.set(null);
     fixture.detectChanges();
