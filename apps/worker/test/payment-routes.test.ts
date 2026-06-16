@@ -172,8 +172,7 @@ class FakePaymentD1 {
     }
 
     if (
-      !payment ||
-      payment.status !== 'confirmed' ||
+      payment?.status !== 'confirmed' ||
       payment.from_user_id !== fromUserId ||
       payment.to_user_id !== toUserId
     ) {

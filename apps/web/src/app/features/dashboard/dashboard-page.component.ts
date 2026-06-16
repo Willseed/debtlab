@@ -118,7 +118,7 @@ import {
       }
 
       .metric-grid {
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
       }
 
       .metric-card {
@@ -132,7 +132,7 @@ import {
       }
 
       .metric-card__value.money {
-        font-size: clamp(1.35rem, 7.5cqi, 3.25rem);
+        font-size: clamp(1.25rem, 7.5cqi, 3.25rem);
       }
 
       @media (max-width: 720px) {
@@ -150,7 +150,7 @@ import {
         }
 
         .metric-card__value.money {
-          font-size: clamp(1.35rem, 7cqi, 2.5rem);
+          font-size: clamp(1.25rem, 7cqi, 2.5rem);
         }
       }
     `,
