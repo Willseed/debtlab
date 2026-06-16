@@ -44,16 +44,14 @@ async function findOrCreateOAuthUser(
 
   if (existingUser) {
     await updateOAuthUserProfile(db, provider, existingUser.id, profile);
-    const status: UserStatus = existingUser.status === 'pending' ? 'active' : existingUser.status;
     const user = {
       ...existingUser,
       email: profile.email ?? existingUser.email,
       displayName: profile.displayName ?? existingUser.displayName,
       avatarUrl: profile.avatarUrl ?? existingUser.avatarUrl,
-      status,
     };
 
-    if (user.status === 'active') {
+    if (user.status !== 'disabled') {
       await db.batch([...createDefaultGroupMembershipStatements(db, user)]);
     }
 
@@ -66,7 +64,7 @@ async function findOrCreateOAuthUser(
     profile.displayName ?? profile.email ?? `${providerDisplayName} user ${profile.subject}`;
   const shouldBootstrapFirstUser = (await countUsers(db)) === 0;
   const role: UserRole = shouldBootstrapFirstUser ? 'admin' : 'member';
-  const status: UserStatus = 'active';
+  const status: UserStatus = shouldBootstrapFirstUser ? 'active' : 'pending';
 
   const user: SessionUser = {
     id: userId,
@@ -149,10 +147,9 @@ async function updateOAuthUserProfile(
       .prepare(
         `UPDATE users
          SET email = COALESCE(?, email),
-             display_name = COALESCE(?, display_name),
-             avatar_url = COALESCE(?, avatar_url),
-             status = CASE WHEN status = 'pending' THEN 'active' ELSE status END,
-             updated_at = datetime('now', '+8 hours')
+            display_name = COALESCE(?, display_name),
+            avatar_url = COALESCE(?, avatar_url),
+            updated_at = datetime('now', '+8 hours')
          WHERE id = ?`,
       )
       .bind(profile.email ?? null, profile.displayName ?? null, profile.avatarUrl ?? null, userId),

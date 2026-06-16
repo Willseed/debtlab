@@ -37,9 +37,9 @@ export function createDefaultGroupMembershipStatements(
     db
       .prepare(
         `INSERT OR IGNORE INTO group_members (id, group_id, user_id, role, status)
-         VALUES (?, ?, ?, ?, 'active')`,
+         VALUES (?, ?, ?, ?, ?)`,
       )
-      .bind(crypto.randomUUID(), DEFAULT_GROUP_ID, user.id, user.role),
+      .bind(crypto.randomUUID(), DEFAULT_GROUP_ID, user.id, user.role, user.status),
   ];
 }
 

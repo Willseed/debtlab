@@ -124,7 +124,14 @@ Request:
 }
 ```
 
-The Worker must verify the token with Google before creating a local session. Unknown Google identities are created as active users immediately: the first user in an empty reset database bootstraps as active admin, and later users are active members. Active users are joined to the default group during verified login, and migrations backfill existing active users into that group. Existing pending Google users are activated on their next verified login. Disabled users remain disabled and must not receive a new session.
+The Worker must verify the token with Google before creating a local session.
+Unknown Google identities bootstrap the first user in an empty reset database as
+active admin; later users are pending members and must not receive a session
+until activated. Active users are joined to the default group during verified
+login, pending users are recorded as pending default-group members, and
+migrations backfill existing active users into that group. Existing pending
+Google users remain pending on later verified logins. Disabled users remain
+disabled and must not receive a new session.
 
 ### POST `/api/auth/apple`
 
@@ -152,10 +159,11 @@ The Worker must verify the Apple identity token before creating a local session.
 Apple identities are keyed by provider subject, not email. Unknown Apple
 identities follow the same activation behavior as Google identities: the first
 user in an empty reset database bootstraps as active admin, later users are
-active members, active users are joined to the default group during verified
-login, migrations backfill existing active users into that group, existing
-pending users are activated on their next verified login, and disabled users
-must not receive a new session.
+pending members, active users are joined to the default group during verified
+login, pending users are recorded as pending default-group members, migrations
+backfill existing active users into that group, existing pending users remain
+pending on later verified logins, and disabled users must not receive a new
+session.
 
 ### GET `/api/auth/me`
 

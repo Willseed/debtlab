@@ -23,7 +23,7 @@ type GroupMemberRow = {
   readonly group_id: string;
   readonly user_id: string;
   readonly role: 'member' | 'admin';
-  readonly status: 'active';
+  readonly status: 'active' | 'disabled' | 'pending';
 };
 type GoogleProfile = Parameters<typeof findOrCreateGoogleUser>[1];
 type AppleProfile = Parameters<typeof findOrCreateAppleUser>[1];
@@ -112,12 +112,12 @@ class FakeD1PreparedStatement {
     }
 
     if (this.sql.includes('INSERT OR IGNORE INTO group_members')) {
-      const [, groupId, userId, role] = this.values;
+      const [, groupId, userId, role, status] = this.values;
       const groupMember: GroupMemberRow = {
         group_id: String(groupId),
         user_id: String(userId),
         role: role === 'admin' ? 'admin' : 'member',
-        status: 'active',
+        status: readUserStatus(status),
       };
       this.db.groupMembers.set(
         groupMemberKey(groupMember.group_id, groupMember.user_id),
@@ -135,7 +135,6 @@ class FakeD1PreparedStatement {
           email: readNullableString(email) ?? existing.email,
           display_name: readNullableString(displayName) ?? existing.display_name,
           avatar_url: readNullableString(avatarUrl) ?? existing.avatar_url,
-          status: existing.status === 'pending' ? 'active' : existing.status,
         });
       }
     }
@@ -153,13 +152,13 @@ test('first Google user bootstraps as active admin in an empty database', async 
   assertDefaultGroupMembership(db, user.id, 'admin');
 });
 
-test('later new Google users activate immediately as members', async () => {
+test('later new Google users default to pending members', async () => {
   const db = createDbWithExistingUser({ id: 'usr_existing', role: 'admin' });
   const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
 
-  assert.equal(user.status, 'active');
+  assert.equal(user.status, 'pending');
   assert.equal(user.role, 'member');
-  assertDefaultGroupMembership(db, user.id, 'member');
+  assertDefaultGroupMembership(db, user.id, 'member', 'pending');
 });
 
 test('current user lookup reads current role and status from D1', async () => {
@@ -201,7 +200,7 @@ test('existing Google users keep active approval while profile data updates', as
   assertDefaultGroupMembership(db, existing.id, 'admin');
 });
 
-test('existing pending Google users activate on their next verified login', async () => {
+test('existing pending Google users remain pending on their next verified login', async () => {
   const db = new FakeD1Database();
   const existing = seedUser(db, {
     id: 'usr_existing',
@@ -211,9 +210,9 @@ test('existing pending Google users activate on their next verified login', asyn
 
   const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
 
-  assert.equal(user.status, 'active');
-  assert.equal(db.users.get(existing.id)?.status, 'active');
-  assertDefaultGroupMembership(db, existing.id, 'member');
+  assert.equal(user.status, 'pending');
+  assert.equal(db.users.get(existing.id)?.status, 'pending');
+  assertDefaultGroupMembership(db, existing.id, 'member', 'pending');
 });
 
 test('existing disabled Google users stay disabled on verified login', async () => {
@@ -268,11 +267,11 @@ test('new Apple users reuse OAuth user creation patterns', async () => {
   const db = createDbWithExistingUser();
   const user = await createAppleUser(db, NEW_APPLE_PROFILE);
 
-  assert.equal(user.status, 'active');
+  assert.equal(user.status, 'pending');
   assert.equal(user.role, 'member');
   assert.equal(user.email, 'apple-user@example.com');
   assert.equal(user.displayName, 'apple-user@example.com');
-  assertDefaultGroupMembership(db, user.id, 'member');
+  assertDefaultGroupMembership(db, user.id, 'member', 'pending');
 });
 
 test('new Apple users fall back to provider subject when Apple omits email', async () => {
@@ -282,6 +281,21 @@ test('new Apple users fall back to provider subject when Apple omits email', asy
 
   assert.equal(user.displayName, 'Apple user apple-subject-only');
   assert.equal(user.email, undefined);
+});
+
+test('existing pending Apple users remain pending on verified login', async () => {
+  const db = new FakeD1Database();
+  const existing = seedUser(db, {
+    id: 'usr_existing',
+    status: 'pending',
+  });
+  seedAppleIdentity(db, existing.id);
+
+  const user = await createAppleUser(db, NEW_APPLE_PROFILE);
+
+  assert.equal(user.status, 'pending');
+  assert.equal(db.users.get(existing.id)?.status, 'pending');
+  assertDefaultGroupMembership(db, existing.id, 'member', 'pending');
 });
 
 test('existing disabled Apple users stay disabled on verified login', async () => {
@@ -383,13 +397,14 @@ function assertDefaultGroupMembership(
   db: FakeD1Database,
   userId: string,
   role: GroupMemberRow['role'],
+  status: GroupMemberRow['status'] = 'active',
 ): void {
   assert.equal(db.groups.has(DEFAULT_GROUP_ID), true);
   assert.deepEqual(db.groupMembers.get(groupMemberKey(DEFAULT_GROUP_ID, userId)), {
     group_id: DEFAULT_GROUP_ID,
     user_id: userId,
     role,
-    status: 'active',
+    status,
   });
 }
 

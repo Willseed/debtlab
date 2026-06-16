@@ -91,8 +91,8 @@ handling.
   `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` only in GitHub Secrets / Worker
   secrets.
 - The first verified user in an empty reset database bootstraps as active admin;
-  later unknown verified users become active members. Existing pending users
-  activate on next verified login.
+  later unknown verified users become pending members. Existing pending users
+  remain pending on later verified logins.
 - Disabled users cannot create new sessions. Private APIs require auth; admin
   APIs require admin middleware and current D1 role/status checks.
 - Session cookies must be `HttpOnly`, `Secure`, `SameSite=Lax`, and `Path=/`.
