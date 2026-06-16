@@ -8,6 +8,26 @@ import { CurrentUser } from '../../shared/models/current-user.model';
 import { ExpenseListItem, MemberListItem } from './expense-api.service';
 import { ExpenseListPageComponent } from './expense-list-page.component';
 
+function createExpenseRow(expense: ExpenseListItem): unknown {
+  return {
+    id: expense.id,
+    title: expense.title,
+    category: expense.category,
+    categoryLabel: '食材',
+    amount: expense.amount,
+    expenseDate: expense.expenseDate,
+    paidById: expense.paidBy.id,
+    paidBy: expense.paidBy.displayName,
+    participantIds: expense.participants.map((participant) => participant.userId),
+    participantsLabel: expense.participants
+      .map((participant) => participant.displayName)
+      .join(', '),
+    description: expense.description ?? '',
+    canEdit: expense.canEdit,
+    canDelete: expense.canDelete,
+  };
+}
+
 describe('ExpenseListPageComponent', () => {
   const currentUser: CurrentUser = {
     id: 'usr_member',
@@ -1198,30 +1218,10 @@ describe('ExpenseListPageComponent', () => {
     const method: unknown = Object.getPrototypeOf(fixture.componentInstance)[name];
 
     if (typeof method !== 'function') {
-      throw new Error(`Component method not found: ${name}`);
+      throw new TypeError(`Component method not found: ${name}`);
     }
 
     Reflect.apply(method, fixture.componentInstance, args);
-  }
-
-  function createExpenseRow(expense: ExpenseListItem): unknown {
-    return {
-      id: expense.id,
-      title: expense.title,
-      category: expense.category,
-      categoryLabel: '食材',
-      amount: expense.amount,
-      expenseDate: expense.expenseDate,
-      paidById: expense.paidBy.id,
-      paidBy: expense.paidBy.displayName,
-      participantIds: expense.participants.map((participant) => participant.userId),
-      participantsLabel: expense.participants
-        .map((participant) => participant.displayName)
-        .join(', '),
-      description: expense.description ?? '',
-      canEdit: expense.canEdit,
-      canDelete: expense.canDelete,
-    };
   }
 
   function findIconButton(label: string): HTMLButtonElement | null {
