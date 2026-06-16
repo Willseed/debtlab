@@ -117,9 +117,9 @@ handling.
 - Soft-deleted expenses are ignored in active settlement calculations. Pending
   payments do not reduce balances; confirmed payments do. Disabled users remain
   in historical settlement data but cannot create new expenses.
-- Payments may be created by active default-group members or admins for
-  outstanding suggested transfers. Receiver/admin-created payments are confirmed
-  immediately; other member-created payments stay pending. Reject duplicate
+- Payments may be created by active default-group members for themselves or by
+  admins for outstanding suggested transfers. Admin-created payments are
+  confirmed immediately; member-created payments stay pending. Reject duplicate
   pending payments for the same sender/receiver pair.
 - Easter eggs must never affect accounting correctness.
 - All API routes live under `/api`, request bodies use Zod validation, and

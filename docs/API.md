@@ -311,15 +311,15 @@ Soft-deleted expenses are ignored. Pending payments do not reduce balances. Conf
 
 ### POST `/api/payments`
 
-Authenticated active default-group member or admin only. The sender and receiver
-must be different active default-group members, and the payment must match an
-outstanding suggested transfer direction with an amount no greater than the
-suggested transfer amount. Payments created by the receiver or admin are
-recorded as confirmed immediately; payments created by any other joined member
-remain pending until the receiver or admin confirms them. Duplicate pending
-payments for the same sender/receiver pair are rejected with `409 CONFLICT`.
-Payment creation writes an audit log; immediate confirmation also writes a
-confirmation audit log.
+Authenticated active default-group member or admin only. Non-admin users may
+only create payments where `fromUserId` is their own user ID. The sender and
+receiver must be different active default-group members, and the payment must
+match an outstanding suggested transfer direction with an amount no greater than
+the suggested transfer amount. Payments created by admins are recorded as
+confirmed immediately; member-created payments remain pending until the receiver
+or admin confirms them. Duplicate pending payments for the same sender/receiver
+pair are rejected with `409 CONFLICT`. Payment creation writes an audit log;
+immediate confirmation also writes a confirmation audit log.
 
 Response (`status` is `pending` or `confirmed`):
 

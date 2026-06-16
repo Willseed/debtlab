@@ -325,7 +325,7 @@ test('POST /api/payments lets account B record a suggested transfer from an acco
   );
 });
 
-test('POST /api/payments lets the receiver record and confirm a payment in one step', async () => {
+test('POST /api/payments rejects a receiver recording payment from another sender', async () => {
   const db = new FakePaymentD1(bob);
   const app = makeApp(db);
   const cookie = await authCookie(bob);
@@ -344,19 +344,11 @@ test('POST /api/payments lets the receiver record and confirm a payment in one s
     env(db),
   );
 
-  assert.equal(response.status, 201);
-  const body = (await response.json()) as { payment: { id: string; status: string } };
-  assert.equal(body.payment.status, 'confirmed');
-  assert.ok(
-    db.batchStatements.some((batch) =>
-      batch.some(
-        ([sql, ...values]) => sql.includes('INSERT INTO payments') && values.includes('confirmed'),
-      ),
-    ),
-  );
-  assert.ok(
-    db.batchStatements.some((batch) => batch.some(([sql]) => sql.includes("'payment_confirmed'"))),
-  );
+  assert.equal(response.status, 403);
+  const body = (await response.json()) as { error: { code: string; message: string } };
+  assert.equal(body.error.code, 'FORBIDDEN');
+  assert.match(body.error.message, /payment sender or an admin/u);
+  assert.equal(db.batchStatements.length, 0);
 });
 
 test('POST /api/payments lets an admin record and confirm a payment between other members', async () => {
@@ -383,7 +375,7 @@ test('POST /api/payments lets an admin record and confirm a payment between othe
   assert.equal(body.payment.status, 'confirmed');
 });
 
-test('POST /api/payments lets any joined active member record a relevant suggested transfer', async () => {
+test('POST /api/payments rejects a third-party member recording another sender payment', async () => {
   const db = new FakePaymentD1(carol, DEFAULT_PENDING_PAYMENT, { includeCarolMember: true });
   const app = makeApp(db);
   const cookie = await authCookie(carol);
@@ -402,9 +394,11 @@ test('POST /api/payments lets any joined active member record a relevant suggest
     env(db),
   );
 
-  assert.equal(response.status, 201);
-  const body = (await response.json()) as { payment: { id: string; status: string } };
-  assert.equal(body.payment.status, 'pending');
+  assert.equal(response.status, 403);
+  const body = (await response.json()) as { error: { code: string; message: string } };
+  assert.equal(body.error.code, 'FORBIDDEN');
+  assert.match(body.error.message, /payment sender or an admin/u);
+  assert.equal(db.batchStatements.length, 0);
 });
 
 test('POST /api/payments rejects account B when B is not an active default-group member', async () => {
@@ -485,8 +479,8 @@ test('POST /api/payments rejects recording a payment for unrelated members', asy
   assert.equal(db.batchStatements.length, 0);
 });
 
-test('POST /api/payments rejects transfers that are not currently suggested', async () => {
-  const db = new FakePaymentD1(alice);
+test('POST /api/payments rejects transfers from the current user that are not currently suggested', async () => {
+  const db = new FakePaymentD1(alice, null, { settlementExpensePayerId: alice.id });
   const app = makeApp(db);
   const cookie = await authCookie(alice);
 
@@ -499,7 +493,7 @@ test('POST /api/payments rejects transfers that are not currently suggested', as
         Cookie: cookie,
         Origin: 'https://lab.buy2330.cc',
       },
-      body: JSON.stringify({ fromUserId: bob.id, toUserId: alice.id, amount: 300 }),
+      body: JSON.stringify({ fromUserId: alice.id, toUserId: bob.id, amount: 300 }),
     },
     env(db),
   );

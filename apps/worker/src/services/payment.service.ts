@@ -25,8 +25,8 @@ export class ForbiddenError extends Error {
 }
 
 export class PaymentCreationForbiddenError extends Error {
-  constructor() {
-    super('Only an active default-group member or an admin may record a payment.');
+  constructor(message = 'Only an active default-group member or an admin may record a payment.') {
+    super(message);
     this.name = 'PaymentCreationForbiddenError';
   }
 }
@@ -138,6 +138,12 @@ export async function createPayment(
     throw new SelfPaymentError();
   }
 
+  if (user.role !== 'admin' && input.fromUserId !== user.id) {
+    throw new PaymentCreationForbiddenError(
+      'Only the payment sender or an admin may record a payment.',
+    );
+  }
+
   const [activeMemberIds, settlementData] = await Promise.all([
     listActiveDefaultGroupMemberIds(db),
     loadSettlementData(db),
@@ -185,8 +191,7 @@ export async function createPayment(
   }
 
   const paymentId = crypto.randomUUID();
-  const status: PaymentCreateResult['status'] =
-    input.toUserId === user.id || user.role === 'admin' ? 'confirmed' : 'pending';
+  const status: PaymentCreateResult['status'] = user.role === 'admin' ? 'confirmed' : 'pending';
 
   const statements = [
     db
