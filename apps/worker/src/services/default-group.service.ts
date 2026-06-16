@@ -43,6 +43,29 @@ export function createDefaultGroupMembershipStatements(
   ];
 }
 
+export function createActiveDefaultGroupMembershipStatements(
+  db: D1Database,
+  user: SessionUser,
+): readonly D1PreparedStatement[] {
+  return [
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO groups (id, name, description, currency, created_by)
+         VALUES (?, ?, ?, 'TWD', ?)`,
+      )
+      .bind(DEFAULT_GROUP_ID, DEFAULT_GROUP_NAME, 'Default lab expense group', user.id),
+    db
+      .prepare(
+        `INSERT INTO group_members (id, group_id, user_id, role, status)
+         VALUES (?, ?, ?, ?, 'active')
+         ON CONFLICT(group_id, user_id) DO UPDATE SET
+           role = excluded.role,
+           status = 'active'`,
+      )
+      .bind(crypto.randomUUID(), DEFAULT_GROUP_ID, user.id, user.role),
+  ];
+}
+
 export async function listDefaultGroupMembers(
   db: D1Database,
   currentUser?: SessionUser,

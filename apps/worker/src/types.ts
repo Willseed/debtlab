@@ -12,6 +12,8 @@ export type Env = {
   readonly APPLE_TEAM_ID?: string;
   readonly APPLE_KEY_ID?: string;
   readonly APPLE_PRIVATE_KEY?: string;
+  readonly LAB_INVITE_CODE?: string;
+  readonly ALLOWED_EMAILS?: string;
 };
 
 export type UserRole = 'member' | 'admin';
@@ -42,6 +44,7 @@ export type ApiErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'
+  | 'INVITE_CODE_INVALID'
   | 'OAUTH_VERIFICATION_FAILED'
   | 'UNSUPPORTED_MEDIA_TYPE'
   | 'SPLIT_TOTAL_MISMATCH'

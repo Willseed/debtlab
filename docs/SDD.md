@@ -132,8 +132,9 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
 - Disabled users cannot create new sessions.
 - The first verified OAuth user in an empty reset database bootstraps as active
   admin; later unknown verified OAuth users become pending members. Existing
-  pending users remain pending on later verified logins. Pending OAuth users are
-  not added to the default group until an activation or allowlist path joins
+  pending users remain pending on later verified logins unless the verified
+  OAuth email matches backend-only `ALLOWED_EMAILS`. Pending OAuth users are not
+  added to the default group until invite activation or an allowlist path joins
   them.
 - Authenticated/admin authorization must consult current D1 user role/status,
   not stale client claims.
@@ -204,6 +205,8 @@ Required production secrets:
 - `APPLE_CLIENT_ID`
 - `APPLE_KEY_ID`
 - `APPLE_PRIVATE_KEY`
+- `LAB_INVITE_CODE`
+- `ALLOWED_EMAILS`
 - `APP_BASE_URL`
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`

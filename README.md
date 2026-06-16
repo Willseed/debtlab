@@ -54,3 +54,7 @@ Sign in with Apple is enabled. Configure `APPLE_TEAM_ID`,
 `APPLE_CLIENT_ID`, `APPLE_KEY_ID`, and `APPLE_PRIVATE_KEY` as GitHub Secrets and
 Cloudflare Worker secrets; documentation and examples must use placeholders
 only.
+
+Invite activation uses backend-only `LAB_INVITE_CODE` and optional
+comma-separated `ALLOWED_EMAILS` Worker secrets. Never expose these values to the
+frontend bundle.

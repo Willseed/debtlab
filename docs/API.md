@@ -128,13 +128,15 @@ Request:
 
 The Worker must verify the token with Google before creating a local session.
 Unknown Google identities bootstrap the first user in an empty reset database as
-active admin; later users are pending members and must not receive a session
-until activated. Active users are joined to the default group during verified
-login, while pending users are not inserted into `group_members` until an
-activation or allowlist path joins them. Migrations backfill existing active
-users into that group. Existing pending Google users remain pending on later
-verified logins. Disabled users remain disabled and must not receive a new
-session.
+active admin; later users are pending members and must not receive an active
+application session until activated. If the verified OAuth profile includes an
+email that matches backend-only `ALLOWED_EMAILS`, the user becomes active and
+joins the default group during creation/login. Active users are joined to the
+default group during verified login, while pending users are not inserted into
+`group_members` until invite activation or an allowlist path joins them.
+Migrations backfill existing active users into that group. Existing pending
+Google users remain pending on later verified logins unless allowlisted.
+Disabled users remain disabled and must not receive a new session.
 
 ### POST `/api/auth/apple`
 
@@ -164,9 +166,31 @@ identities follow the same activation behavior as Google identities: the first
 user in an empty reset database bootstraps as active admin, later users are
 pending members, active users are joined to the default group during verified
 login, pending users are not inserted into `group_members` until an activation
-or allowlist path joins them, migrations backfill existing active users into
-that group, existing pending users remain pending on later verified logins, and
-disabled users must not receive a new session.
+or allowlist path joins them, verified allowlisted emails activate and join
+users during creation/login, migrations backfill existing active users into that
+group, existing pending users remain pending on later verified logins unless
+allowlisted, and disabled users must not receive a new session.
+
+### POST `/api/auth/activate`
+
+Authenticated pending users only.
+
+Request:
+
+```json
+{
+  "inviteCode": "INVITE_CODE"
+}
+```
+
+A correct backend-only `LAB_INVITE_CODE` activates the current pending user,
+joins `grp_default`, clears the `auth-activate` rate-limit window, reissues
+`labsplit_session`, and returns the active user. Incorrect or missing invite
+configuration returns `422 INVITE_CODE_INVALID` with
+`邀請碼不正確或已失效。`; active or disabled users receive `409 CONFLICT`.
+Invite attempts are D1 rate-limited per user at 3 attempts per 60 seconds and
+return `429 RATE_LIMITED` with `Retry-After` plus `retryAfterSeconds` details.
+The invite code and `ALLOWED_EMAILS` are never returned to the frontend.
 
 ### GET `/api/auth/me`
 

@@ -1,5 +1,8 @@
 import { AppleUserProfile } from './apple-oauth.service';
-import { createDefaultGroupMembershipStatements } from './default-group.service';
+import {
+  createActiveDefaultGroupMembershipStatements,
+  createDefaultGroupMembershipStatements,
+} from './default-group.service';
 import { GoogleUserProfile } from './google-oauth.service';
 import { SessionUser, UserRole, UserStatus } from '../types';
 
@@ -19,19 +22,24 @@ type OAuthUserProfile = {
   readonly displayName?: string;
   readonly avatarUrl?: string;
 };
+export type OAuthUserActivationOptions = {
+  readonly allowedEmails?: string;
+};
 
 export async function findOrCreateGoogleUser(
   db: D1Database,
   profile: GoogleUserProfile,
+  activationOptions: OAuthUserActivationOptions = {},
 ): Promise<SessionUser> {
-  return findOrCreateOAuthUser(db, 'google', profile, 'Google');
+  return findOrCreateOAuthUser(db, 'google', profile, 'Google', activationOptions);
 }
 
 export async function findOrCreateAppleUser(
   db: D1Database,
   profile: AppleUserProfile,
+  activationOptions: OAuthUserActivationOptions = {},
 ): Promise<SessionUser> {
-  return findOrCreateOAuthUser(db, 'apple', profile, 'Apple');
+  return findOrCreateOAuthUser(db, 'apple', profile, 'Apple', activationOptions);
 }
 
 async function findOrCreateOAuthUser(
@@ -39,6 +47,7 @@ async function findOrCreateOAuthUser(
   provider: AuthProvider,
   profile: OAuthUserProfile,
   providerDisplayName: string,
+  activationOptions: OAuthUserActivationOptions,
 ): Promise<SessionUser> {
   const existingUser = await findUserByProviderSubject(db, provider, profile.subject);
 
@@ -50,6 +59,13 @@ async function findOrCreateOAuthUser(
       displayName: profile.displayName ?? existingUser.displayName,
       avatarUrl: profile.avatarUrl ?? existingUser.avatarUrl,
     };
+
+    if (
+      user.status === 'pending' &&
+      isEmailAllowlisted(profile.email, activationOptions.allowedEmails)
+    ) {
+      return activateUserAndJoinDefaultGroup(db, user);
+    }
 
     if (user.status === 'active') {
       await db.batch([...createDefaultGroupMembershipStatements(db, user)]);
@@ -63,8 +79,13 @@ async function findOrCreateOAuthUser(
   const displayName =
     profile.displayName ?? profile.email ?? `${providerDisplayName} user ${profile.subject}`;
   const shouldBootstrapFirstUser = (await countUsers(db)) === 0;
+  const shouldActivateByAllowlist = isEmailAllowlisted(
+    profile.email,
+    activationOptions.allowedEmails,
+  );
   const role: UserRole = shouldBootstrapFirstUser ? 'admin' : 'member';
-  const status: UserStatus = shouldBootstrapFirstUser ? 'active' : 'pending';
+  const status: UserStatus =
+    shouldBootstrapFirstUser || shouldActivateByAllowlist ? 'active' : 'pending';
 
   const user: SessionUser = {
     id: userId,
@@ -91,12 +112,33 @@ async function findOrCreateOAuthUser(
   ];
 
   await db.batch(
-    shouldBootstrapFirstUser
+    status === 'active'
       ? [...createUserStatements, ...createDefaultGroupMembershipStatements(db, user)]
       : createUserStatements,
   );
 
   return user;
+}
+
+export async function activateUserAndJoinDefaultGroup(
+  db: D1Database,
+  user: SessionUser,
+): Promise<SessionUser> {
+  const activeUser: SessionUser = { ...user, status: 'active' };
+
+  await db.batch([
+    db
+      .prepare(
+        `UPDATE users
+         SET status = 'active',
+             updated_at = datetime('now', '+8 hours')
+         WHERE id = ? AND status = 'pending'`,
+      )
+      .bind(user.id),
+    ...createActiveDefaultGroupMembershipStatements(db, activeUser),
+  ]);
+
+  return activeUser;
 }
 
 async function countUsers(db: D1Database): Promise<number> {
@@ -177,4 +219,33 @@ function mapUserRow(row: UserRow): SessionUser {
     role: row.role,
     status: row.status,
   };
+}
+
+function isEmailAllowlisted(email: string | undefined, allowedEmails: string | undefined): boolean {
+  const normalizedEmail = normalizeEmail(email);
+
+  if (!normalizedEmail) {
+    return false;
+  }
+
+  return parseAllowedEmails(allowedEmails).has(normalizedEmail);
+}
+
+function parseAllowedEmails(allowedEmails: string | undefined): ReadonlySet<string> {
+  if (!allowedEmails) {
+    return new Set();
+  }
+
+  return new Set(
+    allowedEmails
+      .split(',')
+      .map((email) => normalizeEmail(email))
+      .filter((email): email is string => email !== null),
+  );
+}
+
+function normalizeEmail(email: string | undefined): string | null {
+  const normalizedEmail = email?.trim().toLowerCase();
+
+  return normalizedEmail ? normalizedEmail : null;
 }

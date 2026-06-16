@@ -24,6 +24,7 @@ import {
   createSessionToken,
   SESSION_COOKIE_NAME,
   SESSION_TTL_SECONDS,
+  verifySessionToken,
 } from '../services/auth.service';
 import {
   buildGoogleAuthorizationUrl,
@@ -35,13 +36,29 @@ import {
   readGoogleOAuthConfig,
   verifyGoogleIdToken,
 } from '../services/google-oauth.service';
-import { findOrCreateAppleUser, findOrCreateGoogleUser } from '../services/user.service';
+import {
+  activateUserAndJoinDefaultGroup,
+  findCurrentUserById,
+  findOrCreateAppleUser,
+  findOrCreateGoogleUser,
+} from '../services/user.service';
+import {
+  clearRateLimit,
+  consumeRateLimit,
+  RateLimitExceededError,
+} from '../services/rate-limit.service';
 import { AppBindings, SessionUser } from '../types';
-import { appleAuthSchema, googleAuthSchema } from '../validation/schemas';
+import { appleAuthSchema, googleAuthSchema, inviteActivationSchema } from '../validation/schemas';
 
 const OAUTH_STATE_TTL_SECONDS = 600;
 const OAUTH_RANDOM_PATTERN = /^[0-9a-f]{64}$/u;
 const SESSION_SECRET_CONFIGURATION_ERROR = new Error('Session secret is not configured.');
+const INVITE_CODE_INVALID_MESSAGE = '邀請碼不正確或已失效。';
+const AUTH_ACTIVATE_RATE_LIMIT = {
+  scope: 'auth-activate',
+  limit: 3,
+  windowSeconds: 60,
+} as const;
 
 type AuthContext = Context<AppBindings>;
 
@@ -111,7 +128,9 @@ export function createAuthRoutes(
       const config = readGoogleOAuthConfig(c.env, c.req.url);
       const idToken = await dependencies.exchangeGoogleAuthorizationCode(code, config);
       const profile = await dependencies.verifyGoogleIdToken(idToken, config.clientId);
-      const user = await dependencies.findOrCreateGoogleUser(c.env.DB, profile);
+      const user = await dependencies.findOrCreateGoogleUser(c.env.DB, profile, {
+        allowedEmails: c.env.ALLOWED_EMAILS,
+      });
       const sessionResult = await issueSession(c, user);
 
       if (sessionResult) {
@@ -123,7 +142,7 @@ export function createAuthRoutes(
         );
       }
 
-      return c.redirect(new URL('/dashboard', config.appBaseUrl).toString(), 302);
+      return c.redirect(new URL(readPostLoginPath(user), config.appBaseUrl).toString(), 302);
     } catch (error) {
       return handleGoogleOAuthCallbackError(c, error);
     }
@@ -149,7 +168,9 @@ export function createAuthRoutes(
         parsed.data.credential,
         config.clientId,
       );
-      const user = await dependencies.findOrCreateGoogleUser(c.env.DB, profile);
+      const user = await dependencies.findOrCreateGoogleUser(c.env.DB, profile, {
+        allowedEmails: c.env.ALLOWED_EMAILS,
+      });
       const sessionResult = await issueSession(c, user);
 
       if (sessionResult) {
@@ -215,7 +236,9 @@ export function createAuthRoutes(
         ...verifiedProfile,
         displayName: displayName ?? verifiedProfile.displayName,
       };
-      const user = await dependencies.findOrCreateAppleUser(c.env.DB, profile);
+      const user = await dependencies.findOrCreateAppleUser(c.env.DB, profile, {
+        allowedEmails: c.env.ALLOWED_EMAILS,
+      });
       const sessionResult = await issueSession(c, user);
 
       if (sessionResult) {
@@ -227,7 +250,7 @@ export function createAuthRoutes(
         );
       }
 
-      return c.redirect(new URL('/dashboard', config.appBaseUrl).toString(), 302);
+      return c.redirect(new URL(readPostLoginPath(user), config.appBaseUrl).toString(), 302);
     } catch (error) {
       return handleAppleOAuthCallbackError(c, error);
     }
@@ -253,7 +276,9 @@ export function createAuthRoutes(
         parsed.data.identityToken,
         config.clientId,
       );
-      const user = await dependencies.findOrCreateAppleUser(c.env.DB, profile);
+      const user = await dependencies.findOrCreateAppleUser(c.env.DB, profile, {
+        allowedEmails: c.env.ALLOWED_EMAILS,
+      });
       const sessionResult = await issueSession(c, user);
 
       if (sessionResult) {
@@ -270,6 +295,70 @@ export function createAuthRoutes(
     return c.json({ user: c.get('currentUser') });
   });
 
+  routes.post('/activate', async (c) => {
+    const currentUser = await readSessionUser(c);
+
+    if (!currentUser) {
+      return errorResponse(c, 401, 'UNAUTHORIZED', 'Authentication is required.');
+    }
+
+    if (currentUser.status !== 'pending') {
+      return errorResponse(
+        c,
+        409,
+        'CONFLICT',
+        'User activation is only available for pending users.',
+        { reason: 'USER_NOT_PENDING' },
+      );
+    }
+
+    const body: unknown = await c.req.json().catch(() => null);
+    const parsed = inviteActivationSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return errorResponse(
+        c,
+        422,
+        'VALIDATION_ERROR',
+        'Invite activation request is invalid.',
+        parsed.error.flatten(),
+      );
+    }
+
+    try {
+      await consumeRateLimit(c.env.DB, {
+        ...AUTH_ACTIVATE_RATE_LIMIT,
+        userId: currentUser.id,
+      });
+    } catch (error) {
+      if (error instanceof RateLimitExceededError) {
+        c.header('Retry-After', String(error.retryAfterSeconds));
+        return errorResponse(c, 429, 'RATE_LIMITED', '邀請碼嘗試太頻繁，請稍後再試。', {
+          retryAfterSeconds: error.retryAfterSeconds,
+          limit: error.limit,
+          windowSeconds: error.windowSeconds,
+        });
+      }
+
+      throw error;
+    }
+
+    if (!isInviteCodeValid(parsed.data.inviteCode, c.env.LAB_INVITE_CODE)) {
+      return errorResponse(c, 422, 'INVITE_CODE_INVALID', INVITE_CODE_INVALID_MESSAGE);
+    }
+
+    const user = await activateUserAndJoinDefaultGroup(c.env.DB, currentUser);
+    await clearRateLimit(c.env.DB, AUTH_ACTIVATE_RATE_LIMIT.scope, currentUser.id);
+
+    const sessionResult = await issueSession(c, user);
+
+    if (sessionResult) {
+      return sessionResult;
+    }
+
+    return c.json({ user });
+  });
+
   routes.post('/logout', (c) => {
     clearSessionCookie(c);
 
@@ -277,6 +366,17 @@ export function createAuthRoutes(
   });
 
   return routes;
+}
+
+async function readSessionUser(c: AuthContext): Promise<SessionUser | null> {
+  const token = getCookie(c, SESSION_COOKIE_NAME);
+  const sessionUser = await verifySessionToken(token, c.env.SESSION_SECRET);
+
+  if (!sessionUser) {
+    return null;
+  }
+
+  return findCurrentUserById(c.env.DB, sessionUser.id);
 }
 
 export const authRoutes = createAuthRoutes();
@@ -358,7 +458,7 @@ async function issueSession(c: AuthContext, user: SessionUser): Promise<Response
     return configurationErrorResponse(c, SESSION_SECRET_CONFIGURATION_ERROR);
   }
 
-  if (user.status !== 'active') {
+  if (user.status === 'disabled') {
     clearSessionCookie(c);
     return errorResponse(c, 403, 'FORBIDDEN', 'User is not active.');
   }
@@ -374,6 +474,16 @@ async function issueSession(c: AuthContext, user: SessionUser): Promise<Response
   });
 
   return null;
+}
+
+function readPostLoginPath(user: SessionUser): string {
+  return user.status === 'pending' ? '/activate' : '/dashboard';
+}
+
+function isInviteCodeValid(inviteCode: string, configuredInviteCode: string | undefined): boolean {
+  const expectedInviteCode = configuredInviteCode?.trim();
+
+  return expectedInviteCode ? inviteCode === expectedInviteCode : false;
 }
 
 function handleGoogleOAuthError(c: AuthContext, error: unknown): Response {

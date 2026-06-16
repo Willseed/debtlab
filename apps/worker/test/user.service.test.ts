@@ -27,6 +27,7 @@ type GroupMemberRow = {
 };
 type GoogleProfile = Parameters<typeof findOrCreateGoogleUser>[1];
 type AppleProfile = Parameters<typeof findOrCreateAppleUser>[1];
+type ActivationOptions = NonNullable<Parameters<typeof findOrCreateGoogleUser>[2]>;
 
 const GOOGLE_SUBJECT = 'google-subject';
 const APPLE_SUBJECT = 'apple-subject';
@@ -127,7 +128,32 @@ class FakeD1PreparedStatement {
       );
     }
 
-    if (this.sql.includes('UPDATE users')) {
+    if (this.sql.includes('INSERT INTO group_members')) {
+      const [, groupId, userId, role] = this.values;
+      this.db.groupMemberInsertUserIds.push(String(userId));
+      const groupMember: GroupMemberRow = {
+        group_id: String(groupId),
+        user_id: String(userId),
+        role: role === 'admin' ? 'admin' : 'member',
+        status: 'active',
+      };
+      this.db.groupMembers.set(
+        groupMemberKey(groupMember.group_id, groupMember.user_id),
+        groupMember,
+      );
+    }
+
+    if (this.sql.includes("SET status = 'active'")) {
+      const [userId] = this.values;
+      const existing = this.db.users.get(String(userId));
+
+      if (existing?.status === 'pending') {
+        this.db.users.set(existing.id, {
+          ...existing,
+          status: 'active',
+        });
+      }
+    } else if (this.sql.includes('UPDATE users')) {
       const [email, displayName, avatarUrl, userId] = this.values;
       const existing = this.db.users.get(String(userId));
 
@@ -170,6 +196,25 @@ test('second Google user defaults to pending without joining the default group',
   assert.equal(user.status, 'pending');
   assert.equal(user.role, 'member');
   assertNoDefaultGroupMembership(db, user.id);
+});
+
+test('allowlisted new Google users become active members and join the default group', async () => {
+  const db = createDbWithExistingUser();
+  const user = await createGoogleUser(
+    db,
+    {
+      subject: 'allowlisted-google-subject',
+      email: 'Allowed.Member@Example.Test',
+      displayName: 'Allowed Member',
+    },
+    {
+      allowedEmails: 'other@example.test, allowed.member@example.test ',
+    },
+  );
+
+  assert.equal(user.status, 'active');
+  assert.equal(user.role, 'member');
+  assertDefaultGroupMembership(db, user.id, 'member');
 });
 
 test('current user lookup reads current role and status from D1', async () => {
@@ -226,6 +271,24 @@ test('existing pending Google users remain pending on their next verified login'
   assertNoDefaultGroupMembership(db, existing.id);
 });
 
+test('existing pending Google users activate on verified allowlisted login', async () => {
+  const db = new FakeD1Database();
+  const existing = seedUser(db, {
+    id: 'usr_existing',
+    email: 'old@example.test',
+    status: 'pending',
+  });
+  seedGoogleIdentity(db, existing.id);
+
+  const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE, {
+    allowedEmails: 'new-user@example.com',
+  });
+
+  assert.equal(user.status, 'active');
+  assert.equal(db.users.get(existing.id)?.status, 'active');
+  assertDefaultGroupMembership(db, existing.id, 'member');
+});
+
 test('existing disabled Google users stay disabled on verified login', async () => {
   const db = new FakeD1Database();
   const existing = seedUser(db, {
@@ -234,7 +297,9 @@ test('existing disabled Google users stay disabled on verified login', async () 
   });
   seedGoogleIdentity(db, existing.id);
 
-  const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE);
+  const user = await createGoogleUser(db, NEW_GOOGLE_PROFILE, {
+    allowedEmails: NEW_GOOGLE_PROFILE.email,
+  });
 
   assert.equal(user.status, 'disabled');
   assert.equal(db.users.get(existing.id)?.status, 'disabled');
@@ -349,8 +414,12 @@ function asD1(db: FakeD1Database): D1Database {
   return db as unknown as D1Database;
 }
 
-function createGoogleUser(db: FakeD1Database, profile: GoogleProfile): Promise<SessionUser> {
-  return findOrCreateGoogleUser(asD1(db), profile);
+function createGoogleUser(
+  db: FakeD1Database,
+  profile: GoogleProfile,
+  activationOptions: ActivationOptions = {},
+): Promise<SessionUser> {
+  return findOrCreateGoogleUser(asD1(db), profile, activationOptions);
 }
 
 function createAppleUser(db: FakeD1Database, profile: AppleProfile): Promise<SessionUser> {

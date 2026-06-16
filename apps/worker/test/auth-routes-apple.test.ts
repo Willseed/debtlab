@@ -189,6 +189,29 @@ test('Apple OAuth callback exchanges the code, verifies the ID token, creates a 
   assert.match(setCookie, /Secure/u);
 });
 
+test('Apple OAuth callback creates a pending session and redirects to activation', async () => {
+  const state = VALID_APPLE_STATE;
+  const routes = createAuthRoutes(
+    createAppleDependencies(createSessionUser({ status: 'pending' })),
+  );
+  const response = await requestAuth(
+    '/api/auth/apple/callback',
+    createAppleCallbackInit(
+      {
+        state,
+        code: 'authorization-code',
+      },
+      `${getAppleOAuthStateCookieName(state)}=${VALID_APPLE_NONCE}`,
+    ),
+    {},
+    routes,
+  );
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get('Location'), 'https://lab.buy2330.cc/activate');
+  assert.match(readSetCookie(response), new RegExp(`${SESSION_COOKIE_NAME}=`));
+});
+
 test('Apple OAuth callback ignores malformed Apple user display-name payloads', async () => {
   const malformedUserPayloads = ['not-json', JSON.stringify('Pony Lab'), JSON.stringify({})];
 

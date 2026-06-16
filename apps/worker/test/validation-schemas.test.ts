@@ -6,6 +6,7 @@ import {
   expenseCreateSchema,
   expenseUpdateSchema,
   googleAuthSchema,
+  inviteActivationSchema,
   memberPatchSchema,
   mysteryChallengeSubmissionSchema,
   paymentCreateSchema,
@@ -14,6 +15,11 @@ import {
 test('API request schemas reject unexpected top-level fields', () => {
   assert.equal(googleAuthSchema.safeParse({ credential: 'token', isAdmin: true }).success, false);
   assert.equal(appleAuthSchema.safeParse({ identityToken: 'token', role: 'admin' }).success, false);
+  assert.equal(
+    inviteActivationSchema.safeParse({ inviteCode: 'test-code-placeholder', role: 'admin' })
+      .success,
+    false,
+  );
   assert.equal(
     expenseUpdateSchema.safeParse({ title: 'Coffee', paidByUserId: 'usr_other' }).success,
     false,
@@ -61,6 +67,10 @@ test('API request schemas still accept allowlisted payloads', () => {
       identityToken: 'token',
       user: { name: { firstName: 'Ada', lastName: 'Lovelace' }, email: 'ada@example.test' },
     }).success,
+    true,
+  );
+  assert.equal(
+    inviteActivationSchema.safeParse({ inviteCode: ' test-code-placeholder ' }).success,
     true,
   );
   assert.equal(

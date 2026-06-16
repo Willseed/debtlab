@@ -160,6 +160,27 @@ test('Google OAuth callback exchanges the code, verifies the ID token, creates a
   assert.match(setCookie, /Secure/u);
 });
 
+test('Google OAuth callback creates a pending session and redirects to activation', async () => {
+  const state = VALID_GOOGLE_STATE;
+  const routes = createAuthRoutes(
+    createGoogleDependencies(createSessionUser({ status: 'pending' })),
+  );
+  const response = await requestAuth(
+    `/api/auth/google/callback?state=${state}&code=authorization-code`,
+    {
+      headers: {
+        Cookie: `${getGoogleOAuthStateCookieName(state)}=${state}`,
+      },
+    },
+    {},
+    routes,
+  );
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.get('Location'), 'https://lab.buy2330.cc/activate');
+  assert.match(readSetCookie(response), new RegExp(`${SESSION_COOKIE_NAME}=`));
+});
+
 test('Google OAuth callback refuses disabled identities and clears any existing app session', async () => {
   const state = VALID_GOOGLE_STATE;
   const routes = createAuthRoutes(

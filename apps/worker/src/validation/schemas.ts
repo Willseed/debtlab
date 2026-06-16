@@ -31,6 +31,12 @@ export const appleAuthSchema = z
   })
   .strict();
 
+export const inviteActivationSchema = z
+  .object({
+    inviteCode: z.string().trim().min(1).max(256),
+  })
+  .strict();
+
 export const splitParticipantSchema = z
   .object({
     userId: userIdSchema,
