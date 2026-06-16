@@ -411,6 +411,335 @@ describe('ExpenseListPageComponent', () => {
     expect(deleteButton?.querySelector('svg')).not.toBeNull();
   });
 
+  it('renders an icon-only join action for active nonparticipants and updates the row', () => {
+    const bobOnlyExpense = createExpenseItem({
+      id: 'exp_join',
+      paidBy: {
+        id: 'usr_bob',
+        displayName: 'Bob',
+      },
+      participants: [
+        {
+          userId: 'usr_bob',
+          displayName: 'Bob',
+          shareAmount: 1280,
+        },
+      ],
+      canEdit: false,
+      canDelete: false,
+    });
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([bobOnlyExpense]);
+
+    const joinButton = findIconButton('加入支出');
+    expect(joinButton?.querySelector('svg')).not.toBeNull();
+    expect(joinButton?.textContent?.trim()).toBe('');
+
+    joinButton?.click();
+    fixture.detectChanges();
+
+    const request = http.expectOne('/api/expenses/exp_join/participants/me');
+    expect(request.request.method).toBe('PUT');
+    expect(request.request.body).toBeNull();
+    expect(findIconButton('加入支出')?.disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).not.toContain('支出明細');
+
+    request.flush({
+      expense: createExpenseItem({
+        ...bobOnlyExpense,
+        participants: [
+          {
+            userId: 'usr_bob',
+            displayName: 'Bob',
+            shareAmount: 640,
+          },
+          {
+            userId: currentUser.id,
+            displayName: currentUser.displayName,
+            shareAmount: 640,
+          },
+        ],
+      }),
+    });
+    fixture.detectChanges();
+
+    expect(findIconButton('加入支出')).toBeNull();
+    expect(findIconButton('退出支出')?.querySelector('svg')).not.toBeNull();
+    expect(participantsCellText()).toBe('Bob, Member User');
+  });
+
+  it('renders an exit icon for current participants and disables row actions while pending', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([createExpenseItem({ id: 'exp_leave' })]);
+
+    const leaveButton = findIconButton('退出支出');
+    expect(leaveButton?.querySelector('svg')).not.toBeNull();
+
+    leaveButton?.click();
+    fixture.detectChanges();
+
+    const request = http.expectOne('/api/expenses/exp_leave/participants/me');
+    expect(request.request.method).toBe('DELETE');
+    expect(findIconButton('退出支出')?.disabled).toBeTrue();
+    expect(findIconButton('編輯支出')?.disabled).toBeTrue();
+    expect(findIconButton('刪除支出')?.disabled).toBeTrue();
+    expect(fixture.nativeElement.textContent).not.toContain('LabSplit Entry');
+
+    request.flush({
+      expense: createExpenseItem({
+        id: 'exp_leave',
+        participants: [
+          {
+            userId: 'usr_bob',
+            displayName: 'Bob',
+            shareAmount: 1280,
+          },
+        ],
+      }),
+    });
+    fixture.detectChanges();
+
+    expect(findIconButton('退出支出')).toBeNull();
+    expect(findIconButton('加入支出')?.querySelector('svg')).not.toBeNull();
+    expect(findIconButton('編輯支出')?.disabled).toBeFalse();
+    expect(findIconButton('刪除支出')?.disabled).toBeFalse();
+    expect(participantsCellText()).toBe('Bob');
+  });
+
+  it('surfaces API participation errors in the list status area', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_join_conflict',
+        paidBy: {
+          id: 'usr_bob',
+          displayName: 'Bob',
+        },
+        participants: [
+          {
+            userId: 'usr_bob',
+            displayName: 'Bob',
+            shareAmount: 1280,
+          },
+        ],
+        canEdit: false,
+        canDelete: false,
+      }),
+    ]);
+
+    findIconButton('加入支出')?.click();
+    http.expectOne('/api/expenses/exp_join_conflict/participants/me').flush(
+      {
+        error: {
+          code: 'EXPENSE_PARTICIPANT_CONFLICT',
+          message: 'You cannot join this expense.',
+          details: {},
+        },
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('You cannot join this expense.');
+    expect(findIconButton('加入支出')?.disabled).toBeFalse();
+  });
+
+  it('falls back to a generic message when participation updates fail without an API message', () => {
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([createExpenseItem({ id: 'exp_leave_network' })]);
+
+    findIconButton('退出支出')?.click();
+    http
+      .expectOne('/api/expenses/exp_leave_network/participants/me')
+      .error(new ProgressEvent('error'), {
+        status: 0,
+        statusText: 'Network Error',
+      });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('無法更新支出參與者，請稍後再試。');
+    expect(findIconButton('退出支出')?.disabled).toBeFalse();
+  });
+
+  it('hides participant join and exit actions when the current user is not active', () => {
+    currentUserState.set({
+      ...currentUser,
+      status: 'disabled',
+    });
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([
+      createExpenseItem({
+        id: 'exp_disabled_user',
+        paidBy: {
+          id: 'usr_bob',
+          displayName: 'Bob',
+        },
+        participants: [
+          {
+            userId: 'usr_bob',
+            displayName: 'Bob',
+            shareAmount: 1280,
+          },
+        ],
+        canEdit: false,
+        canDelete: false,
+      }),
+    ]);
+
+    expect(findIconButton('加入支出')).toBeNull();
+    expect(findIconButton('退出支出')).toBeNull();
+  });
+
+  it('skips participant requests when the current state no longer matches the action', () => {
+    const bobOnlyExpense = createExpenseItem({
+      id: 'exp_guard_nonparticipant',
+      paidBy: {
+        id: 'usr_bob',
+        displayName: 'Bob',
+      },
+      participants: [
+        {
+          userId: 'usr_bob',
+          displayName: 'Bob',
+          shareAmount: 1280,
+        },
+      ],
+      canEdit: false,
+      canDelete: false,
+    });
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([createExpenseItem({ id: 'exp_guard_participant' }), bobOnlyExpense]);
+
+    const [participantExpense, nonParticipantExpense] = componentInternals().expenses();
+    if (!participantExpense || !nonParticipantExpense) {
+      throw new Error('Expected participant guard fixtures');
+    }
+
+    currentUserState.set(null);
+    componentInternals().joinExpenseParticipant(nonParticipantExpense, new Event('click'));
+    http.expectNone('/api/expenses/exp_guard_nonparticipant/participants/me');
+
+    currentUserState.set(currentUser);
+    componentInternals().joinExpenseParticipant(participantExpense, new Event('click'));
+    componentInternals().leaveExpenseParticipant(nonParticipantExpense, new Event('click'));
+
+    http.expectNone('/api/expenses/exp_guard_participant/participants/me');
+    http.expectNone('/api/expenses/exp_guard_nonparticipant/participants/me');
+  });
+
+  it('reloads expenses when a participant update returns an unknown row id', () => {
+    const bobOnlyExpense = createExpenseItem({
+      id: 'exp_join_reload',
+      paidBy: {
+        id: 'usr_bob',
+        displayName: 'Bob',
+      },
+      participants: [
+        {
+          userId: 'usr_bob',
+          displayName: 'Bob',
+          shareAmount: 1280,
+        },
+      ],
+      canEdit: false,
+      canDelete: false,
+    });
+    const returnedExpense = createExpenseItem({
+      ...bobOnlyExpense,
+      id: 'exp_join_reloaded',
+      participants: [
+        {
+          userId: 'usr_bob',
+          displayName: 'Bob',
+          shareAmount: 640,
+        },
+        {
+          userId: currentUser.id,
+          displayName: currentUser.displayName,
+          shareAmount: 640,
+        },
+      ],
+    });
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([bobOnlyExpense]);
+
+    findIconButton('加入支出')?.click();
+    http
+      .expectOne('/api/expenses/exp_join_reload/participants/me')
+      .flush({ expense: returnedExpense });
+    flushExpenseList([returnedExpense]);
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Bob, Member User');
+  });
+
+  it('keeps open expense detail and delete state synchronized after row replacement', () => {
+    const bobOnlyExpense = createExpenseItem({
+      id: 'exp_detail_join',
+      paidBy: {
+        id: 'usr_bob',
+        displayName: 'Bob',
+      },
+      participants: [
+        {
+          userId: 'usr_bob',
+          displayName: 'Bob',
+          shareAmount: 1280,
+        },
+      ],
+      canEdit: false,
+      canDelete: false,
+    });
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([bobOnlyExpense]);
+
+    (fixture.nativeElement.querySelector('tr.expense-row') as HTMLTableRowElement).click();
+    fixture.detectChanges();
+    findIconButton('加入支出')?.click();
+    http.expectOne('/api/expenses/exp_detail_join/participants/me').flush({
+      expense: createExpenseItem({
+        ...bobOnlyExpense,
+        participants: [
+          {
+            userId: 'usr_bob',
+            displayName: 'Bob',
+            shareAmount: 640,
+          },
+          {
+            userId: currentUser.id,
+            displayName: currentUser.displayName,
+            shareAmount: 640,
+          },
+        ],
+      }),
+    });
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('支出明細');
+    expect(fixture.nativeElement.textContent).toContain('Bob, Member User');
+
+    closeVisibleDialog();
+    recreateComponent();
+    flushMemberList();
+    flushExpenseList([createExpenseItem({ id: 'exp_pending_replace' })]);
+    clickDeleteIcon();
+    fixture.detectChanges();
+    componentInternals().replaceExpenseRow(
+      createExpenseItem({ id: 'exp_pending_replace', title: 'Updated Beans' }),
+    );
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.textContent).toContain('Updated Beans');
+  });
+
   it('shows non-creator expenses as read-only without edit or delete actions', () => {
     clickButton('新增支出');
     fixture.detectChanges();
@@ -857,6 +1186,40 @@ describe('ExpenseListPageComponent', () => {
     (
       fixture.nativeElement.querySelector('button[aria-label="刪除支出"]') as HTMLButtonElement
     ).click();
+  }
+
+  function closeVisibleDialog(): void {
+    (fixture.nativeElement.querySelector('[role="dialog"]') as HTMLElement).dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }),
+    );
+    fixture.detectChanges();
+  }
+
+  function componentInternals(): {
+    readonly expenses: () => readonly unknown[];
+    readonly joinExpenseParticipant: (expense: unknown, event: Event) => void;
+    readonly leaveExpenseParticipant: (expense: unknown, event: Event) => void;
+    readonly replaceExpenseRow: (expense: ExpenseListItem) => void;
+  } {
+    return fixture.componentInstance as unknown as {
+      readonly expenses: () => readonly unknown[];
+      readonly joinExpenseParticipant: (expense: unknown, event: Event) => void;
+      readonly leaveExpenseParticipant: (expense: unknown, event: Event) => void;
+      readonly replaceExpenseRow: (expense: ExpenseListItem) => void;
+    };
+  }
+
+  function findIconButton(label: string): HTMLButtonElement | null {
+    return fixture.nativeElement.querySelector(
+      `button[aria-label="${label}"]`,
+    ) as HTMLButtonElement | null;
+  }
+
+  function participantsCellText(): string {
+    const cell = fixture.nativeElement.querySelector(
+      'tr.expense-row td:nth-child(6)',
+    ) as HTMLTableCellElement;
+    return cell.textContent?.trim() ?? '';
   }
 
   function setInputValue(selector: string, value: string): void {

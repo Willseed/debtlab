@@ -7,8 +7,14 @@ import {
   deleteExpense,
   ExpenseForbiddenError,
   ExpenseInvalidParticipantsError,
+  ExpenseLastParticipantError,
   ExpenseNotFoundError,
+  ExpenseParticipantForbiddenError,
+  ExpenseParticipantNotFoundError,
+  ExpenseParticipantSplitMethodError,
   getExpense,
+  joinExpenseParticipant,
+  leaveExpenseParticipant,
   listExpenses,
   updateExpense,
   validateExpenseMembers,
@@ -79,6 +85,52 @@ expenseRoutes.get('/:expenseId', async (c) => {
   } catch (error) {
     if (error instanceof ExpenseNotFoundError) {
       return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    throw error;
+  }
+});
+
+expenseRoutes.put('/:expenseId/participants/me', async (c) => {
+  const currentUser = c.get('currentUser');
+  const expenseId = c.req.param('expenseId');
+
+  try {
+    const expense = await joinExpenseParticipant(c.env.DB, currentUser, expenseId);
+    return c.json({ expense });
+  } catch (error) {
+    if (error instanceof ExpenseNotFoundError) {
+      return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    if (error instanceof ExpenseParticipantForbiddenError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
+    }
+    if (error instanceof ExpenseParticipantSplitMethodError) {
+      return errorResponse(c, 409, 'CONFLICT', error.message);
+    }
+    throw error;
+  }
+});
+
+expenseRoutes.delete('/:expenseId/participants/me', async (c) => {
+  const currentUser = c.get('currentUser');
+  const expenseId = c.req.param('expenseId');
+
+  try {
+    const expense = await leaveExpenseParticipant(c.env.DB, currentUser, expenseId);
+    return c.json({ expense });
+  } catch (error) {
+    if (error instanceof ExpenseNotFoundError) {
+      return errorResponse(c, 404, 'NOT_FOUND', error.message);
+    }
+    if (error instanceof ExpenseParticipantForbiddenError) {
+      return errorResponse(c, 403, 'FORBIDDEN', error.message);
+    }
+    if (
+      error instanceof ExpenseParticipantSplitMethodError ||
+      error instanceof ExpenseParticipantNotFoundError ||
+      error instanceof ExpenseLastParticipantError
+    ) {
+      return errorResponse(c, 409, 'CONFLICT', error.message);
     }
     throw error;
   }

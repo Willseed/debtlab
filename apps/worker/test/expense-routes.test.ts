@@ -47,10 +47,18 @@ type FakeExpenseListRow = {
   readonly created_by: string;
 };
 
+type FakeExpenseParticipantRow = {
+  readonly expense_id: string;
+  readonly user_id: string;
+  readonly display_name: string;
+  readonly share_amount: number;
+  readonly share_ratio?: number | null;
+};
+
 class FakeExpenseRouteD1 {
   readonly batchStatements: [string, ...unknown[]][][] = [];
   readonly expenseRows: readonly FakeExpenseListRow[];
-  readonly participantRows: readonly unknown[];
+  participantRows: FakeExpenseParticipantRow[];
   readonly expenseDeleteRow: FakeExpenseDeleteRow | null;
   readonly activeMemberIds: readonly string[];
 
@@ -72,6 +80,14 @@ class FakeExpenseRouteD1 {
         }
       : null,
     activeMemberIds: readonly string[] = [user.id],
+    participantRows: readonly FakeExpenseParticipantRow[] = [
+      {
+        expense_id: 'exp_route',
+        user_id: user.id,
+        display_name: user.displayName,
+        share_amount: expenseOwnerRow?.amount ?? 420,
+      },
+    ],
   ) {
     this.expenseDeleteRow = expenseDeleteRow;
     this.activeMemberIds = activeMemberIds;
@@ -80,7 +96,7 @@ class FakeExpenseRouteD1 {
         id: 'exp_route',
         title: 'Route coffee',
         description: null,
-        amount: 420,
+        amount: expenseOwnerRow?.amount ?? 420,
         currency: 'TWD',
         category: 'ingredients',
         expense_date: '2026-06-14',
@@ -89,14 +105,7 @@ class FakeExpenseRouteD1 {
         created_by: expenseOwnerRow?.created_by ?? user.id,
       },
     ];
-    this.participantRows = [
-      {
-        expense_id: 'exp_route',
-        user_id: user.id,
-        display_name: user.displayName,
-        share_amount: 420,
-      },
-    ];
+    this.participantRows = [...participantRows];
   }
 
   prepare(sql: string) {
@@ -107,6 +116,9 @@ class FakeExpenseRouteD1 {
     this.batchStatements.push(
       statements.map((statement): [string, ...unknown[]] => [statement.sql, ...statement.values]),
     );
+    for (const statement of statements) {
+      this.applyStatement(statement);
+    }
     return statements.map((statement) => ({
       success: true,
       meta: {
@@ -125,6 +137,75 @@ class FakeExpenseRouteD1 {
     }
 
     return 1;
+  }
+
+  private applyStatement(statement: FakeExpenseRouteStatement): void {
+    if (statement.sql.includes('INSERT') && statement.sql.includes('INTO expense_participants')) {
+      this.insertParticipant(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('UPDATE expense_participants')) {
+      this.updateParticipantShare(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('DELETE FROM expense_participants')) {
+      this.deleteParticipant(statement.values);
+    }
+  }
+
+  private insertParticipant(values: readonly unknown[]): void {
+    const expenseId = readBoundString(values[1]);
+    const userId = readBoundString(values[2]);
+
+    if (!expenseId || !userId) {
+      return;
+    }
+
+    if (
+      this.participantRows.some((row) => row.expense_id === expenseId && row.user_id === userId)
+    ) {
+      return;
+    }
+
+    this.participantRows.push({
+      expense_id: expenseId,
+      user_id: userId,
+      display_name: displayNameForUser(userId),
+      share_amount: readBoundNumber(values[3]) ?? 0,
+      share_ratio: readBoundNumber(values[4]),
+    });
+  }
+
+  private updateParticipantShare(values: readonly unknown[]): void {
+    const shareAmount = readBoundNumber(values[0]);
+    const shareRatio = readBoundNumber(values[1]);
+    const expenseId = readBoundString(values[2]);
+    const userId = readBoundString(values[3]);
+
+    if (shareAmount === null || !expenseId || !userId) {
+      return;
+    }
+
+    this.participantRows = this.participantRows.map((row) =>
+      row.expense_id === expenseId && row.user_id === userId
+        ? { ...row, share_amount: shareAmount, share_ratio: shareRatio }
+        : row,
+    );
+  }
+
+  private deleteParticipant(values: readonly unknown[]): void {
+    const expenseId = readBoundString(values[0]);
+    const userId = readBoundString(values[1]);
+
+    if (!expenseId || !userId) {
+      return;
+    }
+
+    this.participantRows = this.participantRows.filter(
+      (row) => row.expense_id !== expenseId || row.user_id !== userId,
+    );
   }
 }
 
@@ -227,8 +308,21 @@ class FakeExpenseRouteStatement {
       return { results: this.db.expenseRows as readonly T[] };
     }
 
+    if (
+      this.sql.includes('SELECT user_id, share_amount, share_ratio') &&
+      this.sql.includes('FROM expense_participants')
+    ) {
+      return {
+        results: this.db.participantRows.map((row) => ({
+          user_id: row.user_id,
+          share_amount: row.share_amount,
+          share_ratio: row.share_ratio ?? null,
+        })) as unknown as readonly T[],
+      };
+    }
+
     if (this.sql.includes('FROM expense_participants ep')) {
-      return { results: this.db.participantRows as readonly T[] };
+      return { results: this.db.participantRows as unknown as readonly T[] };
     }
 
     if (this.sql.includes('FROM group_members')) {
@@ -247,7 +341,16 @@ function displayNameForUser(userId: string): string {
   if (userId === currentUser.id) return currentUser.displayName;
   if (userId === 'usr_bob') return 'Bob';
   if (userId === 'usr_other') return 'Other Member';
+  if (userId === 'usr_carol') return 'Carol';
   return userId;
+}
+
+function readBoundString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function readBoundNumber(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
 }
 
 test('GET /api/expenses returns persisted D1 expenses', async () => {
@@ -425,6 +528,399 @@ test('GET /api/expenses/:expenseId returns authorized non-creator details as rea
       canDelete: false,
     },
   });
+});
+
+test('PUT /api/expenses/:expenseId/participants/me joins the current member', async () => {
+  const bob: SessionUser = {
+    id: 'usr_bob',
+    email: 'bob@example.test',
+    displayName: 'Bob',
+    role: 'member',
+    status: 'active',
+  };
+  const db = new FakeExpenseRouteD1(
+    bob,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: currentUser.id,
+      created_by: currentUser.id,
+      amount: 421,
+    },
+    undefined,
+    ['usr_bob'],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 421,
+      },
+    ],
+  );
+  const response = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    db,
+    {
+      method: 'PUT',
+    },
+    bob,
+  );
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), {
+    expense: {
+      id: 'exp_route',
+      title: 'Route coffee',
+      description: null,
+      amount: 421,
+      currency: 'TWD',
+      category: 'ingredients',
+      expenseDate: '2026-06-14',
+      paidBy: {
+        id: currentUser.id,
+        displayName: currentUser.displayName,
+      },
+      participants: [
+        {
+          userId: currentUser.id,
+          displayName: currentUser.displayName,
+          shareAmount: 211,
+        },
+        {
+          userId: 'usr_bob',
+          displayName: 'Bob',
+          shareAmount: 210,
+        },
+      ],
+      canEdit: false,
+      canDelete: false,
+    },
+  });
+  assert.equal(db.batchStatements.length, 1);
+  assert.match(
+    db.batchStatements[0]?.[0]?.[0] ?? '',
+    /INSERT(?: OR IGNORE)? INTO expense_participants/u,
+  );
+  assert.equal(db.batchStatements[0]?.[4]?.[3], 'expense_participant_joined');
+});
+
+test('PUT /api/expenses/:expenseId/participants/me is idempotent when already joined', async () => {
+  const db = new FakeExpenseRouteD1();
+  const response = await requestExpenseRoute('/api/expenses/exp_route/participants/me', db, {
+    method: 'PUT',
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    ((await response.json()) as { readonly expense: { readonly participants: readonly unknown[] } })
+      .expense.participants,
+    [
+      {
+        userId: currentUser.id,
+        displayName: currentUser.displayName,
+        shareAmount: 420,
+      },
+    ],
+  );
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('PUT /api/expenses/:expenseId/participants/me rejects non-member callers', async () => {
+  const bob: SessionUser = {
+    id: 'usr_bob',
+    email: 'bob@example.test',
+    displayName: 'Bob',
+    role: 'member',
+    status: 'active',
+  };
+  const db = new FakeExpenseRouteD1(
+    bob,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: currentUser.id,
+      created_by: currentUser.id,
+      amount: 420,
+    },
+    undefined,
+    [],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 420,
+      },
+    ],
+  );
+  const response = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    db,
+    {
+      method: 'PUT',
+    },
+    bob,
+  );
+
+  await assertApiError(
+    response,
+    403,
+    'FORBIDDEN',
+    'Only an active default-group member or an admin may join or leave expense participants.',
+  );
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('PUT /api/expenses/:expenseId/participants/me rejects custom splits', async () => {
+  const bob: SessionUser = {
+    id: 'usr_bob',
+    email: 'bob@example.test',
+    displayName: 'Bob',
+    role: 'member',
+    status: 'active',
+  };
+  const db = new FakeExpenseRouteD1(
+    bob,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: currentUser.id,
+      created_by: currentUser.id,
+      amount: 420,
+      split_method: 'custom',
+    },
+    undefined,
+    ['usr_bob'],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 420,
+      },
+    ],
+  );
+  const response = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    db,
+    {
+      method: 'PUT',
+    },
+    bob,
+  );
+
+  await assertApiError(
+    response,
+    409,
+    'CONFLICT',
+    'Self join and leave are only supported for equal split expenses; custom splits require payer editing.',
+  );
+  assert.equal(db.batchStatements.length, 0);
+});
+
+test('DELETE /api/expenses/:expenseId/participants/me leaves the current member', async () => {
+  const db = new FakeExpenseRouteD1(
+    currentUser,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: 'usr_bob',
+      created_by: 'usr_bob',
+      amount: 421,
+    },
+    undefined,
+    [currentUser.id],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 141,
+      },
+      {
+        expense_id: 'exp_route',
+        user_id: 'usr_bob',
+        display_name: 'Bob',
+        share_amount: 140,
+      },
+      {
+        expense_id: 'exp_route',
+        user_id: 'usr_carol',
+        display_name: 'Carol',
+        share_amount: 140,
+      },
+    ],
+  );
+  const response = await requestExpenseRoute('/api/expenses/exp_route/participants/me', db, {
+    method: 'DELETE',
+  });
+
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    ((await response.json()) as { readonly expense: { readonly participants: readonly unknown[] } })
+      .expense.participants,
+    [
+      {
+        userId: 'usr_bob',
+        displayName: 'Bob',
+        shareAmount: 211,
+      },
+      {
+        userId: 'usr_carol',
+        displayName: 'Carol',
+        shareAmount: 210,
+      },
+    ],
+  );
+  assert.equal(db.batchStatements.length, 1);
+  assert.match(db.batchStatements[0]?.[0]?.[0] ?? '', /DELETE FROM expense_participants/u);
+  assert.equal(db.batchStatements[0]?.[4]?.[3], 'expense_participant_left');
+});
+
+test('DELETE /api/expenses/:expenseId/participants/me rejects non-participants and last participants', async () => {
+  const nonParticipantDb = new FakeExpenseRouteD1(
+    currentUser,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: 'usr_bob',
+      created_by: 'usr_bob',
+      amount: 420,
+    },
+    undefined,
+    [currentUser.id],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: 'usr_bob',
+        display_name: 'Bob',
+        share_amount: 420,
+      },
+    ],
+  );
+  const nonParticipantResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    nonParticipantDb,
+    {
+      method: 'DELETE',
+    },
+  );
+
+  await assertApiError(
+    nonParticipantResponse,
+    409,
+    'CONFLICT',
+    'Current user is not an expense participant.',
+  );
+  assert.equal(nonParticipantDb.batchStatements.length, 0);
+
+  const lastParticipantDb = new FakeExpenseRouteD1();
+  const lastParticipantResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    lastParticipantDb,
+    {
+      method: 'DELETE',
+    },
+  );
+
+  await assertApiError(
+    lastParticipantResponse,
+    409,
+    'CONFLICT',
+    'Expense must keep at least one participant.',
+  );
+  assert.equal(lastParticipantDb.batchStatements.length, 0);
+});
+
+test('DELETE /api/expenses/:expenseId/participants/me rejects non-members and custom splits', async () => {
+  const nonMemberDb = new FakeExpenseRouteD1(
+    currentUser,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: 'usr_bob',
+      created_by: 'usr_bob',
+      amount: 420,
+    },
+    undefined,
+    [],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 210,
+      },
+      {
+        expense_id: 'exp_route',
+        user_id: 'usr_bob',
+        display_name: 'Bob',
+        share_amount: 210,
+      },
+    ],
+  );
+  const nonMemberResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    nonMemberDb,
+    {
+      method: 'DELETE',
+    },
+  );
+
+  await assertApiError(
+    nonMemberResponse,
+    403,
+    'FORBIDDEN',
+    'Only an active default-group member or an admin may join or leave expense participants.',
+  );
+  assert.equal(nonMemberDb.batchStatements.length, 0);
+
+  const customSplitDb = new FakeExpenseRouteD1(
+    currentUser,
+    {
+      group_id: 'grp_default',
+      paid_by_user_id: 'usr_bob',
+      created_by: 'usr_bob',
+      amount: 420,
+      split_method: 'custom',
+    },
+    undefined,
+    [currentUser.id],
+    [
+      {
+        expense_id: 'exp_route',
+        user_id: currentUser.id,
+        display_name: currentUser.displayName,
+        share_amount: 210,
+      },
+      {
+        expense_id: 'exp_route',
+        user_id: 'usr_bob',
+        display_name: 'Bob',
+        share_amount: 210,
+      },
+    ],
+  );
+  const customSplitResponse = await requestExpenseRoute(
+    '/api/expenses/exp_route/participants/me',
+    customSplitDb,
+    {
+      method: 'DELETE',
+    },
+  );
+
+  await assertApiError(
+    customSplitResponse,
+    409,
+    'CONFLICT',
+    'Self join and leave are only supported for equal split expenses; custom splits require payer editing.',
+  );
+  assert.equal(customSplitDb.batchStatements.length, 0);
+});
+
+test('participant self-mutation routes map missing expenses to not found', async () => {
+  const db = new FakeExpenseRouteD1(currentUser, null);
+  const response = await requestExpenseRoute('/api/expenses/exp_missing/participants/me', db, {
+    method: 'PUT',
+  });
+
+  await assertApiError(response, 404, 'NOT_FOUND', 'Expense not found.');
+  assert.equal(db.batchStatements.length, 0);
 });
 
 test('PATCH /api/expenses/:expenseId persists member updates', async () => {

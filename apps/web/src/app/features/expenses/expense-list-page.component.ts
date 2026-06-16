@@ -20,6 +20,7 @@ import {
   ExpenseCategory,
   ExpenseCreateResponse,
   ExpenseListItem,
+  ExpenseParticipantResponse,
   MemberListItem,
 } from './expense-api.service';
 
@@ -189,6 +190,102 @@ type ExpenseForm = {
                               />
                             </svg>
                           </button>
+                        }
+                        @if (canCurrentUserChangeParticipation()) {
+                          @if (isCurrentUserParticipant(expense)) {
+                            <button
+                              type="button"
+                              class="button button--secondary button--icon"
+                              (click)="leaveExpenseParticipant(expense, $event)"
+                              [disabled]="isExpenseActionDisabled(expense.id)"
+                              aria-label="退出支出"
+                              title="退出支出"
+                              i18n-aria-label="Leave expense action label@@expensesLeaveActionLabel"
+                              i18n-title="Leave expense action title@@expensesLeaveActionTitle"
+                            >
+                              <svg
+                                aria-hidden="true"
+                                focusable="false"
+                                viewBox="0 0 24 24"
+                                width="20"
+                                height="20"
+                              >
+                                <path
+                                  d="M7 4h7a2 2 0 0 1 2 2v3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="1.8"
+                                />
+                                <path
+                                  d="M16 15v3a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="1.8"
+                                />
+                                <path
+                                  d="M10 12h9"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-width="1.8"
+                                />
+                                <path
+                                  d="m16 9 3 3-3 3"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-linejoin="round"
+                                  stroke-width="1.8"
+                                />
+                              </svg>
+                            </button>
+                          } @else {
+                            <button
+                              type="button"
+                              class="button button--secondary button--icon"
+                              (click)="joinExpenseParticipant(expense, $event)"
+                              [disabled]="isExpenseActionDisabled(expense.id)"
+                              aria-label="加入支出"
+                              title="加入支出"
+                              i18n-aria-label="Join expense action label@@expensesJoinActionLabel"
+                              i18n-title="Join expense action title@@expensesJoinActionTitle"
+                            >
+                              <svg
+                                aria-hidden="true"
+                                focusable="false"
+                                viewBox="0 0 24 24"
+                                width="20"
+                                height="20"
+                              >
+                                <path
+                                  d="M8 12h8"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-width="1.8"
+                                />
+                                <path
+                                  d="M12 8v8"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-linecap="round"
+                                  stroke-width="1.8"
+                                />
+                                <circle
+                                  cx="12"
+                                  cy="12"
+                                  r="8"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  stroke-width="1.8"
+                                />
+                              </svg>
+                            </button>
+                          }
                         }
                       </div>
                     </td>
@@ -542,11 +639,16 @@ export class ExpenseListPageComponent implements OnInit {
   protected readonly isCreateModalOpen = signal(false);
   protected readonly isSubmitting = signal(false);
   protected readonly deletingExpenseIds = signal<ReadonlySet<string>>(new Set());
+  protected readonly participantActionExpenseIds = signal<ReadonlySet<string>>(new Set());
   protected readonly pendingDeleteExpense = signal<ExpenseRow | null>(null);
   protected readonly viewingExpense = signal<ExpenseRow | null>(null);
   protected readonly listStatusMessage = signal('');
   protected readonly statusMessage = signal('');
   protected readonly editingExpenseId = signal<string | null>(null);
+  protected readonly activeCurrentUserId = computed(() => {
+    const currentUser = this.authService.currentUser();
+    return currentUser?.status === 'active' ? currentUser.id : null;
+  });
   protected readonly isEditing = computed(() => this.editingExpenseId() !== null);
   protected readonly editingExpenseSummary = computed(() => {
     const editingId = this.editingExpenseId();
@@ -807,7 +909,28 @@ export class ExpenseListPageComponent implements OnInit {
   }
 
   protected isExpenseActionDisabled(expenseId: string): boolean {
-    return this.hasDeleteFlowPending() || this.deletingExpenseIds().has(expenseId);
+    return (
+      this.hasDeleteFlowPending() ||
+      this.deletingExpenseIds().has(expenseId) ||
+      this.participantActionExpenseIds().has(expenseId)
+    );
+  }
+
+  protected canCurrentUserChangeParticipation(): boolean {
+    return this.activeCurrentUserId() !== null;
+  }
+
+  protected isCurrentUserParticipant(expense: ExpenseRow): boolean {
+    const currentUserId = this.activeCurrentUserId();
+    return currentUserId !== null && expense.participantIds.includes(currentUserId);
+  }
+
+  protected joinExpenseParticipant(expense: ExpenseRow, event: Event): void {
+    this.updateExpenseParticipation(expense, 'join', event);
+  }
+
+  protected leaveExpenseParticipant(expense: ExpenseRow, event: Event): void {
+    this.updateExpenseParticipation(expense, 'leave', event);
   }
 
   private trapModalFocus(event: KeyboardEvent): void {
@@ -849,6 +972,55 @@ export class ExpenseListPageComponent implements OnInit {
     });
   }
 
+  private updateExpenseParticipation(
+    expense: ExpenseRow,
+    action: 'join' | 'leave',
+    event: Event,
+  ): void {
+    event.stopPropagation();
+
+    const currentUserId = this.activeCurrentUserId();
+    if (!currentUserId || this.isExpenseActionDisabled(expense.id)) {
+      return;
+    }
+
+    const isParticipant = expense.participantIds.includes(currentUserId);
+    if ((action === 'join' && isParticipant) || (action === 'leave' && !isParticipant)) {
+      return;
+    }
+
+    this.trackParticipantAction(expense.id);
+    this.listStatusMessage.set('');
+
+    const request$: Observable<ExpenseParticipantResponse> =
+      action === 'join'
+        ? this.expenseApiService.joinExpenseParticipant(expense.id)
+        : this.expenseApiService.leaveExpenseParticipant(expense.id);
+
+    request$.subscribe({
+      next: (response) => {
+        this.replaceExpenseRow(response.expense);
+        this.untrackParticipantAction(expense.id);
+      },
+      error: (err: HttpErrorResponse) => {
+        this.untrackParticipantAction(expense.id);
+        this.listStatusMessage.set(this.formatParticipantActionError(err));
+      },
+    });
+  }
+
+  private trackParticipantAction(expenseId: string): void {
+    this.participantActionExpenseIds.update((ids) => new Set(ids).add(expenseId));
+  }
+
+  private untrackParticipantAction(expenseId: string): void {
+    this.participantActionExpenseIds.update((ids) => {
+      const nextIds = new Set(ids);
+      nextIds.delete(expenseId);
+      return nextIds;
+    });
+  }
+
   private formatSubmitError(error: HttpErrorResponse): string {
     const fallback = $localize`:Expense create failed@@expenseCreateFailed:支出建立失敗，請稍後再試。`;
     const apiError = (error.error as { error?: { message?: string } } | null)?.error;
@@ -857,6 +1029,12 @@ export class ExpenseListPageComponent implements OnInit {
 
   private formatDeleteError(error: HttpErrorResponse): string {
     const fallback = $localize`:Expense delete failed@@expenseDeleteFailed:支出刪除失敗，請稍後再試。`;
+    const apiError = (error.error as { error?: { message?: string } } | null)?.error;
+    return apiError?.message ?? fallback;
+  }
+
+  private formatParticipantActionError(error: HttpErrorResponse): string {
+    const fallback = $localize`:Expense participation update failed@@expenseParticipationFailed:無法更新支出參與者，請稍後再試。`;
     const apiError = (error.error as { error?: { message?: string } } | null)?.error;
     return apiError?.message ?? fallback;
   }
@@ -903,6 +1081,25 @@ export class ExpenseListPageComponent implements OnInit {
       canEdit: expense.canEdit,
       canDelete: expense.canDelete,
     };
+  }
+
+  private replaceExpenseRow(expense: ExpenseListItem): void {
+    const row = this.mapExpenseRow(expense);
+    const rows = this.expenses();
+
+    if (rows.some((candidate) => candidate.id === row.id)) {
+      this.expenses.set(rows.map((candidate) => (candidate.id === row.id ? row : candidate)));
+    } else {
+      this.loadExpensesFromDatabase();
+    }
+
+    if (this.viewingExpense()?.id === row.id) {
+      this.viewingExpense.set(row);
+    }
+
+    if (this.pendingDeleteExpense()?.id === row.id) {
+      this.pendingDeleteExpense.set(row);
+    }
   }
 
   private buildActiveMemberOptions(): readonly MemberListItem[] {

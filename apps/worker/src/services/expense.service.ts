@@ -28,6 +28,38 @@ export class ExpenseInvalidParticipantsError extends Error {
   }
 }
 
+export class ExpenseParticipantForbiddenError extends Error {
+  constructor() {
+    super(
+      'Only an active default-group member or an admin may join or leave expense participants.',
+    );
+    this.name = 'ExpenseParticipantForbiddenError';
+  }
+}
+
+export class ExpenseParticipantSplitMethodError extends Error {
+  constructor(splitMethod: ExpenseCreateInput['splitMethod']) {
+    super(
+      `Self join and leave are only supported for equal split expenses; ${splitMethod} splits require payer editing.`,
+    );
+    this.name = 'ExpenseParticipantSplitMethodError';
+  }
+}
+
+export class ExpenseParticipantNotFoundError extends Error {
+  constructor() {
+    super('Current user is not an expense participant.');
+    this.name = 'ExpenseParticipantNotFoundError';
+  }
+}
+
+export class ExpenseLastParticipantError extends Error {
+  constructor() {
+    super('Expense must keep at least one participant.');
+    this.name = 'ExpenseLastParticipantError';
+  }
+}
+
 type ExpenseUpdateRow = {
   readonly group_id: string;
   readonly paid_by_user_id: string;
@@ -283,6 +315,99 @@ export async function getExpense(
   return mapExpenseListItem(row, participantsByExpenseId, user);
 }
 
+export async function joinExpenseParticipant(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+): Promise<ExpenseListItem> {
+  const expense = await getExpenseParticipantMutationRow(db, expenseId);
+  await assertUserCanMutateSelfParticipant(db, user);
+
+  const participantShares = await listExpenseParticipantShares(db, expenseId);
+
+  if (participantShares.some((participant) => participant.user_id === user.id)) {
+    return getExpenseAfterParticipantMutation(db, user, expenseId);
+  }
+
+  assertEqualParticipantMutationSplitMethod(expense.split_method);
+
+  const updatedShares = recalculateParticipantShares(
+    expense.amount,
+    expense.split_method,
+    sortParticipantSharesByUserId([
+      ...participantShares,
+      { user_id: user.id, share_amount: 0, share_ratio: null },
+    ]),
+  );
+
+  await db.batch([
+    db
+      .prepare(
+        `INSERT OR IGNORE INTO expense_participants (id, expense_id, user_id, share_amount, share_ratio)
+         VALUES (?, ?, ?, 0, NULL)`,
+      )
+      .bind(crypto.randomUUID(), expenseId, user.id),
+    ...createParticipantShareUpdateStatements(db, expenseId, updatedShares),
+    createExpenseUpdatedAtStatement(db, expenseId),
+    createExpenseParticipantAuditStatement(
+      db,
+      user,
+      expenseId,
+      'expense_participant_joined',
+      updatedShares.length,
+    ),
+  ]);
+
+  return getExpenseAfterParticipantMutation(db, user, expenseId);
+}
+
+export async function leaveExpenseParticipant(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+): Promise<ExpenseListItem> {
+  const expense = await getExpenseParticipantMutationRow(db, expenseId);
+  await assertUserCanMutateSelfParticipant(db, user);
+
+  const participantShares = await listExpenseParticipantShares(db, expenseId);
+
+  if (!participantShares.some((participant) => participant.user_id === user.id)) {
+    throw new ExpenseParticipantNotFoundError();
+  }
+
+  assertEqualParticipantMutationSplitMethod(expense.split_method);
+
+  if (participantShares.length === 1) {
+    throw new ExpenseLastParticipantError();
+  }
+
+  const updatedShares = recalculateParticipantShares(
+    expense.amount,
+    expense.split_method,
+    participantShares.filter((participant) => participant.user_id !== user.id),
+  );
+
+  await db.batch([
+    db
+      .prepare(
+        `DELETE FROM expense_participants
+         WHERE expense_id = ? AND user_id = ?`,
+      )
+      .bind(expenseId, user.id),
+    ...createParticipantShareUpdateStatements(db, expenseId, updatedShares),
+    createExpenseUpdatedAtStatement(db, expenseId),
+    createExpenseParticipantAuditStatement(
+      db,
+      user,
+      expenseId,
+      'expense_participant_left',
+      updatedShares.length,
+    ),
+  ]);
+
+  return getExpenseAfterParticipantMutation(db, user, expenseId);
+}
+
 export async function updateExpense(
   db: D1Database,
   user: SessionUser,
@@ -417,6 +542,153 @@ export async function deleteExpense(
   if ((deleteResult?.meta?.changes ?? 0) === 0) {
     throw new ExpenseNotFoundError();
   }
+}
+
+async function getExpenseParticipantMutationRow(
+  db: D1Database,
+  expenseId: string,
+): Promise<ExpenseUpdateRow> {
+  const expense = await db
+    .prepare(
+      `SELECT group_id, paid_by_user_id, amount, split_method
+       FROM expenses
+       WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
+    )
+    .bind(expenseId, DEFAULT_GROUP_ID)
+    .first<ExpenseUpdateRow>();
+
+  if (!expense) {
+    throw new ExpenseNotFoundError();
+  }
+
+  return expense;
+}
+
+async function assertUserCanMutateSelfParticipant(
+  db: D1Database,
+  user: SessionUser,
+): Promise<void> {
+  if (user.status !== 'active') {
+    throw new ExpenseParticipantForbiddenError();
+  }
+
+  if (user.role === 'admin') {
+    return;
+  }
+
+  const activeMemberIds = await listActiveDefaultGroupMemberIdsForUsers(db, [user.id]);
+
+  if (!activeMemberIds.has(user.id)) {
+    throw new ExpenseParticipantForbiddenError();
+  }
+}
+
+function assertEqualParticipantMutationSplitMethod(
+  splitMethod: ExpenseCreateInput['splitMethod'],
+): void {
+  if (splitMethod !== 'equal') {
+    throw new ExpenseParticipantSplitMethodError(splitMethod);
+  }
+}
+
+async function getExpenseAfterParticipantMutation(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+): Promise<ExpenseListItem> {
+  const row = await db
+    .prepare(
+      `SELECT
+         e.id,
+         e.title,
+         e.description,
+         e.amount,
+         e.currency,
+         e.category,
+         e.expense_date,
+         e.paid_by_user_id,
+         COALESCE(payer.display_name, payer.email, e.paid_by_user_id) AS paid_by_display_name,
+         e.created_by
+       FROM expenses e
+       INNER JOIN users payer ON payer.id = e.paid_by_user_id
+       WHERE e.id = ? AND e.group_id = ? AND e.deleted_at IS NULL`,
+    )
+    .bind(expenseId, DEFAULT_GROUP_ID)
+    .first<ExpenseListRow>();
+
+  if (!row) {
+    throw new ExpenseNotFoundError();
+  }
+
+  const participantsByExpenseId = await listParticipantsByExpenseId(db);
+  return mapExpenseListItem(row, participantsByExpenseId, user);
+}
+
+function createParticipantShareUpdateStatements(
+  db: D1Database,
+  expenseId: string,
+  shares: readonly ExpenseParticipantShareRow[],
+): readonly D1PreparedStatement[] {
+  return shares.map((share) =>
+    db
+      .prepare(
+        `UPDATE expense_participants
+         SET share_amount = ?, share_ratio = ?
+         WHERE expense_id = ? AND user_id = ?`,
+      )
+      .bind(share.share_amount, share.share_ratio, expenseId, share.user_id),
+  );
+}
+
+function createExpenseUpdatedAtStatement(db: D1Database, expenseId: string): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE expenses
+       SET updated_at = datetime('now', '+8 hours')
+       WHERE id = ? AND group_id = ? AND deleted_at IS NULL`,
+    )
+    .bind(expenseId, DEFAULT_GROUP_ID);
+}
+
+function createExpenseParticipantAuditStatement(
+  db: D1Database,
+  user: SessionUser,
+  expenseId: string,
+  action: 'expense_participant_joined' | 'expense_participant_left',
+  participantCount: number,
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO audit_logs (id, user_id, action, entity_type, entity_id, after_json)
+       VALUES (?, ?, ?, 'expense', ?, ?)`,
+    )
+    .bind(
+      crypto.randomUUID(),
+      user.id,
+      action,
+      expenseId,
+      JSON.stringify({
+        userId: user.id,
+        splitMethod: 'equal',
+        participantCount,
+      }),
+    );
+}
+
+function sortParticipantSharesByUserId(
+  participants: readonly ExpenseParticipantShareRow[],
+): readonly ExpenseParticipantShareRow[] {
+  return [...participants].sort((left, right) => {
+    if (left.user_id < right.user_id) {
+      return -1;
+    }
+
+    if (left.user_id > right.user_id) {
+      return 1;
+    }
+
+    return 0;
+  });
 }
 
 function mapExpenseListItem(

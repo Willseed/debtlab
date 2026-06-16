@@ -62,6 +62,10 @@ export type ExpenseDeleteResponse = {
   readonly ok: true;
 };
 
+export type ExpenseParticipantResponse = {
+  readonly expense: ExpenseListItem;
+};
+
 export type MemberListItem = {
   readonly userId: string;
   readonly displayName: string;
@@ -99,6 +103,19 @@ export class ExpenseApiService {
 
   deleteExpense(expenseId: string): Observable<ExpenseDeleteResponse> {
     return this.http.delete<ExpenseDeleteResponse>(`${this.apiBaseUrl}/expenses/${expenseId}`);
+  }
+
+  joinExpenseParticipant(expenseId: string): Observable<ExpenseParticipantResponse> {
+    return this.http.put<ExpenseParticipantResponse>(
+      `${this.apiBaseUrl}/expenses/${expenseId}/participants/me`,
+      null,
+    );
+  }
+
+  leaveExpenseParticipant(expenseId: string): Observable<ExpenseParticipantResponse> {
+    return this.http.delete<ExpenseParticipantResponse>(
+      `${this.apiBaseUrl}/expenses/${expenseId}/participants/me`,
+    );
   }
 
   listMembers(): Observable<MemberListResponse> {

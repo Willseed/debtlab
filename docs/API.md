@@ -151,6 +151,38 @@ ratio
 Authenticated. Returns the expense detail with participant shares for callers
 authorized as creator, active group member, or participant.
 
+### PUT `/api/expenses/:expenseId/participants/me`
+
+Authenticated active default-group member or admin only. Joins the current user
+to an existing non-deleted equal-split expense and deterministically recalculates
+all participant shares so the sum remains exactly equal to `amount`. The request
+body is ignored; callers cannot add another user. If the caller is already a
+participant, the endpoint returns the current expense without adding duplicates.
+Custom or ratio splits return `409 CONFLICT`.
+
+Response:
+
+```json
+{
+  "expense": {
+    "id": "exp_1",
+    "title": "Lab coffee",
+    "amount": 1280,
+    "currency": "TWD",
+    "participants": [{ "userId": "usr_alice", "displayName": "Alice", "shareAmount": 640 }]
+  }
+}
+```
+
+### DELETE `/api/expenses/:expenseId/participants/me`
+
+Authenticated active default-group member or admin only. Removes the current
+user from a non-deleted equal-split expense and recalculates the remaining
+participant shares. The endpoint rejects callers who are not participants,
+custom or ratio splits, and attempts to remove the final participant with
+`409 CONFLICT`. The request body is ignored; callers cannot remove another user.
+Successful joins and leaves write expense audit logs.
+
 ### PATCH `/api/expenses/:expenseId`
 
 Only the expense payer may edit default-group expenses. Deleted expenses cannot

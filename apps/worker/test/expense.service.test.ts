@@ -5,8 +5,14 @@ import {
   createExpense,
   deleteExpense,
   ExpenseForbiddenError,
+  ExpenseLastParticipantError,
   ExpenseNotFoundError,
+  ExpenseParticipantForbiddenError,
+  ExpenseParticipantNotFoundError,
+  ExpenseParticipantSplitMethodError,
   getExpense,
+  joinExpenseParticipant,
+  leaveExpenseParticipant,
   listExpenses,
   updateExpense,
 } from '../src/services/expense.service';
@@ -54,7 +60,7 @@ class FakeD1Database {
     readonly paid_by_display_name: string;
     readonly created_by: string;
   }[] = [];
-  participantRows: readonly {
+  participantRows: {
     readonly expense_id: string;
     readonly user_id: string;
     readonly display_name: string;
@@ -69,12 +75,84 @@ class FakeD1Database {
 
   async batch(statements: FakeD1PreparedStatement[]) {
     this.statements.push(statements.map((statement) => [statement.sql, ...statement.values]));
+    for (const statement of statements) {
+      this.applyStatement(statement);
+    }
     return statements.map((statement) => ({
       success: true,
       meta: {
         changes: statement.sql.includes('SET deleted_at') ? this.deleteChanges : 1,
       },
     }));
+  }
+
+  private applyStatement(statement: FakeD1PreparedStatement): void {
+    if (statement.sql.includes('INSERT') && statement.sql.includes('INTO expense_participants')) {
+      this.insertParticipant(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('UPDATE expense_participants')) {
+      this.updateParticipantShare(statement.values);
+      return;
+    }
+
+    if (statement.sql.includes('DELETE FROM expense_participants')) {
+      this.deleteParticipant(statement.values);
+    }
+  }
+
+  private insertParticipant(values: readonly unknown[]): void {
+    const expenseId = readBoundString(values[1]);
+    const userId = readBoundString(values[2]);
+
+    if (!expenseId || !userId) {
+      return;
+    }
+
+    if (
+      this.participantRows.some((row) => row.expense_id === expenseId && row.user_id === userId)
+    ) {
+      return;
+    }
+
+    this.participantRows.push({
+      expense_id: expenseId,
+      user_id: userId,
+      display_name: displayNameForUser(userId),
+      share_amount: readBoundNumber(values[3]) ?? 0,
+      share_ratio: readBoundNumber(values[4]),
+    });
+  }
+
+  private updateParticipantShare(values: readonly unknown[]): void {
+    const shareAmount = readBoundNumber(values[0]);
+    const shareRatio = readBoundNumber(values[1]);
+    const expenseId = readBoundString(values[2]);
+    const userId = readBoundString(values[3]);
+
+    if (shareAmount === null || !expenseId || !userId) {
+      return;
+    }
+
+    this.participantRows = this.participantRows.map((row) =>
+      row.expense_id === expenseId && row.user_id === userId
+        ? { ...row, share_amount: shareAmount, share_ratio: shareRatio }
+        : row,
+    );
+  }
+
+  private deleteParticipant(values: readonly unknown[]): void {
+    const expenseId = readBoundString(values[0]);
+    const userId = readBoundString(values[1]);
+
+    if (!expenseId || !userId) {
+      return;
+    }
+
+    this.participantRows = this.participantRows.filter(
+      (row) => row.expense_id !== expenseId || row.user_id !== userId,
+    );
   }
 }
 
@@ -154,7 +232,7 @@ class FakeD1PreparedStatement {
     }
 
     if (this.sql.includes('FROM expense_participants ep')) {
-      return { results: this.db.participantRows as readonly T[] };
+      return { results: this.db.participantRows as unknown as readonly T[] };
     }
 
     if (this.sql.includes('FROM group_members')) {
@@ -190,6 +268,21 @@ const sessionUser: SessionUser = {
   role: 'member',
   status: 'active',
 };
+
+function readBoundString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function readBoundNumber(value: unknown): number | null {
+  return typeof value === 'number' ? value : null;
+}
+
+function displayNameForUser(userId: string): string {
+  if (userId === 'usr_alice') return 'Alice';
+  if (userId === 'usr_bob') return 'Bob';
+  if (userId === 'usr_carol') return 'Carol';
+  return userId;
+}
 
 test('createExpense persists group, membership, expense, shares, and audit log', async () => {
   const db = new FakeD1Database();
@@ -362,6 +455,361 @@ test('getExpense rejects unknown or unauthorized expenses', async () => {
   );
 });
 
+test('joinExpenseParticipant adds the current member and recalculates equal shares', async () => {
+  const db = new FakeD1Database();
+  const bob: SessionUser = {
+    id: 'usr_bob',
+    email: 'bob@example.test',
+    displayName: 'Bob',
+    role: 'member',
+    status: 'active',
+  };
+  db.activeMemberIds = ['usr_bob'];
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 1001,
+  };
+  db.expenseRows = [
+    {
+      id: 'exp_shared',
+      title: 'Shared coffee',
+      description: null,
+      amount: 1001,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_alice',
+      paid_by_display_name: 'Alice',
+      created_by: 'usr_alice',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_shared',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 1001,
+    },
+  ];
+
+  const expense = await joinExpenseParticipant(db as unknown as D1Database, bob, 'exp_shared');
+
+  assert.deepEqual(expense.participants, [
+    {
+      userId: 'usr_alice',
+      displayName: 'Alice',
+      shareAmount: 501,
+    },
+    {
+      userId: 'usr_bob',
+      displayName: 'Bob',
+      shareAmount: 500,
+    },
+  ]);
+  assert.equal(expense.canEdit, false);
+  const batch = db.statements[0];
+  assert.equal(batch?.length, 5);
+  assert.match(String(batch?.[0]?.[0]), /INSERT(?: OR IGNORE)? INTO expense_participants/u);
+  assert.match(String(batch?.[1]?.[0]), /UPDATE expense_participants/u);
+  assert.equal(batch?.[4]?.[3], 'expense_participant_joined');
+  assert.equal(Number(batch?.[1]?.[1]) + Number(batch?.[2]?.[1]), 1001);
+});
+
+test('joinExpenseParticipant is idempotent for existing participants', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_alice', amount: 420 };
+  db.expenseRows = [
+    {
+      id: 'exp_joined',
+      title: 'Joined coffee',
+      description: null,
+      amount: 420,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_alice',
+      paid_by_display_name: 'Alice',
+      created_by: 'usr_alice',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_joined',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 420,
+    },
+  ];
+
+  const expense = await joinExpenseParticipant(
+    db as unknown as D1Database,
+    sessionUser,
+    'exp_joined',
+  );
+
+  assert.deepEqual(expense.participants, [
+    {
+      userId: 'usr_alice',
+      displayName: 'Alice',
+      shareAmount: 420,
+    },
+  ]);
+  assert.equal(db.statements.length, 0);
+});
+
+test('joinExpenseParticipant rejects custom splits that need explicit shares', async () => {
+  const db = new FakeD1Database();
+  db.activeMemberIds = ['usr_bob'];
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 1000,
+    split_method: 'custom',
+  };
+  db.participantRows = [
+    {
+      expense_id: 'exp_custom',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 1000,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      joinExpenseParticipant(
+        db as unknown as D1Database,
+        {
+          id: 'usr_bob',
+          email: 'bob@example.test',
+          displayName: 'Bob',
+          role: 'member',
+          status: 'active',
+        },
+        'exp_custom',
+      ),
+    ExpenseParticipantSplitMethodError,
+  );
+  assert.equal(db.statements.length, 0);
+});
+
+test('joinExpenseParticipant rejects non-members and disabled users', async () => {
+  const db = new FakeD1Database();
+  db.activeMemberIds = [];
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 1000,
+  };
+
+  await assert.rejects(
+    () =>
+      joinExpenseParticipant(
+        db as unknown as D1Database,
+        {
+          id: 'usr_bob',
+          email: 'bob@example.test',
+          displayName: 'Bob',
+          role: 'member',
+          status: 'active',
+        },
+        'exp_shared',
+      ),
+    ExpenseParticipantForbiddenError,
+  );
+
+  await assert.rejects(
+    () =>
+      joinExpenseParticipant(
+        db as unknown as D1Database,
+        { ...sessionUser, status: 'disabled' },
+        'exp_shared',
+      ),
+    ExpenseParticipantForbiddenError,
+  );
+  assert.equal(db.statements.length, 0);
+});
+
+test('joinExpenseParticipant allows active admins even without group membership', async () => {
+  const db = new FakeD1Database();
+  const admin: SessionUser = {
+    id: 'usr_carol',
+    email: 'carol@example.test',
+    displayName: 'Carol',
+    role: 'admin',
+    status: 'active',
+  };
+  db.activeMemberIds = [];
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 900,
+  };
+  db.expenseRows = [
+    {
+      id: 'exp_admin_join',
+      title: 'Admin-visible coffee',
+      description: null,
+      amount: 900,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_alice',
+      paid_by_display_name: 'Alice',
+      created_by: 'usr_alice',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_admin_join',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 900,
+    },
+  ];
+
+  const expense = await joinExpenseParticipant(
+    db as unknown as D1Database,
+    admin,
+    'exp_admin_join',
+  );
+
+  assert.deepEqual(
+    expense.participants.map((participant) => participant.userId),
+    ['usr_alice', 'usr_carol'],
+  );
+  assert.equal(db.statements.length, 1);
+});
+
+test('leaveExpenseParticipant removes the current member and recalculates equal shares', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
+    created_by: 'usr_bob',
+    amount: 1001,
+  };
+  db.expenseRows = [
+    {
+      id: 'exp_leave',
+      title: 'Shared beans',
+      description: null,
+      amount: 1001,
+      currency: 'TWD',
+      category: 'ingredients',
+      expense_date: '2026-06-14',
+      paid_by_user_id: 'usr_bob',
+      paid_by_display_name: 'Bob',
+      created_by: 'usr_bob',
+    },
+  ];
+  db.participantRows = [
+    {
+      expense_id: 'exp_leave',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 334,
+    },
+    {
+      expense_id: 'exp_leave',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 334,
+    },
+    {
+      expense_id: 'exp_leave',
+      user_id: 'usr_carol',
+      display_name: 'Carol',
+      share_amount: 333,
+    },
+  ];
+
+  const expense = await leaveExpenseParticipant(
+    db as unknown as D1Database,
+    sessionUser,
+    'exp_leave',
+  );
+
+  assert.deepEqual(expense.participants, [
+    {
+      userId: 'usr_bob',
+      displayName: 'Bob',
+      shareAmount: 501,
+    },
+    {
+      userId: 'usr_carol',
+      displayName: 'Carol',
+      shareAmount: 500,
+    },
+  ]);
+  const batch = db.statements[0];
+  assert.equal(batch?.length, 5);
+  assert.match(String(batch?.[0]?.[0]), /DELETE FROM expense_participants/u);
+  assert.equal(batch?.[4]?.[3], 'expense_participant_left');
+  assert.equal(Number(batch?.[1]?.[1]) + Number(batch?.[2]?.[1]), 1001);
+});
+
+test('leaveExpenseParticipant rejects non-participants and last-participant removal', async () => {
+  const nonParticipantDb = new FakeD1Database();
+  nonParticipantDb.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_bob',
+    created_by: 'usr_bob',
+    amount: 420,
+  };
+  nonParticipantDb.participantRows = [
+    {
+      expense_id: 'exp_leave_missing',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 420,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      leaveExpenseParticipant(
+        nonParticipantDb as unknown as D1Database,
+        sessionUser,
+        'exp_leave_missing',
+      ),
+    ExpenseParticipantNotFoundError,
+  );
+  assert.equal(nonParticipantDb.statements.length, 0);
+
+  const lastParticipantDb = new FakeD1Database();
+  lastParticipantDb.expenseOwnerRow = {
+    group_id: 'grp_default',
+    paid_by_user_id: 'usr_alice',
+    created_by: 'usr_alice',
+    amount: 420,
+  };
+  lastParticipantDb.participantRows = [
+    {
+      expense_id: 'exp_leave_last',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 420,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      leaveExpenseParticipant(
+        lastParticipantDb as unknown as D1Database,
+        sessionUser,
+        'exp_leave_last',
+      ),
+    ExpenseLastParticipantError,
+  );
+  assert.equal(lastParticipantDb.statements.length, 0);
+});
+
 test('updateExpense rejects unknown expenses', async () => {
   const db = new FakeD1Database();
   db.expenseOwnerRow = null;
@@ -479,6 +927,136 @@ test('updateExpense rewrites participant shares when the amount changes', async 
   assert.equal(batch?.[2]?.[1], 1250);
   assert.equal(Number(batch?.[1]?.[1]) + Number(batch?.[2]?.[1]), 2501);
   assert.match(String(batch?.[3]?.[0]), /INSERT INTO audit_logs/u);
+});
+
+test('updateExpense recalculates ratio participant shares when the amount changes', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    created_by: 'usr_alice',
+    amount: 300,
+    split_method: 'ratio',
+  };
+  db.participantRows = [
+    {
+      expense_id: 'exp_ratio',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 100,
+      share_ratio: 1,
+    },
+    {
+      expense_id: 'exp_ratio',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 200,
+      share_ratio: 2,
+    },
+  ];
+
+  await updateExpense(db as unknown as D1Database, sessionUser, 'exp_ratio', {
+    amount: 1000,
+  });
+
+  const batch = db.statements[0];
+  assert.equal(batch?.[1]?.[1], 333);
+  assert.equal(batch?.[2]?.[1], 667);
+  assert.equal(Number(batch?.[1]?.[1]) + Number(batch?.[2]?.[1]), 1000);
+});
+
+test('updateExpense recalculates custom participant shares when the amount changes', async () => {
+  const db = new FakeD1Database();
+  db.expenseOwnerRow = {
+    group_id: 'grp_default',
+    created_by: 'usr_alice',
+    amount: 500,
+    split_method: 'custom',
+  };
+  db.participantRows = [
+    {
+      expense_id: 'exp_custom_update',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 200,
+    },
+    {
+      expense_id: 'exp_custom_update',
+      user_id: 'usr_bob',
+      display_name: 'Bob',
+      share_amount: 300,
+    },
+  ];
+
+  await updateExpense(db as unknown as D1Database, sessionUser, 'exp_custom_update', {
+    amount: 1001,
+  });
+
+  const batch = db.statements[0];
+  assert.equal(batch?.[1]?.[1], 400);
+  assert.equal(batch?.[2]?.[1], 601);
+  assert.equal(Number(batch?.[1]?.[1]) + Number(batch?.[2]?.[1]), 1001);
+});
+
+test('updateExpense rejects amount recalculation without valid existing shares', async () => {
+  const emptyDb = new FakeD1Database();
+  emptyDb.expenseOwnerRow = { group_id: 'grp_default', created_by: 'usr_alice', amount: 500 };
+
+  await assert.rejects(
+    () =>
+      updateExpense(emptyDb as unknown as D1Database, sessionUser, 'exp_empty_shares', {
+        amount: 600,
+      }),
+    /Existing expense participants are required/u,
+  );
+
+  const invalidRatioDb = new FakeD1Database();
+  invalidRatioDb.expenseOwnerRow = {
+    group_id: 'grp_default',
+    created_by: 'usr_alice',
+    amount: 500,
+    split_method: 'ratio',
+  };
+  invalidRatioDb.participantRows = [
+    {
+      expense_id: 'exp_invalid_ratio',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 500,
+      share_ratio: null,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      updateExpense(invalidRatioDb as unknown as D1Database, sessionUser, 'exp_invalid_ratio', {
+        amount: 600,
+      }),
+    /Existing ratio split cannot be recalculated/u,
+  );
+
+  const invalidCustomDb = new FakeD1Database();
+  invalidCustomDb.expenseOwnerRow = {
+    group_id: 'grp_default',
+    created_by: 'usr_alice',
+    amount: 500,
+    split_method: 'custom',
+  };
+  invalidCustomDb.participantRows = [
+    {
+      expense_id: 'exp_invalid_custom',
+      user_id: 'usr_alice',
+      display_name: 'Alice',
+      share_amount: 0,
+    },
+  ];
+
+  await assert.rejects(
+    () =>
+      updateExpense(invalidCustomDb as unknown as D1Database, sessionUser, 'exp_invalid_custom', {
+        amount: 600,
+      }),
+    /Existing custom split cannot be recalculated/u,
+  );
 });
 
 test('updateExpense passes through a null description so it clears the stored value', async () => {
