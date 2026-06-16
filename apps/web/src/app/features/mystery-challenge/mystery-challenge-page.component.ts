@@ -546,12 +546,13 @@ function readRetryAfterSeconds(error: HttpErrorResponse): number | null {
   if (!isRecord(details)) return null;
 
   const retryAfterSeconds = details['retryAfterSeconds'];
-  const seconds =
-    typeof retryAfterSeconds === 'number'
-      ? retryAfterSeconds
-      : typeof retryAfterSeconds === 'string'
-        ? Number(retryAfterSeconds.trim())
-        : Number.NaN;
+  let seconds = Number.NaN;
+
+  if (typeof retryAfterSeconds === 'number') {
+    seconds = retryAfterSeconds;
+  } else if (typeof retryAfterSeconds === 'string') {
+    seconds = Number(retryAfterSeconds.trim());
+  }
 
   if (!Number.isFinite(seconds) || seconds <= 0) return null;
   return Math.ceil(seconds);

@@ -1,20 +1,11 @@
 const projectKey = process.env.SONAR_PROJECT_KEY ?? 'Willseed_debtlab';
 const sonarToken = process.env.SONAR_TOKEN;
 const pageSize = 100;
-const timeoutSeconds = Number(process.env.SONAR_OPEN_ISSUES_TIMEOUT_SECONDS ?? 600);
-const pollIntervalSeconds = Number(process.env.SONAR_OPEN_ISSUES_POLL_SECONDS ?? 20);
-const deadline = Date.now() + timeoutSeconds * 1000;
 
-let result = await readSonarFindings();
-
-while (hasFindings(result) && Date.now() < deadline) {
-  reportSonarFindings(result, 'waiting for SonarCloud analysis to settle');
-  await sleep(pollIntervalSeconds * 1000);
-  result = await readSonarFindings();
-}
+const result = await readSonarFindings();
 
 if (hasFindings(result)) {
-  reportSonarFindings(result, 'deployment is blocked');
+  reportSonarFindings(result, 'workflow is stopped');
   process.exitCode = 1;
 } else {
   console.log(`SonarCloud has no open issues or security hotspots for ${projectKey}.`);
@@ -132,10 +123,4 @@ function reportSonarFindings(result, status) {
   if (result.securityHotspots.total > 20) {
     console.error(`- ...and ${result.securityHotspots.total - 20} more security hotspot(s).`);
   }
-}
-
-function sleep(milliseconds) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, milliseconds);
-  });
 }
