@@ -118,45 +118,42 @@ import {
       }
 
       .metric-grid {
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+        display: grid;
+        gap: var(--space-4);
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
       .metric-card {
+        box-sizing: border-box;
         container-type: inline-size;
-        overflow: hidden;
+        overflow: visible;
       }
 
       .metric-card__value {
         display: block;
         inline-size: 100%;
+        line-height: 1.1;
         max-width: 100%;
-        overflow: hidden;
+        overflow-x: auto;
+        overflow-y: visible;
         overflow-wrap: normal;
         white-space: nowrap;
+        font-size: clamp(28px, 4vw, 52px);
       }
 
-      .metric-card__value.money {
-        font-size: clamp(1rem, 1.5vw, 2rem);
-        font-size: clamp(1rem, 6cqi, 2rem);
+      @media (max-width: 1024px) {
+        .metric-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
       }
 
-      @media (max-width: 720px) {
+      @media (max-width: 640px) {
         .metric-grid {
           grid-template-columns: 1fr;
         }
 
         .metric-card {
           padding: var(--space-4);
-        }
-
-        .metric-card__value {
-          font-size: clamp(1.625rem, 8vw, 2.5rem);
-          line-height: 1.1;
-        }
-
-        .metric-card__value.money {
-          font-size: clamp(1.25rem, 7vw, 2.5rem);
-          font-size: clamp(1.25rem, 7cqi, 2.5rem);
         }
       }
     `,
