@@ -146,11 +146,14 @@ apps, complex approvals, multi-lab hierarchy, and heavy analytics/charting.
   HSTS, CSP, `X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`,
   `Permissions-Policy`, and `Cross-Origin-Opener-Policy`.
 - CSP must preserve the app's Google OAuth, Apple OAuth, and Cloudflare
-  analytics/beacon origins while blocking inline styles/eval, wildcard sources,
-  framing, and object embeds. `data:` is only allowed for images used by the
-  static UI. The `/api/health` clue page may keep a route-specific stricter CSP
-  with a per-response style nonce because it intentionally renders
-  self-contained HTML.
+  analytics/beacon origins while blocking untrusted inline execution/eval,
+  wildcard sources, framing, and object embeds. SPA HTML must be served
+  Worker-first with a per-response nonce injected into the Angular app shell and
+  matched in `script-src` / `style-src` so runtime module scripts and Angular
+  component styles work without `unsafe-inline`. `data:` is only allowed for
+  images used by the static UI. The `/api/health` clue page may keep a
+  route-specific stricter CSP with a per-response style nonce because it
+  intentionally renders self-contained HTML.
 - All `/api/*` responses are `Cache-Control: no-store` and vary on `Cookie` so
   private session-backed data is never reused across users by intermediary
   caches.

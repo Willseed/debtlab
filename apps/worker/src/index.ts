@@ -12,7 +12,12 @@ import { settlementRoutes } from './routes/settlements';
 import { configurationErrorResponse } from './http/configuration-error-response';
 import { errorResponse } from './http/error-response';
 import { logWorkerError } from './logging/safe-log';
-import { securityHeaders } from './middleware/security-headers';
+import {
+  buildPageCsp,
+  generateCspNonce,
+  injectCspNonce,
+  securityHeaders,
+} from './middleware/security-headers';
 import { validateOrigin } from './middleware/validate-origin';
 import { AppBindings } from './types';
 
@@ -55,7 +60,19 @@ app.all('*', async (c) => {
     return configurationErrorResponse(c, STATIC_ASSET_BINDING_CONFIGURATION_ERROR);
   }
 
-  return c.env.ASSETS.fetch(c.req.raw);
+  const assetResponse = await c.env.ASSETS.fetch(c.req.raw);
+
+  const contentType = assetResponse.headers.get('Content-Type') ?? '';
+  if (contentType.includes('text/html')) {
+    const nonce = generateCspNonce();
+    const html = injectCspNonce(await assetResponse.text(), nonce);
+    const headers = new Headers(assetResponse.headers);
+    headers.set('Content-Security-Policy', buildPageCsp(nonce));
+    headers.set('Content-Type', 'text/html; charset=utf-8');
+    return new Response(html, { status: assetResponse.status, headers });
+  }
+
+  return assetResponse;
 });
 
 app.onError((error, c) => {

@@ -11,6 +11,9 @@ import app from '../src/index';
 import {
   CONTENT_SECURITY_POLICY,
   PERMISSIONS_POLICY,
+  buildPageCsp,
+  generateCspNonce,
+  injectCspNonce,
   securityHeaders,
 } from '../src/middleware/security-headers';
 import { AppBindings } from '../src/types';
@@ -60,6 +63,10 @@ test('Cloudflare Pages _headers matches Worker security header sources', () => {
   );
 });
 
+test('Worker assets run worker first so SPA HTML receives CSP nonces', () => {
+  assert.match(readWorkerWranglerConfig(), /run_worker_first\s*=\s*true/u);
+});
+
 test('securityHeaders preserves route-specific Content-Security-Policy values', async () => {
   const app = new Hono<AppBindings>();
   const routeCsp = "default-src 'none'; style-src 'nonce-route'; frame-ancestors 'none'";
@@ -95,14 +102,138 @@ test('index serves static assets with security headers outside /api', async () =
 
   assert.equal(response.status, 200);
   assert.equal(response.headers.get('Content-Type'), 'text/html; charset=utf-8');
-  assert.equal(await response.text(), '<!doctype html><title>LabSplit</title>');
-  assert.equal(response.headers.get('Content-Security-Policy'), CONTENT_SECURITY_POLICY);
   assert.equal(
     response.headers.get('Strict-Transport-Security'),
     'max-age=31536000; includeSubDomains',
   );
   assert.equal(response.headers.get('X-Content-Type-Options'), 'nosniff');
   assert.equal(response.headers.get('X-Frame-Options'), 'DENY');
+
+  const csp = response.headers.get('Content-Security-Policy') ?? '';
+  assertDirectiveHasNonce(csp, 'style-src');
+  assertDirectiveHasNonce(csp, 'script-src');
+  assert.doesNotMatch(csp, /'unsafe-inline'/u);
+  assertProductionCspInvariants('HTML page', csp);
+});
+
+test('index injects ngCspNonce attribute into app-root for HTML assets', async () => {
+  const response = await app.request('/', undefined, {
+    ...createTestEnv(),
+    ASSETS: createStaticAssetsWithAppRoot(),
+  });
+
+  const html = await response.text();
+  assert.match(html, /ngCspNonce="[A-Za-z0-9+/=]+"/u);
+});
+
+test('index injects nonce attribute into script tags for HTML assets', async () => {
+  const response = await app.request('/', undefined, {
+    ...createTestEnv(),
+    ASSETS: createStaticAssetsWithAppRoot(),
+  });
+
+  const html = await response.text();
+  assert.match(html, /<script nonce="[A-Za-z0-9+/=]+" /u);
+});
+
+test('index nonce in HTML body matches nonce in CSP header', async () => {
+  const response = await app.request('/', undefined, {
+    ...createTestEnv(),
+    ASSETS: createStaticAssetsWithAppRoot(),
+  });
+
+  const html = await response.text();
+  const nonceMatch = html.match(/ngCspNonce="([A-Za-z0-9+/=]+)"/u);
+  assert.ok(nonceMatch, 'ngCspNonce attribute must be present in HTML');
+  const nonce = nonceMatch[1];
+  const csp = response.headers.get('Content-Security-Policy') ?? '';
+  assertDirectiveHasNonce(csp, 'style-src', nonce);
+  assertDirectiveHasNonce(csp, 'script-src', nonce);
+});
+
+test('index generates different nonces for successive HTML requests', async () => {
+  const env = { ...createTestEnv(), ASSETS: createStaticAssets() };
+  const [r1, r2] = await Promise.all([
+    app.request('/', undefined, env),
+    app.request('/', undefined, env),
+  ]);
+
+  const csp1 = r1.headers.get('Content-Security-Policy') ?? '';
+  const csp2 = r2.headers.get('Content-Security-Policy') ?? '';
+  const nonceMatch1 = csp1.match(/'nonce-([A-Za-z0-9+/=]+)'/u);
+  const nonceMatch2 = csp2.match(/'nonce-([A-Za-z0-9+/=]+)'/u);
+  assert.ok(nonceMatch1, 'first response must have a nonce');
+  assert.ok(nonceMatch2, 'second response must have a nonce');
+  assert.notEqual(nonceMatch1[1], nonceMatch2[1], 'nonces must differ per request');
+});
+
+test('index does not modify non-HTML assets (no nonce in CSP)', async () => {
+  const response = await app.request('/styles.css', undefined, {
+    ...createTestEnv(),
+    ASSETS: createStaticCssAssets(),
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('Content-Security-Policy'), CONTENT_SECURITY_POLICY);
+});
+
+test('buildPageCsp adds nonce to script-src and style-src', () => {
+  const nonce = 'test-nonce-value';
+  const csp = buildPageCsp(nonce);
+
+  assert.match(csp, /script-src[^;]*'nonce-test-nonce-value'/u);
+  assert.match(csp, /style-src[^;]*'nonce-test-nonce-value'/u);
+  assert.doesNotMatch(csp, /'unsafe-inline'/u);
+  assertProductionCspInvariants('buildPageCsp', csp);
+});
+
+test('buildPageCsp preserves all required CSP origins', () => {
+  const csp = buildPageCsp('any-nonce');
+
+  assert.match(csp, /accounts\.google\.com/u);
+  assert.match(csp, /appleid\.apple\.com/u);
+  assert.match(csp, /cloudflareinsights\.com/u);
+  assert.match(csp, /frame-ancestors 'none'/u);
+  assert.match(csp, /object-src 'none'/u);
+  assert.match(csp, /upgrade-insecure-requests/u);
+});
+
+test('generateCspNonce returns a valid base64 string with 128 bits of entropy', () => {
+  const nonce = generateCspNonce();
+  assert.match(nonce, /^[A-Za-z0-9+/=]{24}$/u);
+});
+
+test('generateCspNonce returns unique values on repeated calls', () => {
+  const nonces = new Set(Array.from({ length: 20 }, () => generateCspNonce()));
+  assert.equal(nonces.size, 20, 'all generated nonces must be unique');
+});
+
+test('injectCspNonce adds ngCspNonce to app-root', () => {
+  const html = '<html><body><app-root></app-root></body></html>';
+  const result = injectCspNonce(html, 'abc123');
+  assert.match(result, /<app-root ngCspNonce="abc123">/u);
+});
+
+test('injectCspNonce adds nonce to script tags', () => {
+  const html = '<html><body><script src="main.js" type="module"></script></body></html>';
+  const result = injectCspNonce(html, 'abc123');
+  assert.match(result, /<script nonce="abc123" src="main.js"/u);
+});
+
+test('injectCspNonce handles app-root with existing attributes', () => {
+  const html = '<app-root class="themed"></app-root>';
+  const result = injectCspNonce(html, 'abc123');
+  assert.match(result, /<app-root class="themed" ngCspNonce="abc123">/u);
+});
+
+test('PERMISSIONS_POLICY does not include ambient-light-sensor', () => {
+  assert.doesNotMatch(PERMISSIONS_POLICY, /ambient-light-sensor/u);
+});
+
+test('PERMISSIONS_POLICY includes core privacy-sensitive features restricted', () => {
+  assert.match(PERMISSIONS_POLICY, /camera=\(\)/u);
+  assert.match(PERMISSIONS_POLICY, /geolocation=\(\)/u);
+  assert.match(PERMISSIONS_POLICY, /microphone=\(\)/u);
 });
 
 test('index blocks production source map disclosure from static assets', async () => {
@@ -248,6 +379,13 @@ function readCloudflarePagesHeaders(): Record<string, string> {
   return headers;
 }
 
+function readWorkerWranglerConfig(): string {
+  const currentDirectory = dirname(fileURLToPath(import.meta.url));
+  const wranglerPath = resolve(currentDirectory, '../wrangler.toml');
+
+  return readFileSync(wranglerPath, 'utf8');
+}
+
 function assertProductionCspInvariants(label: string, policy: string): void {
   assert.notEqual(policy, '', `${label} CSP must be present`);
 
@@ -282,6 +420,22 @@ function assertProductionCspInvariants(label: string, policy: string): void {
   }
 }
 
+function assertDirectiveHasNonce(
+  policy: string,
+  directiveName: string,
+  expectedNonce?: string,
+): void {
+  const sources = parseCsp(policy).get(directiveName) ?? [];
+  const noncePattern = expectedNonce
+    ? new RegExp(`^'nonce-${escapeRegExp(expectedNonce)}'$`, 'u')
+    : /^'nonce-[A-Za-z0-9+/=]+'$/u;
+
+  assert.ok(
+    sources.some((source) => noncePattern.test(source)),
+    `${directiveName} must include the expected nonce source`,
+  );
+}
+
 function parseCsp(policy: string): Map<string, readonly string[]> {
   const directives = new Map<string, readonly string[]>();
 
@@ -295,6 +449,10 @@ function parseCsp(policy: string): Map<string, readonly string[]> {
   }
 
   return directives;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&');
 }
 
 function createUnusedD1(): D1Database {
@@ -312,6 +470,26 @@ function createStaticAssets(): NonNullable<AppBindings['Bindings']['ASSETS']> {
         headers: {
           'Content-Type': 'text/html; charset=utf-8',
         },
+      }),
+  };
+}
+
+function createStaticAssetsWithAppRoot(): NonNullable<AppBindings['Bindings']['ASSETS']> {
+  return {
+    fetch: async () =>
+      new Response(
+        '<!doctype html><html><body><app-root></app-root>' +
+          '<script src="main.js" type="module"></script></body></html>',
+        { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+      ),
+  };
+}
+
+function createStaticCssAssets(): NonNullable<AppBindings['Bindings']['ASSETS']> {
+  return {
+    fetch: async () =>
+      new Response('body { margin: 0; }', {
+        headers: { 'Content-Type': 'text/css; charset=utf-8' },
       }),
   };
 }
