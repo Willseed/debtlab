@@ -134,11 +134,14 @@ import {
         inline-size: 100%;
         line-height: 1.1;
         max-width: 100%;
-        overflow-x: auto;
         overflow-y: visible;
         overflow-wrap: normal;
         white-space: nowrap;
-        font-size: clamp(28px, 4vw, 52px);
+        font-size: clamp(28px, 4cqi, 52px);
+      }
+
+      .metric-card .metric-card__value.money {
+        font-size: clamp(28px, 4cqi, 52px);
       }
 
       @media (max-width: 1024px) {

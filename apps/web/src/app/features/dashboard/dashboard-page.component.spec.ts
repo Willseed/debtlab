@@ -173,12 +173,22 @@ describe('DashboardPageComponent', () => {
     expect(cardStyle.boxSizing).withContext('metric card box sizing').toBe('border-box');
     expect(cardStyle.containerType).withContext('metric card query container').toBe('inline-size');
     expect(cardStyle.overflow).withContext('metric card overflow').toBe('visible');
-    expect(valueStyle.overflowX).withContext('metric value horizontal overflow').toBe('auto');
+    expect(valueStyle.overflowX).withContext('metric value horizontal overflow').toBe('visible');
+    expect(valueStyle.overflowY).withContext('metric value vertical overflow').toBe('visible');
     expect(valueStyle.whiteSpace).withContext('metric value wrapping').toBe('nowrap');
     expect(valueStyle.maxWidth).withContext('metric value max width').toBe('100%');
-    expect(findStyleRule('.metric-card__value', 'font-size').style.getPropertyValue('font-size'))
-      .withContext('metric value clamp font sizing')
-      .toBe('clamp(28px, 4vw, 52px)');
+
+    const valueFontRule = findStyleRule('.metric-card__value', 'font-size');
+    const moneyFontRule = findStyleRule('.metric-card__value.money', 'font-size');
+    expect(valueFontRule.style.getPropertyValue('font-size'))
+      .withContext('metric value cqi font sizing')
+      .toBe('clamp(28px, 4cqi, 52px)');
+    expect(moneyFontRule.selectorText)
+      .withContext('money metric selector specificity')
+      .toContain('.metric-card');
+    expect(moneyFontRule.style.getPropertyValue('font-size'))
+      .withContext('metric value cqi font sizing for money')
+      .toBe('clamp(28px, 4cqi, 52px)');
     expect(
       findStyleRule('.metric-card__value', 'line-height').style.getPropertyValue('line-height'),
     )
@@ -298,9 +308,7 @@ describe('DashboardPageComponent', () => {
         .withContext(`${value.textContent ?? 'money value'} should start inside its card`)
         .toBeGreaterThanOrEqual(cardRect.left);
       expect(valueRect.right)
-        .withContext(
-          `${value.textContent ?? 'money value'} scroll container should stay inside its card`,
-        )
+        .withContext(`${value.textContent ?? 'money value'} should stay inside its card`)
         .toBeLessThanOrEqual(cardRect.right);
     }
 
