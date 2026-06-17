@@ -392,7 +392,7 @@ function findStyleRule(selector: string, property: string, mediaText?: string): 
 
     const match = findStyleRuleInList(rules, selector, property, mediaText);
     if (!match) continue;
-    if (!found || !found.selectorText.includes(`${selector}[_ngcontent`)) {
+    if (!found?.selectorText.includes(`${selector}[_ngcontent`)) {
       found = match;
     }
   }
