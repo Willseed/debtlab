@@ -118,21 +118,26 @@ import {
       }
 
       .metric-grid {
-        grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
       }
 
       .metric-card {
         container-type: inline-size;
+        overflow: hidden;
       }
 
       .metric-card__value {
+        display: block;
+        inline-size: 100%;
         max-width: 100%;
+        overflow: hidden;
         overflow-wrap: normal;
         white-space: nowrap;
       }
 
       .metric-card__value.money {
-        font-size: clamp(1.25rem, 7.5cqi, 3.25rem);
+        font-size: clamp(1rem, 1.5vw, 2rem);
+        font-size: clamp(1rem, 6cqi, 2rem);
       }
 
       @media (max-width: 720px) {
@@ -150,6 +155,7 @@ import {
         }
 
         .metric-card__value.money {
+          font-size: clamp(1.25rem, 7vw, 2.5rem);
           font-size: clamp(1.25rem, 7cqi, 2.5rem);
         }
       }

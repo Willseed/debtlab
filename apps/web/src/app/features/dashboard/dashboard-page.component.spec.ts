@@ -153,6 +153,64 @@ describe('DashboardPageComponent', () => {
     }
   });
 
+  it('keeps screenshot-sized desktop TWD metrics inside a four-column grid', () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.display = 'block';
+    host.style.width = '1332px';
+    fixture.detectChanges();
+
+    http.expectOne('/api/settlements/summary').flush(
+      createSummary({
+        balances: [{ userId: 'usr_bob', displayName: 'Bob', net: -15_910 }],
+        suggestedTransfers: [
+          {
+            fromUserId: 'usr_bob',
+            fromDisplayName: 'Bob',
+            toUserId: 'usr_alice',
+            toDisplayName: 'Alice',
+            amount: 15_910,
+          },
+        ],
+      }),
+    );
+    http.expectOne('/api/expenses').flush({
+      expenses: [createExpense({ amount: 31_820, expenseDate: currentMonthDate() })],
+      nextCursor: null,
+    });
+    fixture.detectChanges();
+
+    const grid = host.querySelector<HTMLElement>('.metric-grid');
+    expect(grid).withContext('desktop metric grid').not.toBeNull();
+    if (!grid) return;
+
+    const gridColumns = getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean);
+    expect(gridColumns.length).withContext('desktop metric columns at 1332px').toBe(4);
+
+    const moneyValues = Array.from(host.querySelectorAll<HTMLElement>('.metric-card__value.money'));
+    expect(moneyValues.map((value) => value.textContent?.trim())).toEqual([
+      'NT$31820',
+      'NT$-15910',
+      'NT$15910',
+    ]);
+
+    for (const value of moneyValues) {
+      const card = value.closest<HTMLElement>('.metric-card');
+      expect(card)
+        .withContext(`${value.textContent ?? 'money value'} card`)
+        .not.toBeNull();
+      if (!card) return;
+
+      const valueRect = value.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      expect(value.scrollWidth)
+        .withContext(`${value.textContent ?? 'money value'} should fit its value box`)
+        .toBeLessThanOrEqual(value.clientWidth);
+      expect(valueRect.right)
+        .withContext(`${value.textContent ?? 'money value'} should stay inside its card`)
+        .toBeLessThanOrEqual(cardRect.right);
+    }
+  });
+
   it('falls back to zero member-specific amounts without a current user', () => {
     currentUserState.set(null);
     fixture.detectChanges();
@@ -165,7 +223,7 @@ describe('DashboardPageComponent', () => {
   });
 });
 
-function createSummary(): SettlementSummary {
+function createSummary(overrides: Partial<SettlementSummary> = {}): SettlementSummary {
   return {
     currency: 'TWD',
     balances: [
@@ -182,6 +240,7 @@ function createSummary(): SettlementSummary {
       },
     ],
     pendingPayments: [],
+    ...overrides,
   };
 }
 
